@@ -5,7 +5,6 @@ import { ResizableHandle, ResizablePanel, ResizableGroup } from '@/components/ui
 import ResumeEditor from '@/components/resume/ResumeEditor';
 import ResumePreview from '@/components/resume/ResumePreview';
 import { useResumeStore } from '@/stores/resume-store';
-import { useLayoutStore } from '@/stores/layout-store';
 import { INITIAL_SAMPLE_RESUME } from '@/app/resume/sample';
 import { useDefaultLayout } from 'react-resizable-panels';
 
@@ -23,8 +22,6 @@ const createSafeStorage = () => {
 
 export default function ResumePage() {
   const { resume, setResume } = useResumeStore();
-  const { leftSidebarSize, rightSidebarSize, setLeftSidebarSize, setRightSidebarSize } =
-    useLayoutStore();
 
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
     id: 'unique-layout-id',
@@ -37,11 +34,6 @@ export default function ResumePage() {
       setResume(INITIAL_SAMPLE_RESUME);
     }
   }, [resume, setResume]);
-
-  const handleLayoutChange = (sizes: number[]) => {
-    if (sizes[0]) setLeftSidebarSize(sizes[0]);
-    if (sizes[1]) setRightSidebarSize(sizes[1]);
-  };
 
   if (!resume) {
     return (
@@ -56,12 +48,12 @@ export default function ResumePage() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      {/* <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-full mx-auto px-6 py-4">
           <h1 className="text-2xl font-bold text-gray-900">Resume Copilot</h1>
           <p className="text-sm text-gray-600 mt-1">从LinkedIn导入，创建专业简历</p>
         </div>
-      </header>
+      </header> */}
 
       <main className="flex-1 overflow-hidden">
         <ResizableGroup defaultLayout={defaultLayout} onLayoutChanged={onLayoutChanged}>
@@ -77,10 +69,8 @@ export default function ResumePage() {
 
           <ResizablePanel id="right" minSize={50}>
             <div className="h-full bg-gray-100">
-              <div className="h-full overflow-y-auto p-8">
-                <div className="max-w-4xl mx-auto">
-                  <ResumePreview />
-                </div>
+              <div className="h-full overflow-y-auto">
+                <ResumePreview />
               </div>
             </div>
           </ResizablePanel>

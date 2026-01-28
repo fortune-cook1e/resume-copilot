@@ -6,15 +6,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Trash2, Upload } from 'lucide-react';
+import { Download, Plus, Trash2, Upload, Loader2 } from 'lucide-react';
 import { parseLinkedInJSON } from '@/lib/linkedin-parser';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useResumeStore } from '@/stores/resume-store';
 import { Education, WorkExperience, Skill } from '@/types/resume';
+import { useRouter } from 'next/navigation';
 
 export default function ResumeEditor() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { resume, updateResume } = useResumeStore();
+  const router = useRouter();
+  const [isExporting, setIsExporting] = useState(false);
 
   if (!resume) return null;
 
@@ -143,6 +146,45 @@ export default function ResumeEditor() {
     }
   };
 
+  const handleExportPDF = async () => {
+    if (isExporting) return;
+
+    setIsExporting(true);
+
+    try {
+      const response = await fetch('/api/export-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: resume?.personalInfo.fullName || '简历',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'PDF 导出失败');
+      }
+
+      // 下载 PDF
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${resume?.personalInfo.fullName || '简历'}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('导出 PDF 失败:', error);
+      alert('导出 PDF 失败，请稍后重试');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="p-6">
       <input
@@ -155,10 +197,27 @@ export default function ResumeEditor() {
 
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold text-gray-900">编辑简历</h2>
-        <Button onClick={handleLinkedInImport} className="gap-2">
-          <Upload className="h-4 w-4" />
-          从LinkedIn导入
-        </Button>
+        <div className="space-x-2">
+          <Button onClick={handleLinkedInImport} className="gap-2" size="sm">
+            从LinkedIn导入
+          </Button>
+          <Button size="sm" onClick={() => router.push('/resume/print')}>
+            Print Page
+          </Button>
+          <Button onClick={handleExportPDF} size="sm" className="gap-2" disabled={isExporting}>
+            {isExporting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                导出中...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" />
+                导出PDF
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="personal" className="w-full">
