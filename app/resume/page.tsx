@@ -3,10 +3,11 @@
 import { useEffect } from 'react';
 import { ResizableHandle, ResizablePanel, ResizableGroup } from '@/components/ui/resizable';
 import ResumeEditor from '@/components/resume/ResumeEditor';
-import ResumePreview from '@/components/resume/ResumePreview';
+import ResumePreview from '@/components/resume/ResumeDocument';
 import { useResumeStore } from '@/stores/resume-store';
-import { INITIAL_SAMPLE_RESUME } from '@/app/resume/sample';
 import { useDefaultLayout } from 'react-resizable-panels';
+import { sampleResume } from '@/types/resume/sample';
+import ResumeBuilder from '@/components/resume/ResumeBuilder';
 
 // create a safe storage that works in SSR
 const createSafeStorage = () => {
@@ -31,7 +32,7 @@ export default function ResumePage() {
   // Initialize resume data
   useEffect(() => {
     if (!resume) {
-      setResume(INITIAL_SAMPLE_RESUME);
+      setResume(sampleResume);
     }
   }, [resume, setResume]);
 
@@ -48,16 +49,9 @@ export default function ResumePage() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
-      {/* <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-full mx-auto px-6 py-4">
-          <h1 className="text-2xl font-bold text-gray-900">Resume Copilot</h1>
-          <p className="text-sm text-gray-600 mt-1">从LinkedIn导入，创建专业简历</p>
-        </div>
-      </header> */}
-
       <main className="flex-1 overflow-hidden">
         <ResizableGroup defaultLayout={defaultLayout} onLayoutChanged={onLayoutChanged}>
-          <ResizablePanel id="left" minSize={50}>
+          <ResizablePanel id="left" minSize={400} maxSize={500}>
             <div className="h-full bg-white border-r border-gray-200">
               <div className="h-full overflow-y-auto">
                 <ResumeEditor />
@@ -67,12 +61,8 @@ export default function ResumePage() {
 
           <ResizableHandle withHandle />
 
-          <ResizablePanel id="right" minSize={50}>
-            <div className="h-full bg-gray-100">
-              <div className="h-full overflow-y-auto">
-                <ResumePreview />
-              </div>
-            </div>
+          <ResizablePanel id="right" minSize={500}>
+            <ResumeBuilder />
           </ResizablePanel>
         </ResizableGroup>
       </main>

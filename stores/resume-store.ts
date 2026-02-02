@@ -1,15 +1,15 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import type { Resume } from '@/types/resume';
+import type { ResumeData } from '@/types/resume';
 
 interface ResumeState {
-  resume: Resume | null;
+  resume: ResumeData | null;
   isReady: boolean;
 }
 
 interface ResumeActions {
-  setResume: (resume: Resume) => void;
-  updateResume: (updater: (draft: Resume) => void) => void;
+  setResume: (resume: ResumeData) => void;
+  updateResume: (updater: (draft: ResumeData) => void) => void;
   reset: () => void;
 }
 

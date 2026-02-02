@@ -2,19 +2,26 @@
 
 import { useEffect } from 'react';
 import { useResumeStore } from '@/stores/resume-store';
-import { INITIAL_SAMPLE_RESUME } from '@/app/resume/sample';
 import ResumeDocument from '@/components/resume/ResumeDocument';
+import { sampleResume } from '@/types/resume/sample';
+import Page from '@/components/resume/Page';
 
 export default function ResumePrintPage() {
   const { resume, setResume } = useResumeStore();
 
   useEffect(() => {
     if (!resume) {
-      setResume(INITIAL_SAMPLE_RESUME);
+      setResume(sampleResume);
     }
   }, [resume, setResume]);
 
   if (!resume) return null;
 
-  return <ResumeDocument resume={resume} />;
+  return (
+    <div className="bg-white mx-auto" style={{ width: '794px' }}>
+      <Page>
+        <ResumeDocument />
+      </Page>
+    </div>
+  );
 }
