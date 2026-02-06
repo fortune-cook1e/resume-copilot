@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-// Schema
 export const urlSchema = z.object({
+  icon: z.string().default('Link'),
   label: z.string(),
   link: z.literal('').or(
     z.string().url({
@@ -10,11 +10,10 @@ export const urlSchema = z.object({
   ),
 });
 
-// Type
 export type URL = z.infer<typeof urlSchema>;
 
-// Defaults
 export const defaultUrl: URL = {
+  icon: '',
   label: '',
   link: '',
 };

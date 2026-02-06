@@ -1,7 +1,8 @@
 'use client';
 
 import { useResumeStore } from '@/stores/resume-store';
-import PersonalInfo from './PersonalInfo';
+import Basics from './modules/Basics';
+import Education from './modules/Education';
 
 export default function ResumeDocument() {
   const { resume } = useResumeStore();
@@ -19,7 +20,8 @@ export default function ResumeDocument() {
   // 使用像素单位确保浏览器和 PDF 渲染一致
   return (
     <div id="resume-document" className="p-custom space-y-4">
-      <PersonalInfo />
+      <Basics />
+      <Education />
     </div>
   );
 }

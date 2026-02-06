@@ -29,6 +29,3 @@ export const defaultModules: Modules = {
     items: [],
   },
 };
-
-export * from './basics';
-export * from './education';

@@ -1,13 +1,20 @@
-import { defaultPersonalInfo, PersonalInfoSchema } from '@/types/resume';
+import { defaultModules, defaultBasics, modulesSchema, basicsSchema } from '@/types/resume';
 import { z } from 'zod';
 
+export const sectionSchema = z.object({
+  name: z.string(),
+  visible: z.boolean().default(true),
+});
+
 export const resumeDataSchema = z.object({
-  personalInfo: PersonalInfoSchema,
+  basics: basicsSchema,
+  modules: modulesSchema,
 });
 
 // default resume data
 export const defaultResumeData: ResumeData = {
-  personalInfo: defaultPersonalInfo,
+  basics: defaultBasics,
+  modules: defaultModules,
 };
 
 export type ResumeData = z.infer<typeof resumeDataSchema>;
