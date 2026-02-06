@@ -1,13 +1,7 @@
 import { z } from 'zod';
 import { defaultUrl, urlSchema } from '../common';
 
-const customFieldSchema = z.object({
-  icon: z.string().default('Link'),
-  label: z.string(),
-  link: z.literal('').or(z.string().url()),
-});
-
-export const PersonalInfoSchema = z.object({
+export const basicsSchema = z.object({
   name: z.string(),
   email: z.literal('').or(z.string().email()),
   phone: z.string(),
@@ -18,12 +12,12 @@ export const PersonalInfoSchema = z.object({
     url: z.string(),
     size: z.number().default(64),
   }),
-  customFields: z.array(customFieldSchema).default([]),
+  customFields: z.array(urlSchema).default([]),
 });
 
-export type PersonalInfo = z.infer<typeof PersonalInfoSchema>;
+export type Basics = z.infer<typeof basicsSchema>;
 
-export const defaultPersonalInfo: PersonalInfo = {
+export const defaultBasics: Basics = {
   name: '',
   email: '',
   phone: '',

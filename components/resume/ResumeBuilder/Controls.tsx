@@ -21,7 +21,7 @@ export default function Controls() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          title: resume.personalInfo.name || 'Resume',
+          title: resume.basics.name || 'Resume',
         }),
       });
 
@@ -35,7 +35,7 @@ export default function Controls() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${resume.personalInfo.name || 'Resume'}.pdf`;
+      a.download = `${resume.basics.name || 'Resume'}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

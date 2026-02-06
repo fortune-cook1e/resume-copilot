@@ -22,16 +22,16 @@ import {
   Link as LinkIcon,
 } from 'lucide-react';
 
-export default function PersonalInfoForm() {
+export default function Basics() {
   const { resume, updateResume } = useResumeStore();
 
   if (!resume) return null;
 
-  const { personalInfo } = resume;
+  const { basics } = resume;
 
   const addCustomField = () => {
     updateResume(draft => {
-      draft.personalInfo.customFields.push({
+      draft.basics.customFields.push({
         icon: 'Link',
         label: '',
         link: '',
@@ -41,13 +41,13 @@ export default function PersonalInfoForm() {
 
   const removeCustomField = (index: number) => {
     updateResume(draft => {
-      draft.personalInfo.customFields.splice(index, 1);
+      draft.basics.customFields.splice(index, 1);
     });
   };
 
   const updateCustomField = (index: number, field: 'icon' | 'label' | 'link', value: string) => {
     updateResume(draft => {
-      draft.personalInfo.customFields[index][field] = value;
+      draft.basics.customFields[index][field] = value;
     });
   };
 
@@ -71,9 +71,9 @@ export default function PersonalInfoForm() {
       <div className="space-y-2">
         <Label htmlFor="picture-url">Picture</Label>
         <div className="flex items-center gap-4">
-          {personalInfo.picture.url && (
+          {basics.picture.url && (
             <img
-              src={personalInfo.picture.url}
+              src={basics.picture.url}
               alt="Avatar"
               className="w-16 h-16 rounded-full object-cover"
             />
@@ -81,10 +81,10 @@ export default function PersonalInfoForm() {
           <Input
             id="picture-url"
             type="url"
-            value={personalInfo.picture.url}
+            value={basics.picture.url}
             onChange={e =>
               updateResume(draft => {
-                draft.personalInfo.picture.url = e.target.value;
+                draft.basics.picture.url = e.target.value;
               })
             }
             placeholder="https://example.com/avatar.jpg"
@@ -98,10 +98,10 @@ export default function PersonalInfoForm() {
         <Label htmlFor="name">Full Name</Label>
         <Input
           id="name"
-          value={personalInfo.name}
+          value={basics.name}
           onChange={e =>
             updateResume(draft => {
-              draft.personalInfo.name = e.target.value;
+              draft.basics.name = e.target.value;
             })
           }
           placeholder="John Doe"
@@ -113,10 +113,10 @@ export default function PersonalInfoForm() {
         <Label htmlFor="headline">Headline</Label>
         <Textarea
           id="headline"
-          value={personalInfo.headline}
+          value={basics.headline}
           onChange={e =>
             updateResume(draft => {
-              draft.personalInfo.headline = e.target.value;
+              draft.basics.headline = e.target.value;
             })
           }
           placeholder="Brief description of your professional background..."
@@ -131,10 +131,10 @@ export default function PersonalInfoForm() {
           <Input
             id="email"
             type="email"
-            value={personalInfo.email}
+            value={basics.email}
             onChange={e =>
               updateResume(draft => {
-                draft.personalInfo.email = e.target.value;
+                draft.basics.email = e.target.value;
               })
             }
             placeholder="john@example.com"
@@ -146,10 +146,10 @@ export default function PersonalInfoForm() {
             <Input
               id="website"
               type="url"
-              value={personalInfo.website.link}
+              value={basics.website.link}
               onChange={e =>
                 updateResume(draft => {
-                  draft.personalInfo.website.link = e.target.value;
+                  draft.basics.website.link = e.target.value;
                 })
               }
               placeholder="https://example.com"
@@ -170,10 +170,10 @@ export default function PersonalInfoForm() {
                   <Input
                     id="website-label"
                     placeholder="Label (e.g., Portfolio)"
-                    value={personalInfo.website.label}
+                    value={basics.website.label}
                     onChange={e =>
                       updateResume(draft => {
-                        draft.personalInfo.website.label = e.target.value;
+                        draft.basics.website.label = e.target.value;
                       })
                     }
                   />
@@ -190,10 +190,10 @@ export default function PersonalInfoForm() {
           <Label htmlFor="phone">Phone</Label>
           <Input
             id="phone"
-            value={personalInfo.phone}
+            value={basics.phone}
             onChange={e =>
               updateResume(draft => {
-                draft.personalInfo.phone = e.target.value;
+                draft.basics.phone = e.target.value;
               })
             }
             placeholder="+1 234 567 8900"
@@ -203,10 +203,10 @@ export default function PersonalInfoForm() {
           <Label htmlFor="location">Location</Label>
           <Input
             id="location"
-            value={personalInfo.location}
+            value={basics.location}
             onChange={e =>
               updateResume(draft => {
-                draft.personalInfo.location = e.target.value;
+                draft.basics.location = e.target.value;
               })
             }
             placeholder="San Francisco, CA"
@@ -215,7 +215,7 @@ export default function PersonalInfoForm() {
       </div>
 
       {/* Custom Fields */}
-      {personalInfo.customFields.map((field, index) => {
+      {basics.customFields.map((field, index) => {
         const IconComponent = commonIcons.find(i => i.name === field.icon)?.component || LinkIcon;
 
         return (

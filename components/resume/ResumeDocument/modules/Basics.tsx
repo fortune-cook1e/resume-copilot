@@ -13,16 +13,16 @@ import {
   Link as LinkIcon,
 } from 'lucide-react';
 
-const PersonalInfo = () => {
+const Basics = () => {
   const { resume } = useResumeStore();
 
   if (!resume) return null;
 
   const {
-    personalInfo: { name, headline, location, phone, email, website, picture, customFields },
+    basics: { name, headline, location, phone, email, website, picture, customFields },
   } = resume;
 
-  const iconMap: Record<string, any> = {
+  const iconMap: Record<string, React.FC<React.SVGProps<SVGSVGElement>>> = {
     Link: LinkIcon,
     Github: Github,
     Linkedin: Linkedin,
@@ -102,4 +102,4 @@ const PersonalInfo = () => {
   );
 };
 
-export default PersonalInfo;
+export default Basics;

@@ -3,7 +3,7 @@ import { useRef } from 'react';
 
 import { useResumeStore } from '@/stores/resume-store';
 import ResumeDocument from '../ResumeDocument';
-import Controls from '@/components/resume/ResumeDocument/Controls';
+import Controls from '@/components/resume/ResumeBuilder/Controls';
 import Page from '@/components/resume/Page';
 import {
   TransformWrapper,
