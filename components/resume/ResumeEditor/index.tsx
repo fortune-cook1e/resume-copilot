@@ -2,8 +2,9 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useResumeStore } from '@/stores/resume-store';
-import Basics from './Basics';
-import Education from './Education';
+import Basics from './modules/Basics';
+import Education from './modules/Education';
+import Experience from './modules/Experience';
 
 export default function ResumeEditor() {
   const { resume } = useResumeStore();
@@ -32,7 +33,7 @@ export default function ResumeEditor() {
           <Education />
         </TabsContent>
         <TabsContent value="experience" className="mt-4">
-          {/* Experience form component goes here */}
+          <Experience />
         </TabsContent>
         <TabsContent value="skills" className="mt-4">
           {/* Skills form component goes here */}

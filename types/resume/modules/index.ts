@@ -1,3 +1,4 @@
+import { experienceSchema } from '@/types/resume';
 import { educationSchema } from './education';
 import z from 'zod';
 
@@ -10,6 +11,10 @@ export const modulesSchema = z.object({
   education: moduleSchema.extend({
     id: z.literal('education'),
     items: z.array(educationSchema),
+  }),
+  experience: moduleSchema.extend({
+    id: z.literal('experience'),
+    items: z.array(experienceSchema),
   }),
 });
 
@@ -28,7 +33,14 @@ export const defaultModules: Modules = {
     visible: true,
     items: [],
   },
+  experience: {
+    ...defaultModule,
+    id: 'experience',
+    visible: true,
+    items: [],
+  },
 };
 
 export * from './basics';
 export * from './education';
+export * from './experience';

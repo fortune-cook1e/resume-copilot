@@ -5,17 +5,12 @@ import { useResumeStore } from '@/stores/resume-store';
 import { defaultEducation, type Education as EducationType } from '@/types/resume';
 import { createId } from '@paralleldrive/cuid2';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { GripVertical, Plus, Eye, EyeOff, Pencil, Trash2 } from 'lucide-react';
+import ModuleItemList from '../components/ModuleItemList';
+import RichTextEditor from '../components/RichTextEditor';
+import { Plus } from 'lucide-react';
 
 export default function Education() {
   const { resume, updateResume } = useResumeStore();
@@ -71,6 +66,17 @@ export default function Education() {
     });
   };
 
+  const handleReorder = (sourceId: string, targetId: string) => {
+    updateResume(draft => {
+      const items = draft.modules.education.items;
+      const fromIndex = items.findIndex(item => item.id === sourceId);
+      const toIndex = items.findIndex(item => item.id === targetId);
+      if (fromIndex < 0 || toIndex < 0) return;
+      const [moved] = items.splice(fromIndex, 1);
+      items.splice(toIndex, 0, moved);
+    });
+  };
+
   const updateField = (field: keyof EducationType, value: string) => {
     if (editingItem) {
       setEditingItem({ ...editingItem, [field]: value });
@@ -79,80 +85,15 @@ export default function Education() {
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        {education.items.map(item => (
-          <div
-            key={item.id}
-            className="group relative border rounded-lg p-4 hover:shadow-sm transition-shadow bg-white"
-          >
-            <div className="flex items-start gap-3">
-              <div className="mt-1 cursor-grab text-gray-400 hover:text-gray-600">
-                <GripVertical className="h-5 w-5" />
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-gray-900 truncate">
-                  {item.university || 'Untitled'}
-                </div>
-                <div className="text-sm text-gray-500 truncate">{item.major}</div>
-              </div>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <span className="sr-only">Open menu</span>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <circle cx="12" cy="12" r="1" />
-                      <circle cx="12" cy="5" r="1" />
-                      <circle cx="12" cy="19" r="1" />
-                    </svg>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => toggleVisibility(item.id)}>
-                    {item.visible ? (
-                      <>
-                        <EyeOff className="mr-2 h-4 w-4" />
-                        <span>Hide</span>
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="mr-2 h-4 w-4" />
-                        <span>Show</span>
-                      </>
-                    )}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleEdit(item)}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    <span>Edit</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handleRemove(item.id)}
-                    className="text-red-600 focus:text-red-600"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    <span>Remove</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        ))}
-      </div>
+      <ModuleItemList
+        items={education.items}
+        getTitle={item => item.university || 'Untitled'}
+        getSubtitle={item => item.major}
+        onToggleVisibility={toggleVisibility}
+        onEdit={handleEdit}
+        onRemove={handleRemove}
+        onReorder={handleReorder}
+      />
 
       <Button onClick={addNewItem} variant="outline" className="w-full" size="lg">
         <Plus className="mr-2 h-4 w-4" />
@@ -211,12 +152,10 @@ export default function Education() {
 
             <div className="space-y-2">
               <Label htmlFor="summary">Summary</Label>
-              <Textarea
-                id="summary"
+              <RichTextEditor
                 value={editingItem?.summary || ''}
-                onChange={e => updateField('summary', e.target.value)}
+                onChange={value => updateField('summary', value)}
                 placeholder="Describe your achievements, awards, or relevant coursework..."
-                rows={4}
               />
             </div>
           </div>

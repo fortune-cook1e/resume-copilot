@@ -3,6 +3,7 @@
 import { useResumeStore } from '@/stores/resume-store';
 import Basics from './modules/Basics';
 import Education from './modules/Education';
+import Experience from './modules/Experience';
 
 export default function ResumeDocument() {
   const { resume } = useResumeStore();
@@ -22,6 +23,7 @@ export default function ResumeDocument() {
     <div id="resume-document" className="p-custom space-y-4">
       <Basics />
       <Education />
+      <Experience />
     </div>
   );
 }
