@@ -17,10 +17,36 @@ export async function POST(request: NextRequest) {
 
     if (isVercel) {
       // Vercel/Lambda 环境：使用 puppeteer-core + @sparticuz/chromium
+      const chromiumConfig = chromium as unknown as {
+        setHeadlessMode?: boolean;
+        setGraphicsMode?: boolean;
+        defaultViewport?: { width: number; height: number; deviceScaleFactor?: number } | null;
+        headless?: boolean;
+      };
+
+      if (chromiumConfig.setHeadlessMode !== undefined) {
+        chromiumConfig.setHeadlessMode = true;
+      }
+
+      if (chromiumConfig.setGraphicsMode !== undefined) {
+        chromiumConfig.setGraphicsMode = false;
+      }
+
       browser = await puppeteerCore.launch({
-        args: chromium.args,
+        args: [
+          ...chromium.args,
+          '--disable-gpu',
+          '--disable-dev-shm-usage',
+          '--disable-setuid-sandbox',
+          '--no-first-run',
+          '--no-sandbox',
+          '--no-zygote',
+          '--single-process',
+        ],
+        defaultViewport:
+          chromiumConfig.defaultViewport ?? { width: 794, height: 1123, deviceScaleFactor: 1 },
         executablePath: await chromium.executablePath(),
-        headless: true,
+        headless: chromiumConfig.headless ?? true,
       });
     } else {
       // 本地开发环境：使用 puppeteer 自带的 Chromium

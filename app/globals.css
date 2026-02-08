@@ -139,6 +139,7 @@
 /* print styles */
 @media print {
   @page {
+    /* 210mm x 297mm */
     size: A4;
     margin: 0;
   }
