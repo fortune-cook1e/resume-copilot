@@ -58,7 +58,7 @@ export const sampleResume: ResumeData = {
           date: 'Jul 2018 - Aug 2025',
           visible: true,
           summary:
-            '• Developed and maintained the user interface for Google Search, serving over 1 billion users worldwide.\n• Collaborated with cross-functional teams to design and implement new features, resulting in a 15% increase in user engagement.\n• Optimized front-end performance, reducing page load times by 30% and improving overall user experience.',
+            '-   Developed and maintained the user interface for Google Search, serving over 1 billion users worldwide.\n    \n-   Collaborated with cross-functional teams to design and implement new features, resulting in a 15% increase in user engagement.\n    \n-   Optimized front-end performance, reducing page load times by 30% and improving overall user experience.',
         },
         {
           id: 'experience-item-2',
@@ -68,7 +68,7 @@ export const sampleResume: ResumeData = {
           date: 'Jun 2016 - Aug 2016',
           visible: true,
           summary:
-            '• Contributed to the development of Facebook’s main web application, enhancing the news feed and user profile features.\n• Implemented responsive design techniques to ensure a seamless experience across desktop and mobile devices.\n• Participated in code reviews and collaborated with designers to create intuitive user interfaces.',
+            '-   Contributed to the development of Facebook’s main web application, enhancing the news feed and user profile features.\n    \n-   Implemented responsive design techniques to ensure a seamless experience across desktop and mobile devices.\n    \n-   Participated in code reviews and collaborated with designers to create intuitive user interfaces.',
         },
         {
           id: 'experience-item-3',
@@ -78,7 +78,7 @@ export const sampleResume: ResumeData = {
           date: 'Jun 2015 - Aug 2015',
           visible: true,
           summary:
-            '• Assisted in the development of a single-page application using React and Redux, contributing to both front-end and back-end code.\n• Worked closely with the design team to implement pixel-perfect UI components and improve the overall user experience.\n• Gained valuable experience in an agile development environment, participating in daily stand-ups and sprint planning sessions.',
+            '-   Assisted in the development of a single-page application using React and Redux, contributing to both front-end and back-end code.\n    \n-   Worked closely with the design team to implement pixel-perfect UI components and improve the overall user experience.\n    \n-   Gained valuable experience in an agile development environment, participating in daily stand-ups and sprint planning sessions.',
         },
       ],
     },

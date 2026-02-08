@@ -33,6 +33,8 @@ export default function Experience() {
   const handleSave = () => {
     if (!editingItem) return;
 
+    console.log({ editingItem });
+
     updateResume(draft => {
       const index = draft.modules.experience.items.findIndex(item => item.id === editingItem.id);
       if (index >= 0) {
