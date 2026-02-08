@@ -33,26 +33,16 @@ export default function ResumeEditor() {
 
   return (
     <div className="p-6 space-y-8">
-      {/* <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900">Edit Resume</h2>
-      </div> */}
-
       <section className="space-y-4">
         <div className="text-lg font-semibold text-gray-900">Basics</div>
         <Basics />
       </section>
 
-      <section className="space-y-4">
-        <Education />
-      </section>
+      <Education />
 
-      <section className="space-y-4">
-        <Experience />
-      </section>
+      <Projects />
 
-      <section className="space-y-4">
-        <Projects />
-      </section>
+      <Experience />
 
       <section className="space-y-4">
         <div className="flex items-center justify-between">

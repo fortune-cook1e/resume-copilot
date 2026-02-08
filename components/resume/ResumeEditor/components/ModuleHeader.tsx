@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Eye, EyeOff, Pencil, Check } from 'lucide-react';
+import { Eye, EyeOff, Pencil, Check, Trash2 } from 'lucide-react';
 import { useResumeStore } from '@/stores/resume-store';
 import type { Modules } from '@/types/resume';
 
@@ -39,6 +39,16 @@ export default function ModuleHeader({ moduleId, canEditName = true }: ModuleHea
   const toggleVisibility = () => {
     updateResume(draft => {
       draft.modules[moduleId].visible = !draft.modules[moduleId].visible;
+    });
+  };
+
+  const isCustomModule = typeof moduleId === 'string' && moduleId.startsWith('custom-');
+
+  const deleteModule = () => {
+    if (!isCustomModule) return;
+    if (!window.confirm('Delete this custom module? This cannot be undone.')) return;
+    updateResume(draft => {
+      delete draft.modules[moduleId];
     });
   };
 
@@ -80,15 +90,28 @@ export default function ModuleHeader({ moduleId, canEditName = true }: ModuleHea
         )}
       </div>
 
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        onClick={toggleVisibility}
-        title={module.visible ? 'Hide module' : 'Show module'}
-      >
-        {module.visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-      </Button>
+      <div className="flex items-center gap-1">
+        {isCustomModule && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={deleteModule}
+            title="Delete module"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={toggleVisibility}
+          title={module.visible ? 'Hide module' : 'Show module'}
+        >
+          {module.visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </Button>
+      </div>
     </div>
   );
 }

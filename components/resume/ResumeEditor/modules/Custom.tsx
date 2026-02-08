@@ -13,9 +13,10 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import ModuleHeader from '../components/ModuleHeader';
 import ModuleItemList from '../components/ModuleItemList';
 import RichTextEditor from '../components/RichTextEditor';
-import { Eye, EyeOff, Pencil, Check, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 interface CustomProps {
   moduleId: CustomModuleId;
@@ -25,8 +26,6 @@ export default function Custom({ moduleId }: CustomProps) {
   const { resume, updateResume } = useResumeStore();
   const [editingItem, setEditingItem] = useState<CustomType | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [draftName, setDraftName] = useState('');
 
   if (!resume) return null;
 
@@ -97,30 +96,6 @@ export default function Custom({ moduleId }: CustomProps) {
     });
   };
 
-  const startEditingName = () => {
-    setDraftName(module.name || '');
-    setIsEditingName(true);
-  };
-
-  const finishEditingName = () => {
-    const nextName = draftName.trim();
-    updateResume(draft => {
-      const targetModule = draft.modules[moduleId] as CustomModule | undefined;
-      if (!targetModule) return;
-      if (!nextName) return;
-      targetModule.name = nextName;
-    });
-    setIsEditingName(false);
-  };
-
-  const toggleModuleVisibility = () => {
-    updateResume(draft => {
-      const targetModule = draft.modules[moduleId] as CustomModule | undefined;
-      if (!targetModule) return;
-      targetModule.visible = !targetModule.visible;
-    });
-  };
-
   const updateField = (field: keyof CustomType, value: string) => {
     if (editingItem) {
       setEditingItem({ ...editingItem, [field]: value });
@@ -141,51 +116,7 @@ export default function Custom({ moduleId }: CustomProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          {isEditingName ? (
-            <Input
-              value={draftName}
-              onChange={event => setDraftName(event.target.value)}
-              onBlur={finishEditingName}
-              onKeyDown={event => {
-                if (event.key === 'Enter') {
-                  event.preventDefault();
-                  finishEditingName();
-                }
-                if (event.key === 'Escape') {
-                  event.preventDefault();
-                  setIsEditingName(false);
-                }
-              }}
-              className="h-8 w-48"
-              autoFocus
-            />
-          ) : (
-            <h3 className="text-lg font-semibold text-gray-900">{module.name}</h3>
-          )}
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={isEditingName ? finishEditingName : startEditingName}
-            title={isEditingName ? 'Save name' : 'Edit name'}
-          >
-            {isEditingName ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-          </Button>
-        </div>
-
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={toggleModuleVisibility}
-          title={module.visible ? 'Hide module' : 'Show module'}
-        >
-          {module.visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-        </Button>
-      </div>
+      <ModuleHeader moduleId={moduleId} />
 
       <ModuleItemList
         items={module.items}

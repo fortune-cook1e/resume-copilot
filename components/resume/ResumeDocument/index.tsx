@@ -18,8 +18,8 @@ export default function ResumeDocument() {
     <div id="resume-document" className="p-custom space-y-4">
       <Basics />
       <Education />
-      <Experience />
       <Projects />
+      <Experience />
       {Object.keys(resume.modules)
         .filter(isCustomModuleId)
         .map(key => (
