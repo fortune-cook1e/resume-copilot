@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     // 等待内容加载完成
     await page.waitForFunction(
       () => document.querySelector('#resume-document')?.getAttribute('data-ready') === 'true',
-      { timeout: 20000 },
+      { timeout: 1 * 60 * 1000 }, // max 1 minute
     );
 
     // 生成 PDF
