@@ -82,5 +82,41 @@ export const sampleResume: ResumeData = {
         },
       ],
     },
+
+    projects: {
+      name: 'Projects',
+      visible: true,
+      id: 'projects',
+      items: [
+        {
+          id: 'project-item-1',
+          name: 'Personal Portfolio Website',
+          description: 'A responsive portfolio website ',
+          date: '2023',
+          visible: true,
+          website: {
+            icon: 'Github',
+            label: 'Github',
+            link: 'https://johndoe.me/',
+          },
+          summary:
+            '-   Developed a personal portfolio website using React and Tailwind CSS to showcase projects and experience.\n    \n-   Implemented responsive design principles to ensure the website looks great on all devices, resulting in a 20% increase in mobile traffic.\n    \n-   Integrated a contact form with email notifications, allowing potential employers and collaborators to easily get in touch.',
+        },
+        {
+          id: 'project-item-2',
+          name: 'Open Source Contribution',
+          description: 'Contributed to the React library on GitHub',
+          date: '2022',
+          visible: true,
+          website: {
+            icon: 'Github',
+            label: 'Github',
+            link: 'https://github.com/facebook/react',
+          },
+          summary:
+            '-   Contributed to the React library by fixing bugs and improving documentation, resulting in a more robust and user-friendly framework.\n    \n-   Collaborated with maintainers and other contributors to review code changes and ensure high-quality contributions.\n    \n-   Gained recognition from the open-source community for consistent and impactful contributions.',
+        },
+      ],
+    },
   },
 };

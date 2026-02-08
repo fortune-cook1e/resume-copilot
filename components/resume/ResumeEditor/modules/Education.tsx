@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import ModuleItemList from '../components/ModuleItemList';
 import RichTextEditor from '../components/RichTextEditor';
+import ModuleHeader from '../components/ModuleHeader';
 import { Plus } from 'lucide-react';
 
 export default function Education() {
@@ -85,6 +86,7 @@ export default function Education() {
 
   return (
     <div className="space-y-4">
+      <ModuleHeader moduleId="education" />
       <ModuleItemList
         items={education.items}
         getTitle={item => item.university || 'Untitled'}

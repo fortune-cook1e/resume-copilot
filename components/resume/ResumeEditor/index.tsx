@@ -1,47 +1,87 @@
 'use client';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { useResumeStore } from '@/stores/resume-store';
 import Basics from './modules/Basics';
 import Education from './modules/Education';
 import Experience from './modules/Experience';
+import Projects from './modules/Projects';
+import Custom from './modules/Custom';
+import type { CustomModule, CustomModuleId } from '@/types/resume';
 
 export default function ResumeEditor() {
-  const { resume } = useResumeStore();
+  const { resume, updateResume } = useResumeStore();
 
   if (!resume) return null;
 
+  const isCustomModuleId = (key: string): key is CustomModuleId => key.startsWith('custom-');
+
+  const activateCustomModule = () => {
+    const existingCustom = Object.keys(resume.modules).filter(isCustomModuleId);
+    const nextIndex = existingCustom.length + 1;
+    const moduleId = `custom-${nextIndex}` as CustomModuleId;
+    const nextName = moduleId;
+    updateResume(draft => {
+      draft.modules[moduleId] = {
+        id: moduleId,
+        name: nextName,
+        visible: true,
+        items: [],
+      } as CustomModule;
+    });
+  };
+
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-6 space-y-8">
+      {/* <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900">Edit Resume</h2>
-      </div>
+      </div> */}
 
-      <Tabs defaultValue="basics" className="w-full">
-        <TabsList>
-          <TabsTrigger value="basics">Basics</TabsTrigger>
-          <TabsTrigger value="education">Education</TabsTrigger>
-          <TabsTrigger value="experience">Experience</TabsTrigger>
-          <TabsTrigger value="skills">Skills</TabsTrigger>
-          <TabsTrigger value="projects">Projects</TabsTrigger>
-        </TabsList>
+      <section className="space-y-4">
+        <div className="text-lg font-semibold text-gray-900">Basics</div>
+        <Basics />
+      </section>
 
-        <TabsContent value="basics" className="mt-4">
-          <Basics />
-        </TabsContent>
-        <TabsContent value="education" className="mt-4">
-          <Education />
-        </TabsContent>
-        <TabsContent value="experience" className="mt-4">
-          <Experience />
-        </TabsContent>
-        <TabsContent value="skills" className="mt-4">
-          {/* Skills form component goes here */}
-        </TabsContent>
-        <TabsContent value="projects" className="mt-4">
-          {/* Projects form component goes here */}
-        </TabsContent>
-      </Tabs>
+      <section className="space-y-4">
+        <Education />
+      </section>
+
+      <section className="space-y-4">
+        <Experience />
+      </section>
+
+      <section className="space-y-4">
+        <Projects />
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="text-lg font-semibold text-gray-900">Custom Module</div>
+          <Button type="button" variant="outline" size="sm" onClick={activateCustomModule}>
+            Add Custom Module
+          </Button>
+        </div>
+        {Object.keys(resume.modules).some(isCustomModuleId) ? (
+          <div className="space-y-6">
+            {Object.keys(resume.modules)
+              .filter(isCustomModuleId)
+              .map(key => (
+                <Custom key={key} moduleId={key} />
+              ))}
+          </div>
+        ) : (
+          <div className="rounded-lg border border-dashed p-6 text-sm text-gray-500">
+            Add a custom module to include additional sections.
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-4">
+        <div className="text-lg font-semibold text-gray-900">Skills</div>
+        <div className="rounded-lg border border-dashed p-6 text-sm text-gray-500">
+          Skills module is coming soon.
+        </div>
+      </section>
     </div>
   );
 }

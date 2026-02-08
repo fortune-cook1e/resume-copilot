@@ -1,4 +1,10 @@
-import { defaultModules, defaultBasics, modulesSchema, basicsSchema } from '@/types/resume';
+import {
+  defaultModules,
+  defaultBasics,
+  modulesSchema,
+  basicsSchema,
+  type Modules,
+} from '@/types/resume';
 import { z } from 'zod';
 
 export const sectionSchema = z.object({
@@ -12,12 +18,14 @@ export const resumeDataSchema = z.object({
 });
 
 // default resume data
-export const defaultResumeData: ResumeData = {
+export const defaultResumeData = {
   basics: defaultBasics,
   modules: defaultModules,
-};
+} satisfies z.infer<typeof resumeDataSchema>;
 
-export type ResumeData = z.infer<typeof resumeDataSchema>;
+export type ResumeData = Omit<z.infer<typeof resumeDataSchema>, 'modules'> & {
+  modules: Modules;
+};
 
 export const resumeSchema = z.object({
   id: z.string(),
@@ -29,4 +37,6 @@ export const resumeSchema = z.object({
   updatedAt: z.date().or(z.string()),
 });
 
-export type Resume = z.infer<typeof resumeSchema>;
+export type Resume = Omit<z.infer<typeof resumeSchema>, 'data'> & {
+  data: ResumeData;
+};

@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import ModuleItemList from '../components/ModuleItemList';
 import RichTextEditor from '../components/RichTextEditor';
+import ModuleHeader from '../components/ModuleHeader';
 import { Plus } from 'lucide-react';
 
 export default function Experience() {
@@ -32,8 +33,6 @@ export default function Experience() {
 
   const handleSave = () => {
     if (!editingItem) return;
-
-    console.log({ editingItem });
 
     updateResume(draft => {
       const index = draft.modules.experience.items.findIndex(item => item.id === editingItem.id);
@@ -89,6 +88,7 @@ export default function Experience() {
 
   return (
     <div className="space-y-4">
+      <ModuleHeader moduleId="experience" />
       <ModuleItemList
         items={experience.items}
         getTitle={item => item.company || 'Untitled'}
