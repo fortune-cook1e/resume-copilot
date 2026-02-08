@@ -69,14 +69,14 @@ export async function POST(request: NextRequest) {
 
     // 直接访问打印页面
     await page.goto(`${baseUrl}/resume/print`, {
-      waitUntil: 'networkidle0',
-      timeout: 30000,
+      waitUntil: 'domcontentloaded',
+      timeout: 15000,
     });
 
-    // 等待内容加载完成
+    // 等待内容加载完成（限制在 Vercel 30s 以内）
     await page.waitForFunction(
       () => document.querySelector('#resume-document')?.getAttribute('data-ready') === 'true',
-      { timeout: 1 * 60 * 1000 }, // max 1 minute
+      { timeout: 15000 },
     );
 
     // 生成 PDF
