@@ -10,12 +10,14 @@ import type { CustomModuleId } from '@/types/resume';
 
 export default function ResumeDocument() {
   const { resume } = useResumeStore();
-  if (!resume) return null;
+  if (!resume) {
+    return <div id="resume-document" data-ready="false" className="p-custom" />;
+  }
 
   const isCustomModuleId = (key: string): key is CustomModuleId => key.startsWith('custom-');
 
   return (
-    <div id="resume-document" className="p-custom space-y-4">
+    <div id="resume-document" data-ready="true" className="p-custom space-y-4">
       <Basics />
       <Education />
       <Projects />

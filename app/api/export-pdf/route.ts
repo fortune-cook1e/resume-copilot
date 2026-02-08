@@ -43,8 +43,11 @@ export async function POST(request: NextRequest) {
           '--no-zygote',
           '--single-process',
         ],
-        defaultViewport:
-          chromiumConfig.defaultViewport ?? { width: 794, height: 1123, deviceScaleFactor: 1 },
+        defaultViewport: chromiumConfig.defaultViewport ?? {
+          width: 794,
+          height: 1123,
+          deviceScaleFactor: 1,
+        },
         executablePath: await chromium.executablePath(),
         headless: chromiumConfig.headless ?? true,
       });
@@ -71,7 +74,10 @@ export async function POST(request: NextRequest) {
     });
 
     // 等待内容加载完成
-    await page.waitForSelector('#resume-document', { timeout: 10000 });
+    await page.waitForFunction(
+      () => document.querySelector('#resume-document')?.getAttribute('data-ready') === 'true',
+      { timeout: 20000 },
+    );
 
     // 生成 PDF
     const pdfBuffer = await page.pdf({
