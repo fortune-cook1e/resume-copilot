@@ -127,6 +127,9 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
   }
   body {
     @apply bg-background text-foreground;
@@ -148,6 +151,17 @@
     padding: 0;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
+  }
+
+  #page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0;
+    box-shadow: none !important;
+  }
+
+  .page-break-guide {
+    display: none !important;
   }
 
   .print\:hidden {

@@ -10,7 +10,6 @@ import {
   TransformComponent,
   ReactZoomPanPinchContentRef,
 } from 'react-zoom-pan-pinch';
-import { MM_TO_PX, PAGE_SIZE_MAP } from '@/constants';
 
 export default function ResumeBuilder() {
   const { resume } = useResumeStore();
@@ -30,7 +29,6 @@ export default function ResumeBuilder() {
       <TransformComponent
         wrapperClass="!w-screen !h-screen"
         contentClass="grid items-start justify-center space-x-12 pointer-events-none"
-        contentStyle={{ width: `${PAGE_SIZE_MAP.a4.width * MM_TO_PX + 42}px` }}
       >
         <Page mode="builder">
           <ResumeDocument />
