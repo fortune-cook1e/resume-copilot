@@ -5,6 +5,7 @@ import Basics from './modules/Basics';
 import Education from './modules/Education';
 import Experience from './modules/Experience';
 import Projects from './modules/Projects';
+import Skills from './modules/Skills';
 import Custom from './modules/Custom';
 import type { CustomModuleId } from '@/types/resume';
 
@@ -21,6 +22,7 @@ export default function ResumeDocument() {
       <Basics />
       <Education />
       <Projects />
+      <Skills />
       <Experience />
       {Object.keys(resume.modules)
         .filter(isCustomModuleId)

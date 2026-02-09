@@ -118,5 +118,27 @@ export const sampleResume: ResumeData = {
         },
       ],
     },
+
+    skills: {
+      name: 'Skills',
+      visible: true,
+      id: 'skills',
+      items: [
+        {
+          id: 'skill-item-1',
+          name: 'Web',
+          level: 'Expert',
+          keywords: ['React', 'Vue', 'Angular', 'HTML', 'CSS', 'JavaScript'],
+          visible: true,
+        },
+        {
+          id: 'skill-item-2',
+          name: 'Mobile',
+          level: 'Advanced',
+          keywords: ['React Native', 'Flutter', 'Swift', 'Kotlin'],
+          visible: true,
+        },
+      ],
+    },
   },
 };

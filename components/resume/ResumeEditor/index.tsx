@@ -7,6 +7,7 @@ import Education from './modules/Education';
 import Experience from './modules/Experience';
 import Projects from './modules/Projects';
 import Custom from './modules/Custom';
+import Skills from './modules/Skills';
 import type { CustomModule, CustomModuleId } from '@/types/resume';
 
 export default function ResumeEditor() {
@@ -66,12 +67,7 @@ export default function ResumeEditor() {
         )}
       </section>
 
-      <section className="space-y-4">
-        <div className="text-lg font-semibold text-gray-900">Skills</div>
-        <div className="rounded-lg border border-dashed p-6 text-sm text-gray-500">
-          Skills module is coming soon.
-        </div>
-      </section>
+      <Skills />
     </div>
   );
 }

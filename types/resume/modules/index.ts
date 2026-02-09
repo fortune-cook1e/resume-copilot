@@ -3,6 +3,7 @@ import {
   educationSchema,
   projectsSchema,
   customModuleSchema,
+  skillsSchema,
   type CustomModule,
 } from '@/types/resume/modules';
 import z from 'zod';
@@ -26,6 +27,11 @@ export const builtInModulesSchema = z.object({
   projects: moduleSchema.extend({
     id: z.literal('projects'),
     items: z.array(projectsSchema),
+  }),
+
+  skills: moduleSchema.extend({
+    id: z.literal('skills'),
+    items: z.array(skillsSchema),
   }),
 });
 
@@ -59,6 +65,13 @@ export const defaultModules: Modules = {
     visible: true,
     items: [],
   },
+
+  skills: {
+    ...defaultModule,
+    id: 'skills',
+    visible: true,
+    items: [],
+  },
 };
 
 export * from './basics';
@@ -66,3 +79,4 @@ export * from './education';
 export * from './experience';
 export * from './projects';
 export * from './custom';
+export * from './skills';
