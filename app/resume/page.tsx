@@ -8,6 +8,7 @@ import { useResumeStore } from '@/stores/resume-store';
 import { useDefaultLayout } from 'react-resizable-panels';
 import { sampleResume } from '@/types/resume/sample';
 import ResumeBuilder from '@/components/resume/ResumeBuilder';
+import { useSession } from '@/lib/auth-client';
 
 // create a safe storage that works in SSR
 const createSafeStorage = () => {
@@ -23,6 +24,8 @@ const createSafeStorage = () => {
 
 export default function ResumePage() {
   const { resume, setResume } = useResumeStore();
+  const { data: session } = useSession();
+  const { user } = session || {};
 
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
     id: 'unique-layout-id',
