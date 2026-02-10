@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     const isVercel = process.env.VERCEL === '1';
 
     // 获取基础 URL
-    const baseUrl = isVercel ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
+    const baseUrl = isVercel ? `https://${process.env.BETTER_AUTH_URL}` : 'http://localhost:3000';
 
     let browser;
 
