@@ -53,9 +53,7 @@ docker-compose*.yml
 README.md
 docs
 
-# Database
-drizzle
-*.sql
+# Database - only exclude db files, keep drizzle migrations
 *.db
 
 # Test
