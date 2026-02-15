@@ -38,8 +38,6 @@ jobs:
           tags: |
             ${{ secrets.ALIYUN_REGISTRY }}/resume-copilot:latest
             ${{ secrets.ALIYUN_REGISTRY }}/resume-copilot:${{ github.sha }}
-          cache-from: type=registry,ref=${{ secrets.ALIYUN_REGISTRY }}/resume-copilot:buildcache
-          cache-to: type=registry,ref=${{ secrets.ALIYUN_REGISTRY }}/resume-copilot:buildcache,mode=max
 
       # 5. Deploy to Aliyun Server
       - name: Deploy to Aliyun Server
