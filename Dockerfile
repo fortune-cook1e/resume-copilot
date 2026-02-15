@@ -86,10 +86,12 @@ COPY --from=builder /app/tsconfig.json ./tsconfig.json
 COPY --from=builder /app/package.json ./package.json
 
 # Copy drizzle-kit and dependencies from builder (for migrations)
+COPY --from=builder /app/node_modules/.bin ./node_modules/.bin
 COPY --from=builder /app/node_modules/drizzle-kit ./node_modules/drizzle-kit
 COPY --from=builder /app/node_modules/drizzle-orm ./node_modules/drizzle-orm
 COPY --from=builder /app/node_modules/postgres ./node_modules/postgres
 COPY --from=builder /app/node_modules/dotenv ./node_modules/dotenv
+COPY --from=builder /app/node_modules/.pnpm ./node_modules/.pnpm
 
 # Copy types directory (needed for schema imports)
 COPY --from=builder /app/types ./types
