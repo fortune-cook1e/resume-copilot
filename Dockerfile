@@ -80,6 +80,7 @@ COPY --from=builder /app/.next/static ./.next/static
 
 # Copy database schema and config for migrations
 COPY --from=builder /app/db ./db
+COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
 COPY --from=builder /app/package.json ./package.json

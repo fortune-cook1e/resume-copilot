@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "drizzle:generate": "drizzle-kit generate:ts --out ./drizzle",
+    "drizzle:generate": "drizzle-kit generate",
     "drizzle:migate": "drizzle-kit migrate",
     "drizzle:push": "drizzle-kit push",
     "drizzle:pull": "drizzle-kit pull",
