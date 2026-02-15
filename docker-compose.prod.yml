@@ -22,11 +22,11 @@ services:
 
   # Resume Copilot Application
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${ALIYUN_REGISTRY}/leon-gao/resume-copilot:latest
     container_name: resume-copilot-app
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
       # Map port 3000 in the container to port 3005 on the host to avoid conflicts with local development
       - '3005:3000'
