@@ -3,7 +3,7 @@ name: Deploy to Aliyun
 on:
   push:
     branches:
-      - main # 推送到 main 分支时触发
+      - master # 推送到 master 分支时触发
   workflow_dispatch: # 允许手动触发
 
 jobs:
