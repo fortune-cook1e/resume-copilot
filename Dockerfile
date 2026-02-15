@@ -31,9 +31,13 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy source code
 COPY . .
 
+# Build arguments for client-side environment variables
+ARG NEXT_PUBLIC_APP_URL
+
 # Set environment variables for build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
 
 # Build application
 RUN pnpm build
@@ -99,4 +103,6 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+
+# next.js standalone mode expects the server to be started with "node server.js"
 CMD ["node", "server.js"]

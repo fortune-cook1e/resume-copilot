@@ -38,6 +38,8 @@ jobs:
           tags: |
             ${{ secrets.ALIYUN_REGISTRY }}/resume-copilot:latest
             ${{ secrets.ALIYUN_REGISTRY }}/resume-copilot:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_APP_URL=${{ secrets.APP_URL }}
 
       # 5. Copy docker-compose file to server
       - name: Copy docker-compose.prod.yml to server
