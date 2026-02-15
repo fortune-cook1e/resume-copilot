@@ -1,0 +1,65 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: resume-copilot-db-prod
+    restart: unless-stopped
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: ${DB_USER:-resume}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-resume_copilot}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - resume-network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-resume}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Resume Copilot Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: resume-copilot-app
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      # Database
+      DATABASE_URL: postgresql://${DB_USER:-resume}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-resume_copilot}
+
+      # Better Auth
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL}
+
+      # Next.js
+      NODE_ENV: production
+      PORT: 3000
+
+      # Puppeteer
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
+      PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - resume-network
+    # Optional: mount logs directory
+    volumes:
+      - app_logs:/app/logs
+
+volumes:
+  postgres_data:
+    name: resume-copilot-pgdata-prod
+  app_logs:
+    name: resume-copilot-app-logs
+
+networks:
+  resume-network:
+    name: resume-copilot-network
+    driver: bridge

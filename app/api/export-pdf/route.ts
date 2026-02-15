@@ -1,85 +1,83 @@
 import { NextRequest, NextResponse } from 'next/server';
 import puppeteerCore from 'puppeteer-core';
 import puppeteer from 'puppeteer';
-import chromium from '@sparticuz/chromium';
+
+// Detect runtime environment
+const isDevelop = process.env.NODE_ENV === 'development';
 
 export async function POST(request: NextRequest) {
   try {
-    const { title = '简历' } = await request.json();
+    const { title = 'Resume' } = await request.json();
 
-    // 判断是否在 Vercel 环境
-    const isVercel = process.env.VERCEL === '1';
+    // Get base URL - use localhost in production since puppeteer runs in same container
+    const baseUrl = isDevelop ? 'http://localhost:3000' : 'http://localhost:3000'; // In Docker, access the same container
 
-    // 获取基础 URL
-    const baseUrl = isVercel ? `https://${process.env.BETTER_AUTH_URL}` : 'http://localhost:3000';
+    // Get session cookie from request to pass to puppeteer
+    const sessionCookie = request.cookies.get('better-auth.session_token');
+
+    // Require authentication
+    if (!sessionCookie) {
+      return NextResponse.json(
+        { error: 'Unauthorized', message: 'Please login to export PDF' },
+        { status: 401 },
+      );
+    }
 
     let browser;
 
-    if (isVercel) {
-      // Vercel/Lambda 环境：使用 puppeteer-core + @sparticuz/chromium
-      const chromiumConfig = chromium as unknown as {
-        setHeadlessMode?: boolean;
-        setGraphicsMode?: boolean;
-        defaultViewport?: { width: number; height: number; deviceScaleFactor?: number } | null;
-        headless?: boolean;
-      };
-
-      if (chromiumConfig.setHeadlessMode !== undefined) {
-        chromiumConfig.setHeadlessMode = true;
-      }
-
-      if (chromiumConfig.setGraphicsMode !== undefined) {
-        chromiumConfig.setGraphicsMode = false;
-      }
-
-      browser = await puppeteerCore.launch({
-        args: [
-          ...chromium.args,
-          '--disable-gpu',
-          '--disable-dev-shm-usage',
-          '--disable-setuid-sandbox',
-          '--no-first-run',
-          '--no-sandbox',
-          '--no-zygote',
-          '--single-process',
-        ],
-        defaultViewport: chromiumConfig.defaultViewport ?? {
-          width: 794,
-          height: 1123,
-          deviceScaleFactor: 1,
-        },
-        executablePath: await chromium.executablePath(),
-        headless: chromiumConfig.headless ?? true,
-      });
-    } else {
-      // 本地开发环境：使用 puppeteer 自带的 Chromium
+    if (isDevelop) {
+      // Development: use puppeteer with bundled Chromium
       browser = await puppeteer.launch({
         headless: true,
+      });
+    } else {
+      // Production (Docker): use system Chromium
+      browser = await puppeteerCore.launch({
+        executablePath: '/usr/bin/chromium-browser',
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+        ],
       });
     }
 
     const page = await browser.newPage();
 
-    // 设置视口为 A4 纸张尺寸 (96 DPI: 210mm = 794px, 297mm = 1123px)
+    // Set session cookie (already validated above)
+    const url = new URL(baseUrl);
+    await page.setCookie({
+      name: 'better-auth.session_token',
+      value: sessionCookie.value,
+      domain: url.hostname,
+      path: '/',
+      httpOnly: true,
+      secure: url.protocol === 'https:',
+      sameSite: 'Lax',
+    });
+
+    // Set viewport to A4 paper size (96 DPI: 210mm = 794px, 297mm = 1123px)
     await page.setViewport({
       width: 794,
       height: 1123,
       deviceScaleFactor: 1,
     });
 
-    // 直接访问打印页面
+    // Navigate to print page
     await page.goto(`${baseUrl}/resume/print`, {
       waitUntil: 'networkidle0',
       timeout: 30000,
     });
 
-    // 等待内容加载完成
+    // Wait for content to be ready
     await page.waitForFunction(
       () => document.querySelector('#resume-document')?.getAttribute('data-ready') === 'true',
-      { timeout: 1 * 60 * 1000 }, // max 1 minute
+      { timeout: 60000 },
     );
 
-    // 生成 PDF
+    // Generate PDF
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
@@ -94,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     await browser.close();
 
-    // 返回 PDF 文件
+    // Return PDF file
     return new NextResponse(Buffer.from(pdfBuffer), {
       status: 200,
       headers: {
@@ -111,6 +109,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// 配置 API 路由选项
+// Configure API route options
 export const runtime = 'nodejs';
-export const maxDuration = 30; // Vercel Pro 最多 30 秒
+export const maxDuration = 30; // Vercel Pro: max 30 seconds
