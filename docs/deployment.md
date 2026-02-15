@@ -70,7 +70,7 @@ vim .env  # 填入真实的环境变量
 - **Domain Names:** `resume.example.com`
 - **Scheme:** `http`
 - **Forward Hostname / IP:** `your-server-ip` 或容器名
-- **Forward Port:** `3000`
+- **Forward Port:** `3005`
 - **Block Common Exploits:** ✅
 - **Websockets Support:** ✅
 - **SSL:** 使用 Let's Encrypt 自动申请证书
@@ -163,7 +163,7 @@ docker exec -it resume-copilot-db-prod psql -U resume -d resume_copilot -c "\dt"
 docker-compose -f docker-compose.prod.yml ps
 
 # 测试应用
-curl http://localhost:3000/api/health
+curl http://localhost:3005/api/health
 
 # 通过 Nginx Proxy Manager 访问
 curl https://your-domain.com
@@ -246,7 +246,7 @@ docker-compose -f docker-compose.prod.yml ps app
 docker network inspect resume-copilot-network
 
 # 检查 Nginx Proxy Manager 配置
-# 确保反向代理指向正确的 IP:3000
+# 确保反向代理指向正确的 IP:3005
 ```
 
 ## 🛡️ 安全建议
@@ -256,7 +256,7 @@ docker network inspect resume-copilot-network
 ```bash
 # 只开放必要端口
 ufw allow 22/tcp    # SSH
-ufw allow 3000/tcp  # Application (for Nginx Proxy Manager)
+ufw allow 3005/tcp  # Application (for Nginx Proxy Manager)
 ufw enable
 ```
 
