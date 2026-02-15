@@ -22,7 +22,7 @@ services:
 
   # Resume Copilot Application
   app:
-    image: ${ALIYUN_REGISTRY}/leon-gao/resume-copilot:latest
+    image: ${ALIYUN_REGISTRY}/resume-copilot:latest
     container_name: resume-copilot-app
     restart: unless-stopped
     env_file:
