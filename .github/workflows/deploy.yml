@@ -63,6 +63,9 @@ jobs:
             # Navigate to app directory
             cd ${{ secrets.ALIYUN_APP_DIR }} || exit 1
 
+            # Export environment variables for docker-compose
+            export ALIYUN_REGISTRY="${{ secrets.ALIYUN_REGISTRY }}"
+
             # Login to Aliyun ACR
             echo "${{ secrets.ALIYUN_REGISTRY_PASSWORD }}" | docker login \
               --username ${{ secrets.ALIYUN_REGISTRY_USERNAME }} \
