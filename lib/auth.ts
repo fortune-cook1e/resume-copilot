@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { db } from '@/db';
 import * as schema from '@/db/schema';
+import { COOKIE_PREFIX, COOKIE_NAMES } from '@/constants/cookies';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -12,15 +13,16 @@ export const auth = betterAuth({
     schema,
   }),
   advanced: {
+    cookiePrefix: COOKIE_PREFIX,
     cookies: {
       session_token: {
-        name: 'better-auth.session_token',
+        name: COOKIE_NAMES.SESSION_TOKEN,
         attributes: {
           secure: isProduction,
         },
       },
       session_data: {
-        name: 'better-auth.session_data',
+        name: COOKIE_NAMES.SESSION_DATA,
         attributes: {
           secure: isProduction,
         },

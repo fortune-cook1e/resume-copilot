@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import puppeteerCore from 'puppeteer-core';
 import puppeteer from 'puppeteer';
+import { auth } from '@/lib/auth';
+import { headers } from 'next/headers';
+import { COOKIE_NAMES } from '@/constants/cookies';
 
 // Detect runtime environment
 const isDevelop = process.env.NODE_ENV === 'development';
@@ -9,19 +12,14 @@ export async function POST(request: NextRequest) {
   try {
     const { title = 'Resume' } = await request.json();
 
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+
     // Get base URL - use localhost in production since puppeteer runs in same container
-    const baseUrl = isDevelop ? 'http://localhost:3000' : 'http://localhost:3000'; // In Docker, access the same container
-
-    // Get session cookie from request to pass to puppeteer
-    const sessionCookie = request.cookies.get('better-auth.session_token');
-
-    // Require authentication
-    if (!sessionCookie) {
-      return NextResponse.json(
-        { error: 'Unauthorized', message: 'Please login to export PDF' },
-        { status: 401 },
-      );
-    }
+    const baseUrl = isDevelop
+      ? (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000')
+      : 'http://localhost:3000';
 
     let browser;
 
@@ -46,17 +44,19 @@ export async function POST(request: NextRequest) {
 
     const page = await browser.newPage();
 
-    // Set session cookie (already validated above)
-    const url = new URL(baseUrl);
-    await page.setCookie({
-      name: 'better-auth.session_token',
-      value: sessionCookie.value,
-      domain: url.hostname,
-      path: '/',
-      httpOnly: true,
-      secure: url.protocol === 'https:',
-      sameSite: 'Lax',
-    });
+    // Set session cookie (authenticated via middleware)
+    if (session?.session?.token) {
+      const url = new URL(baseUrl);
+      await page.setCookie({
+        name: COOKIE_NAMES.SESSION_TOKEN,
+        value: session.session.token,
+        domain: url.hostname,
+        path: '/',
+        httpOnly: true,
+        secure: url.protocol === 'https:',
+        sameSite: 'Lax',
+      });
+    }
 
     // Set viewport to A4 paper size (96 DPI: 210mm = 794px, 297mm = 1123px)
     await page.setViewport({

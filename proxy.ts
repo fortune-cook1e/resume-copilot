@@ -1,13 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from './lib/auth';
+import { headers } from 'next/headers';
 
-const publicPaths = ["/", "/login", "/register", "/api/auth"];
+const publicPaths = ['/', '/login', '/register', '/api/auth'];
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
   // Allow public paths
-  const isPublicPath = publicPaths.some((path) => {
-    if (path === "/") return pathname === "/";
+  const isPublicPath = publicPaths.some(path => {
+    if (path === '/') return pathname === '/';
     return pathname.startsWith(path);
   });
 
@@ -15,13 +21,9 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check for better-auth session cookie
-  const sessionToken =
-    request.cookies.get("better-auth.session_token")?.value;
-
-  if (!sessionToken) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
+  if (!session) {
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
@@ -36,8 +38,7 @@ export const config = {
      * - _next/image (image optimization)
      * - favicon.ico
      * - public folder
-     * - api/export-pdf (PDF export)
      */
-    "/((?!_next/static|_next/image|favicon.ico|public|api/export-pdf).*)",
+    '/((?!_next/static|_next/image|favicon.ico|public).*)',
   ],
 };
