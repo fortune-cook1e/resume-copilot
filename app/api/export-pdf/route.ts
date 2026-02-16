@@ -1,62 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
-import puppeteerCore from 'puppeteer-core';
-import puppeteer from 'puppeteer';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
-import { COOKIE_NAMES } from '@/constants/cookies';
-
-// Detect runtime environment
-const isDevelop = process.env.NODE_ENV === 'development';
+import puppeteer from 'puppeteer-core';
 
 export async function POST(request: NextRequest) {
+  let browser;
+  let page;
+
+  const isDev = process.env.NODE_ENV !== 'production';
+
   try {
     const { title = 'Resume' } = await request.json();
 
-    const session = await auth.api.getSession({
-      headers: await headers(),
+    // CHROME_WS_ENDPOINT: ws endpoint of the remote Chrome
+    // CHROME_TARGET_URL: URL that Chrome container uses to reach this app
+    //   - Production (docker-compose): ws://chrome:3000 + http://app:3000
+    //   - Development: ws://localhost:3006 + http://host.docker.internal:3000
+    const chromeWsEndpoint = process.env.CHROME_WS_ENDPOINT;
+    const chromeTargetUrl = process.env.CHROME_TARGET_URL ?? 'http://host.docker.internal:3000';
+
+    if (!chromeWsEndpoint) {
+      throw new Error('CHROME_WS_ENDPOINT not set. Start Chrome via: docker-compose up -d chrome');
+    }
+
+    // Connect to remote Chrome
+    browser = await puppeteer.connect({
+      browserWSEndpoint: chromeWsEndpoint,
     });
 
-    // Get base URL - use localhost in production since puppeteer runs in same container
-    const baseUrl = isDevelop
-      ? (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000')
-      : 'http://localhost:3000';
-
-    let browser;
-
-    if (isDevelop) {
-      // Development: use puppeteer with bundled Chromium
-      browser = await puppeteer.launch({
-        headless: true,
-      });
-    } else {
-      // Production (Docker): use system Chromium
-      browser = await puppeteerCore.launch({
-        executablePath: '/usr/bin/chromium-browser',
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-        ],
-      });
-    }
-
-    const page = await browser.newPage();
-
-    // Set session cookie (authenticated via middleware)
-    if (session?.session?.token) {
-      const url = new URL(baseUrl);
-      await page.setCookie({
-        name: COOKIE_NAMES.SESSION_TOKEN,
-        value: session.session.token,
-        domain: url.hostname,
-        path: '/',
-        httpOnly: true,
-        secure: url.protocol === 'https:',
-        sameSite: 'Lax',
-      });
-    }
+    page = await browser.newPage();
 
     // Set viewport to A4 paper size (96 DPI: 210mm = 794px, 297mm = 1123px)
     await page.setViewport({
@@ -66,10 +36,16 @@ export async function POST(request: NextRequest) {
     });
 
     // Navigate to print page
-    await page.goto(`${baseUrl}/resume/print`, {
+    await page.goto(`${chromeTargetUrl}/resume/print`, {
       waitUntil: 'networkidle0',
       timeout: 30000,
     });
+
+    // Verify page loaded correctly (not redirected to login)
+    const currentUrl = page.url();
+    if (!currentUrl.includes('/resume/print')) {
+      throw new Error(`Redirected to: ${currentUrl}. Session cookie may not be working.`);
+    }
 
     // Wait for content to be ready
     await page.waitForFunction(
@@ -81,16 +57,9 @@ export async function POST(request: NextRequest) {
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: {
-        top: '0',
-        right: '0',
-        bottom: '0',
-        left: '0',
-      },
+      margin: { top: '0', right: '0', bottom: '0', left: '0' },
       displayHeaderFooter: false,
     });
-
-    await browser.close();
 
     // Return PDF file
     return new NextResponse(Buffer.from(pdfBuffer), {
@@ -106,9 +75,13 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to generate PDF', details: String(error) },
       { status: 500 },
     );
+  } finally {
+    // Always clean up: close page and disconnect
+    await page?.close().catch(() => {});
+    await browser?.disconnect().catch(() => {});
   }
 }
 
 // Configure API route options
 export const runtime = 'nodejs';
-export const maxDuration = 30; // Vercel Pro: max 30 seconds
+export const maxDuration = 30;

@@ -20,6 +20,24 @@ services:
       timeout: 5s
       retries: 5
 
+  # Browserless Chrome for PDF generation
+  chrome:
+    image: browserless/chrome:latest
+    container_name: resume-copilot-chrome
+    restart: unless-stopped
+    ports:
+      - '3006:3000'
+    networks:
+      - resume-network
+    environment:
+      MAX_CONCURRENT_SESSIONS: 5
+      CONNECTION_TIMEOUT: 60000
+      MAX_QUEUE_LENGTH: 10
+      PREBOOT_CHROME: true
+      KEEP_ALIVE: true
+      DEFAULT_BLOCK_ADS: true
+      DEFAULT_HEADLESS: true
+
   # Resume Copilot Application
   app:
     image: ${ALIYUN_REGISTRY}/resume-copilot:latest
@@ -28,7 +46,6 @@ services:
     env_file:
       - .env
     ports:
-      # Map port 3000 in the container to port 3005 on the host to avoid conflicts with local development
       - '3005:3000'
     environment:
       # Database
@@ -40,17 +57,17 @@ services:
 
       # Next.js
       NODE_ENV: production
-      PORT: 3000
+      PORT: ${PORT:-3000}
 
-      # Puppeteer
-      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
-      PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
+      # Remote Chrome for PDF generation
+      CHROME_WS_ENDPOINT: ws://chrome:3000
+      # URL that Chrome container uses to reach this app
+      CHROME_TARGET_URL: http://app:3000
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - resume-network
-    # Optional: mount logs directory
     volumes:
       - app_logs:/app/logs
 

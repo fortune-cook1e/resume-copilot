@@ -12,5 +12,19 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  # Browserless Chrome for PDF generation (local development)
+  chrome:
+    image: browserless/chrome:latest
+    container_name: resume-copilot-chrome-dev
+    restart: unless-stopped
+    ports:
+      - '3006:3000'
+    environment:
+      MAX_CONCURRENT_SESSIONS: 3
+      CONNECTION_TIMEOUT: 60000
+      PREBOOT_CHROME: true
+      KEEP_ALIVE: true
+      DEFAULT_HEADLESS: true
+
 volumes:
   pgdata:

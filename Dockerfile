@@ -49,19 +49,6 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Install Chromium for Puppeteer (PDF generation)
-RUN apk add --no-cache \
-    chromium \
-    nss \
-    freetype \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont
-
-# Tell Puppeteer to use installed Chromium
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-
 # Install pnpm for running database migrations
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
