@@ -21,6 +21,9 @@ export async function POST(request: NextRequest) {
       throw new Error('CHROME_WS_ENDPOINT not set. Start Chrome via: docker-compose up -d chrome');
     }
 
+    console.log('[PDF] Connecting to Chrome:', chromeWsEndpoint);
+    console.log('[PDF] Target URL:', chromeTargetUrl);
+
     // Connect to remote Chrome
     browser = await puppeteer.connect({
       browserWSEndpoint: chromeWsEndpoint,
@@ -35,14 +38,23 @@ export async function POST(request: NextRequest) {
       deviceScaleFactor: 1,
     });
 
-    // Navigate to print page
-    await page.goto(`${chromeTargetUrl}/resume/print`, {
+    // Enable console log from browser page
+    page.on('console', msg => console.log('[Browser Console]', msg.text()));
+    page.on('pageerror', error => console.error('[Browser Error]', error));
+
+    const printUrl = `${chromeTargetUrl}/resume/print`;
+    console.log('[PDF] Navigating to:', printUrl);
+
+    // Navigate to print page with increased timeout
+    await page.goto(printUrl, {
       waitUntil: 'networkidle0',
-      timeout: 30000,
+      timeout: 60 * 1000, // Increased to 60s for production
     });
 
-    // Verify page loaded correctly (not redirected to login)
     const currentUrl = page.url();
+    console.log('[PDF] Current URL after navigation:', currentUrl);
+
+    // Verify page loaded correctly (not redirected to login)
     if (!currentUrl.includes('/resume/print')) {
       throw new Error(`Redirected to: ${currentUrl}. Session cookie may not be working.`);
     }
