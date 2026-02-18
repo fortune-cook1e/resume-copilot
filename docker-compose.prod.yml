@@ -20,7 +20,8 @@ services:
       timeout: 5s
       retries: 5
 
-  # Browserless Chrome for PDF generation
+  # Browserless Chrome for PDF generation (v2)
+  # Server: 2 vCPU / 2 GiB — keep Chrome lightweight
   chrome:
     image: browserless/chrome:latest
     container_name: resume-copilot-chrome
@@ -30,13 +31,18 @@ services:
     networks:
       - resume-network
     environment:
-      MAX_CONCURRENT_SESSIONS: 5
-      CONNECTION_TIMEOUT: 60000
-      MAX_QUEUE_LENGTH: 10
-      PREBOOT_CHROME: true
-      KEEP_ALIVE: true
-      DEFAULT_BLOCK_ADS: true
-      DEFAULT_HEADLESS: true
+      # Only 1 concurrent session to minimize memory spike
+      CONCURRENT: 1
+      QUEUED: 3
+      # 2 minutes per session before force-kill
+      TIMEOUT: 120000
+      HEALTH: true
+    shm_size: '256m'
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '1.0'
 
   # Resume Copilot Application
   app:
@@ -60,7 +66,8 @@ services:
       PORT: ${PORT:-3000}
 
       # Remote Chrome for PDF generation
-      CHROME_WS_ENDPOINT: ws://chrome:3000
+      # browserless v2: must use /chrome path
+      CHROME_WS_ENDPOINT: ws://chrome:3000/chrome
       # URL that Chrome container uses to reach this app
       CHROME_TARGET_URL: http://app:3000
     depends_on:
