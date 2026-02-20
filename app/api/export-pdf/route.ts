@@ -49,12 +49,12 @@ export async function POST(request: NextRequest) {
     console.log('[PDF] Navigating to:', printUrl);
 
     const navStart = Date.now();
-    // Use 'domcontentloaded' instead of 'networkidle0'
-    // networkidle0 waits for 0 network connections for 500ms which hangs on
-    // resource-constrained servers. domcontentloaded is sufficient because
-    // we then explicitly wait for #resume-document[data-ready] below.
+    // Use 'load' to wait for all resources (images, fonts, CSS) to finish loading.
+    // - 'domcontentloaded': too early, images not loaded yet (avatar missing)
+    // - 'networkidle0': too strict, hangs on persistent connections (timeout on 2C2G server)
+    // - 'load': waits for images/fonts but doesn't require 0 network connections
     await page.goto(printUrl, {
-      waitUntil: 'domcontentloaded',
+      waitUntil: 'load',
       timeout: 60000, // 60s — generous for 2 vCPU / 2 GiB server
     });
     console.log('[PDF] Navigation took', Date.now() - navStart, 'ms');
