@@ -20,6 +20,29 @@ services:
       timeout: 5s
       retries: 5
 
+  # Browserless Chrome for PDF generation (v2)
+  # Server: 2 vCPU / 2 GiB — keep Chrome lightweight
+  chrome:
+    image: browserless/chrome:latest
+    container_name: resume-copilot-chrome
+    restart: unless-stopped
+    ports:
+      - '3006:3000'
+    networks:
+      - resume-network
+    environment:
+      # Only 1 concurrent session to minimize memory spike
+      CONCURRENT: 1
+      QUEUED: 3
+      # 2 minutes per session before force-kill
+      TIMEOUT: 120000
+      HEALTH: true
+    shm_size: '256m'
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
   # Resume Copilot Application
   app:
     image: ${ALIYUN_REGISTRY}/resume-copilot:latest
@@ -28,7 +51,6 @@ services:
     env_file:
       - .env
     ports:
-      # Map port 3000 in the container to port 3005 on the host to avoid conflicts with local development
       - '3005:3000'
     environment:
       # Database
@@ -40,17 +62,18 @@ services:
 
       # Next.js
       NODE_ENV: production
-      PORT: 3000
+      PORT: ${PORT:-3000}
 
-      # Puppeteer
-      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
-      PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
+      # Remote Chrome for PDF generation
+      # browserless v2: must use /chrome path
+      CHROME_WS_ENDPOINT: ws://chrome:3000/chrome
+      # URL that Chrome container uses to reach this app
+      CHROME_TARGET_URL: http://app:3000
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - resume-network
-    # Optional: mount logs directory
     volumes:
       - app_logs:/app/logs
 

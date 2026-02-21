@@ -1,62 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import puppeteerCore from 'puppeteer-core';
-import puppeteer from 'puppeteer';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
-import { COOKIE_NAMES } from '@/constants/cookies';
-
-// Detect runtime environment
-const isDevelop = process.env.NODE_ENV === 'development';
+import puppeteer from 'puppeteer-core';
 
 export async function POST(request: NextRequest) {
+  let browser;
+  let page;
+
   try {
     const { title = 'Resume' } = await request.json();
 
-    const session = await auth.api.getSession({
-      headers: await headers(),
+    // CHROME_WS_ENDPOINT: ws endpoint of the remote Chrome (browserless v2)
+    // CHROME_TARGET_URL: URL that Chrome container uses to reach this app
+    //   - Production (docker-compose): ws://chrome:3000/chrome + http://app:3000
+    //   - Development: ws://localhost:3006/chrome + http://host.docker.internal:3000
+    const chromeWsEndpoint = process.env.CHROME_WS_ENDPOINT;
+    const chromeTargetUrl = process.env.CHROME_TARGET_URL ?? 'http://host.docker.internal:3000';
+
+    if (!chromeWsEndpoint) {
+      throw new Error('CHROME_WS_ENDPOINT not set. Start Chrome via: docker-compose up -d chrome');
+    }
+
+    const startTime = Date.now();
+    console.log('[PDF] Connecting to Chrome:', chromeWsEndpoint);
+    console.log('[PDF] Target URL:', chromeTargetUrl);
+
+    // Connect to remote Chrome (browserless v2 uses /chrome path)
+    browser = await puppeteer.connect({
+      browserWSEndpoint: chromeWsEndpoint,
     });
+    console.log('[PDF] Connected in', Date.now() - startTime, 'ms');
 
-    // Get base URL - use localhost in production since puppeteer runs in same container
-    const baseUrl = isDevelop
-      ? (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000')
-      : 'http://localhost:3000';
-
-    let browser;
-
-    if (isDevelop) {
-      // Development: use puppeteer with bundled Chromium
-      browser = await puppeteer.launch({
-        headless: true,
-      });
-    } else {
-      // Production (Docker): use system Chromium
-      browser = await puppeteerCore.launch({
-        executablePath: '/usr/bin/chromium-browser',
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-        ],
-      });
-    }
-
-    const page = await browser.newPage();
-
-    // Set session cookie (authenticated via middleware)
-    if (session?.session?.token) {
-      const url = new URL(baseUrl);
-      await page.setCookie({
-        name: COOKIE_NAMES.SESSION_TOKEN,
-        value: session.session.token,
-        domain: url.hostname,
-        path: '/',
-        httpOnly: true,
-        secure: url.protocol === 'https:',
-        sameSite: 'Lax',
-      });
-    }
+    page = await browser.newPage();
 
     // Set viewport to A4 paper size (96 DPI: 210mm = 794px, 297mm = 1123px)
     await page.setViewport({
@@ -65,32 +38,51 @@ export async function POST(request: NextRequest) {
       deviceScaleFactor: 1,
     });
 
-    // Navigate to print page
-    await page.goto(`${baseUrl}/resume/print`, {
-      waitUntil: 'networkidle0',
-      timeout: 30000,
-    });
+    // Log browser page events for debugging
+    page.on('console', msg => console.log('[Browser]', msg.text()));
+    page.on('pageerror', error => console.error('[Browser Error]', error));
+    page.on('requestfailed', req =>
+      console.warn('[Browser Request Failed]', req.url(), req.failure()?.errorText),
+    );
 
-    // Wait for content to be ready
+    const printUrl = `${chromeTargetUrl}/resume/print`;
+    console.log('[PDF] Navigating to:', printUrl);
+
+    const navStart = Date.now();
+    // Use 'load' to wait for all resources (images, fonts, CSS) to finish loading.
+    // - 'domcontentloaded': too early, images not loaded yet (avatar missing)
+    // - 'networkidle0': too strict, hangs on persistent connections (timeout on 2C2G server)
+    // - 'load': waits for images/fonts but doesn't require 0 network connections
+    await page.goto(printUrl, {
+      waitUntil: 'load',
+      timeout: 60000, // 60s — generous for 2 vCPU / 2 GiB server
+    });
+    console.log('[PDF] Navigation took', Date.now() - navStart, 'ms');
+
+    const currentUrl = page.url();
+    console.log('[PDF] Current URL:', currentUrl);
+
+    // Verify page loaded correctly (not redirected to login)
+    if (!currentUrl.includes('/resume/print')) {
+      throw new Error(`Redirected to: ${currentUrl}`);
+    }
+
+    // Wait for React to finish rendering the resume
+    console.log('[PDF] Waiting for document ready...');
     await page.waitForFunction(
       () => document.querySelector('#resume-document')?.getAttribute('data-ready') === 'true',
-      { timeout: 60000 },
+      { timeout: 60000 }, // 60s — React hydration can be slow on low-memory server
     );
+    console.log('[PDF] Document ready in', Date.now() - navStart, 'ms');
 
     // Generate PDF
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: {
-        top: '0',
-        right: '0',
-        bottom: '0',
-        left: '0',
-      },
+      margin: { top: '0', right: '0', bottom: '0', left: '0' },
       displayHeaderFooter: false,
     });
-
-    await browser.close();
+    console.log('[PDF] Total time:', Date.now() - startTime, 'ms');
 
     // Return PDF file
     return new NextResponse(Buffer.from(pdfBuffer), {
@@ -106,9 +98,13 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to generate PDF', details: String(error) },
       { status: 500 },
     );
+  } finally {
+    // Always clean up: close page and disconnect
+    await page?.close().catch(() => {});
+    await browser?.disconnect().catch(() => {});
   }
 }
 
 // Configure API route options
 export const runtime = 'nodejs';
-export const maxDuration = 30; // Vercel Pro: max 30 seconds
+export const maxDuration = 120;
