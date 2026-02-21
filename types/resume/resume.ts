@@ -23,10 +23,6 @@ export const defaultResumeData = {
   modules: defaultModules,
 } satisfies z.infer<typeof resumeDataSchema>;
 
-export type ResumeData = Omit<z.infer<typeof resumeDataSchema>, 'modules'> & {
-  modules: Modules;
-};
-
 export const resumeSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -37,6 +33,13 @@ export const resumeSchema = z.object({
   updatedAt: z.date().or(z.string()),
 });
 
-export type Resume = Omit<z.infer<typeof resumeSchema>, 'data'> & {
-  data: ResumeData;
+export type ResumeVisibility = 'public' | 'private';
+
+export type ResumeData = Omit<z.infer<typeof resumeDataSchema>, 'modules'> & {
+  modules: Modules;
 };
+
+export type Resume = z.infer<typeof resumeSchema>;
+
+// Lightweight resume item for list views (no data payload)
+export type ResumeItem = Omit<Resume, 'data'>;
