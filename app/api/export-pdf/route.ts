@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     // - 'networkidle0': too strict, hangs on persistent connections (timeout on 2C2G server)
     // - 'load': waits for images/fonts but doesn't require 0 network connections
     await page.goto(printUrl, {
-      waitUntil: 'networkidle0',
+      waitUntil: 'load',
       timeout: 60000, // 60s — generous for 2 vCPU / 2 GiB server
     });
     console.log('[PDF] Navigation took', Date.now() - navStart, 'ms');
