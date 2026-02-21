@@ -24,27 +24,27 @@ const Basics = () => {
 
   const iconMap: Record<string, React.FC<React.SVGProps<SVGSVGElement>>> = {
     Link: LinkIcon,
-    Github: Github,
-    Linkedin: Linkedin,
-    Twitter: Twitter,
-    Youtube: Youtube,
-    Instagram: Instagram,
-    Mail: Mail,
+    Github,
+    Linkedin,
+    Twitter,
+    Youtube,
+    Instagram,
+    Mail,
     Phone: PhoneIcon,
-    MapPin: MapPin,
-    Globe: Globe,
+    MapPin,
+    Globe,
   };
 
   return (
     <div className="flex items-start gap-4 border-b border-resume-theme pb-5">
-      {/* Avatar */}
-      {picture.url && (
+      {/* Avatar: temporaryly hidden since  waitUntil option is set as "load" */}
+      {/* {picture.url && (
         <img
           src={picture.url}
           alt={name}
           className="w-16 h-16 rounded-full object-cover flex-shrink-0"
         />
-      )}
+      )} */}
 
       <div className="flex-1 space-y-2">
         <div>

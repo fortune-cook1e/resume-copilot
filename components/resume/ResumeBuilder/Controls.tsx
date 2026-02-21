@@ -1,13 +1,17 @@
-import { ZoomIn, ZoomOut, RotateCcw, Download } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Download, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useControls } from 'react-zoom-pan-pinch';
 import { useState } from 'react';
 import { useResumeStore } from '@/stores/resume-store';
+import { exportResumePDF } from '@/services/resume';
+
+import { useRouter } from 'next/navigation';
 
 export default function Controls() {
   const { zoomIn, zoomOut, resetTransform } = useControls();
   const { resume } = useResumeStore();
   const [isExporting, setIsExporting] = useState(false);
+  const router = useRouter();
 
   const handleExportPDF = async () => {
     if (isExporting || !resume) return;
@@ -15,23 +19,7 @@ export default function Controls() {
     setIsExporting(true);
 
     try {
-      const response = await fetch('/api/export-pdf', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: resume.basics.name || 'Resume',
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to export PDF');
-      }
-
-      // Download PDF
-      const blob = await response.blob();
+      const blob = await exportResumePDF(resume.basics.name || 'Resume');
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -50,13 +38,40 @@ export default function Controls() {
 
   return (
     <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex gap-2 bg-white/95 backdrop-blur-sm rounded-lg p-2 shadow-lg border border-gray-200">
-      <Button variant="ghost" size="icon" onClick={() => zoomIn()} title="Zoom In">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => router.push('/dashboard/resumes')}
+        title="Back to Resumes"
+        className="cursor-pointer"
+      >
+        <Home className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => zoomIn()}
+        title="Zoom In"
+        className="cursor-pointer"
+      >
         <ZoomIn className="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="icon" onClick={() => zoomOut()} title="Zoom Out">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => zoomOut()}
+        title="Zoom Out"
+        className="cursor-pointer"
+      >
         <ZoomOut className="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="icon" onClick={() => resetTransform()} title="Reset">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => resetTransform()}
+        title="Reset"
+        className="cursor-pointer"
+      >
         <RotateCcw className="h-4 w-4" />
       </Button>
       <div className="w-px bg-gray-200" />
@@ -66,6 +81,7 @@ export default function Controls() {
         onClick={handleExportPDF}
         disabled={isExporting}
         title="Export PDF"
+        className="cursor-pointer"
       >
         {isExporting ? (
           <div className="h-4 w-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />

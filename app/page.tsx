@@ -39,9 +39,6 @@ export default function Home() {
             <a className="hover:text-white" href="#workflow">
               Workflow
             </a>
-            <a className="hover:text-white" href="#security">
-              Security
-            </a>
           </div>
           <div className="flex items-center gap-3">
             <Link href="/resume">
@@ -121,10 +118,6 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-              </div>
-              <div className="absolute -bottom-6 -left-6 rounded-2xl bg-teal-300 text-slate-950 px-4 py-3 text-sm shadow-lg animate-bounce">
-                <div className="font-semibold">Recruiter-ready</div>
-                <div className="text-xs">Optimized for ATS parsing</div>
               </div>
             </div>
           </div>
@@ -230,43 +223,6 @@ export default function Home() {
                     <span className="text-xs text-slate-400">Done</span>
                   </div>
                 ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="security" className="container mx-auto px-4 pb-24">
-          <div className="grid md:grid-cols-[1.1fr_0.9fr] gap-10 items-center">
-            <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900 to-slate-800 p-8">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-2xl bg-teal-300/20 grid place-items-center">
-                  <Shield className="h-6 w-6 text-teal-200" />
-                </div>
-                <div>
-                  <div className="text-sm text-slate-300">Security</div>
-                  <div className="text-xl font-semibold">Your data stays yours.</div>
-                </div>
-              </div>
-              <p className="mt-4 text-slate-300">
-                We prioritize privacy-first workflows, export-only data handling, and controlled
-                access. Perfect for teams that care about compliance.
-              </p>
-            </div>
-            <div className="space-y-4">
-              <h3 className="text-2xl font-semibold">Built for modern hiring teams</h3>
-              <p className="text-slate-300">
-                Whether you are preparing for your next interview or generating recruiter-ready
-                profiles at scale, Resume Copilot keeps you focused and compliant.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Link href="/resume">
-                  <Button className="bg-teal-300 text-slate-950 hover:bg-teal-200">
-                    Launch Resume Builder
-                  </Button>
-                </Link>
-                <Button variant="outline" className="border-white/30 text-white hover:bg-white/10">
-                  Talk to Us
-                </Button>
               </div>
             </div>
           </div>
