@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ResizableHandle, ResizablePanel, ResizableGroup } from '@/components/ui/resizable';
 import ResumeEditor from '@/components/resume/ResumeEditor';
@@ -9,6 +9,7 @@ import { useDefaultLayout } from 'react-resizable-panels';
 import ResumeBuilder from '@/components/resume/ResumeBuilder';
 import { getResume } from '@/services/resume';
 import type { ResumeData } from '@/types/resume';
+import { Loading } from '@/components/ui/loading';
 
 // create a safe storage that works in SSR
 const createSafeStorage = () => {
@@ -22,7 +23,7 @@ const createSafeStorage = () => {
   return localStorage;
 };
 
-export default function ResumePage() {
+function ResumeInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const resumeId = searchParams.get('id');
@@ -112,5 +113,13 @@ export default function ResumePage() {
         </ResizableGroup>
       </main>
     </div>
+  );
+}
+
+export default function ResumesPage() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <ResumeInner />
+    </Suspense>
   );
 }
