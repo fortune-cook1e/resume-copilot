@@ -8,6 +8,13 @@
       "when": 1771185955006,
       "tag": "0000_third_mojo",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1771591502539,
+      "tag": "0001_stale_living_tribunal",
+      "breakpoints": true
     }
   ]
 }

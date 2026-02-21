@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, boolean, jsonb } from 'drizzle-orm/pg-core';
 
 // ============================================================
 // Better-auth core tables (user, session, account, verification)
@@ -51,4 +51,23 @@ export const verification = pgTable('verification', {
   expiresAt: timestamp('expires_at').notNull(),
   createdAt: timestamp('created_at'),
   updatedAt: timestamp('updated_at'),
+});
+
+// ============================================================
+// Application tables
+// ============================================================
+
+export const resume = pgTable('resume', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  title: text('title').notNull().default('Untitled Resume'),
+  description: text('description').notNull().default(''),
+  data: jsonb('data').notNull(),
+  visibility: text('visibility', { enum: ['public', 'private'] })
+    .notNull()
+    .default('private'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
