@@ -32,8 +32,8 @@ export default function LoginPage() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: '',
-      password: '',
+      email: '123@qq.com',
+      password: '12345678',
     },
   });
 
@@ -47,7 +47,7 @@ export default function LoginPage() {
     if (result.error) {
       setError(result.error.message ?? 'Login failed, please try again');
     } else {
-      router.push('/resume');
+      router.push('/dashboard/resumes');
     }
   };
 

@@ -45,6 +45,8 @@ export default function ResumeEditor() {
 
       <Experience />
 
+      <Skills />
+
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="text-lg font-semibold text-gray-900">Custom Module</div>
@@ -66,8 +68,6 @@ export default function ResumeEditor() {
           </div>
         )}
       </section>
-
-      <Skills />
     </div>
   );
 }

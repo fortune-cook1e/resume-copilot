@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { createResume, updateResume } from '@/services/resume';
 import { sampleResume } from '@/types/resume/sample';
-import { type ResumeItem, resumeSchema } from '@/types';
+import { defaultResumeData, type ResumeItem, resumeSchema } from '@/types';
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -72,7 +72,7 @@ export function ResumeDialog({ mode, onSuccess, trigger, resume }: ResumeDialogP
         await createResume({
           title: values.title,
           description: values.description,
-          ...(useTemplate ? { data: sampleResume } : {}),
+          ...(useTemplate ? { data: sampleResume } : { data: defaultResumeData }),
         });
       } else if (resume) {
         await updateResume(resume.id, {
@@ -128,6 +128,7 @@ export function ResumeDialog({ mode, onSuccess, trigger, resume }: ResumeDialogP
             {isCreate && (
               <div className="flex items-center gap-2">
                 <input
+                  aria-label="use sample template"
                   type="checkbox"
                   id="useTemplate"
                   checked={useTemplate}

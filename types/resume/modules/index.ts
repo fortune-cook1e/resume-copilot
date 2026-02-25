@@ -49,18 +49,21 @@ export const defaultModule: Module = {
 export const defaultModules: Modules = {
   education: {
     ...defaultModule,
+    name: 'Education',
     id: 'education',
     visible: true,
     items: [],
   },
   experience: {
     ...defaultModule,
+    name: 'Experience',
     id: 'experience',
     visible: true,
     items: [],
   },
   projects: {
     ...defaultModule,
+    name: 'Projects',
     id: 'projects',
     visible: true,
     items: [],
@@ -68,6 +71,7 @@ export const defaultModules: Modules = {
 
   skills: {
     ...defaultModule,
+    name: 'Skills',
     id: 'skills',
     visible: true,
     items: [],
