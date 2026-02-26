@@ -87,7 +87,12 @@ export default function ResumesPage() {
       {!isLoading && resumes.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {resumes.map(resume => (
-            <ResumeCard key={resume.id} resume={resume} onDeleted={fetchResumes} />
+            <ResumeCard
+              key={resume.id}
+              resume={resume}
+              onDeleted={fetchResumes}
+              onEdit={fetchResumes}
+            />
           ))}
         </div>
       )}

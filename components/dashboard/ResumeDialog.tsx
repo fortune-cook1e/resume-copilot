@@ -24,7 +24,7 @@ import { z } from 'zod';
 
 interface ResumeDialogProps {
   mode: 'create' | 'edit';
-  onSuccess: () => void;
+  onSuccess?: () => void;
   trigger: React.ReactNode;
   resume?: ResumeItem;
 }
@@ -81,7 +81,7 @@ export function ResumeDialog({ mode, onSuccess, trigger, resume }: ResumeDialogP
         });
       }
       setOpen(false);
-      onSuccess();
+      onSuccess?.();
     } catch (error) {
       console.error('Failed to save resume:', error);
     } finally {

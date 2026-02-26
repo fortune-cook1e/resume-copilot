@@ -141,6 +141,7 @@ export default function Skills() {
               <Label htmlFor="skill-level">Level</Label>
               <select
                 id="skill-level"
+                title="Skill level"
                 value={editingItem?.level || 'Beginner'}
                 onChange={e => updateLevel(e.target.value as SkillsType['level'])}
                 className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"

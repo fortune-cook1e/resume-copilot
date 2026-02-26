@@ -15,10 +15,12 @@ import { FileText, MoreVertical, Pencil, Trash2, Eye, Clock } from 'lucide-react
 import { deleteResume } from '@/services/resume';
 import { ResumeDialog } from './ResumeDialog';
 import type { ResumeItem } from '@/types';
+import { useToggle } from '@/hooks';
 
 interface ResumeCardProps {
   resume: ResumeItem;
-  onDeleted: () => void;
+  onDeleted?: () => void;
+  onEdit?: () => void;
 }
 
 function formatDate(dateStr: string | Date) {
@@ -29,15 +31,16 @@ function formatDate(dateStr: string | Date) {
   });
 }
 
-export function ResumeCard({ resume, onDeleted }: ResumeCardProps) {
+export function ResumeCard({ resume, onDeleted, onEdit }: ResumeCardProps) {
   const router = useRouter();
+  const { value: open, setTrue: openMenu, setFalse: closeMenu, toggle: toggleMenu } = useToggle();
 
   const handleDelete = async () => {
     if (!confirm('Are you sure you want to delete this resume?')) return;
 
     try {
       await deleteResume(resume.id);
-      onDeleted();
+      onDeleted?.();
     } catch (error) {
       console.error('Failed to delete resume:', error);
     }
@@ -49,9 +52,6 @@ export function ResumeCard({ resume, onDeleted }: ResumeCardProps) {
 
   return (
     <Card className="group relative overflow-hidden transition-all hover:shadow-md hover:border-primary/20">
-      {/* Color accent bar */}
-      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/60 to-primary/20" />
-
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
@@ -71,12 +71,13 @@ export function ResumeCard({ resume, onDeleted }: ResumeCardProps) {
             </div>
           </div>
 
-          <DropdownMenu>
+          <DropdownMenu open={open} onOpenChange={toggleMenu}>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-8 w-8 opacity-100"
+                onClick={toggleMenu}
               >
                 <MoreVertical className="h-4 w-4" />
               </Button>
@@ -84,12 +85,12 @@ export function ResumeCard({ resume, onDeleted }: ResumeCardProps) {
             <DropdownMenuContent align="end">
               <DropdownMenuItem
                 onSelect={e => e.preventDefault()}
-                onClick={e => e.stopPropagation()}
+                // onClick={e => e.stopPropagation()}
               >
                 <ResumeDialog
                   mode="edit"
                   resume={resume}
-                  onSuccess={onDeleted}
+                  onSuccess={onEdit}
                   trigger={
                     <div className="flex w-full items-center">
                       <Pencil className="mr-4 h-4 w-4" />
@@ -126,11 +127,11 @@ export function ResumeCard({ resume, onDeleted }: ResumeCardProps) {
       </CardFooter>
 
       {/* Clickable overlay — z-0 stays below dropdown (z-50) */}
-      <button
+      {/* <button
         className="absolute inset-0 -z-10 cursor-pointer"
         onClick={handlePreview}
         aria-label={`Preview ${resume.title}`}
-      />
+      /> */}
     </Card>
   );
 }
