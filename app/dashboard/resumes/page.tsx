@@ -8,10 +8,12 @@ import { FileText } from 'lucide-react';
 import { getResumes } from '@/services/resume';
 import { Button } from '@/components/ui/button';
 import type { ResumeItem } from '@/types';
+import { useToggle } from '@/hooks';
 
 export default function ResumesPage() {
   const [resumes, setResumes] = useState<ResumeItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { value: open, toggle: toggleDialog } = useToggle();
 
   const fetchResumes = async () => {
     try {
@@ -30,17 +32,23 @@ export default function ResumesPage() {
 
   return (
     <div className="space-y-6">
+      <ResumeDialog
+        mode="create"
+        open={open}
+        onOpenChange={toggleDialog}
+        onSuccess={fetchResumes}
+      />
+
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Resumes</h1>
           <p className="text-muted-foreground">Create and manage your resumes</p>
         </div>
-        <ResumeDialog
-          mode="create"
-          onSuccess={fetchResumes}
-          trigger={<Button>Create Resume</Button>}
-        />
+        <Button onClick={toggleDialog}>
+          <FileText className="h-4 w-4" />
+          New Resume
+        </Button>
       </div>
 
       {/* Loading state */}
@@ -74,11 +82,7 @@ export default function ResumesPage() {
             education, and skills.
           </p>
           <div className="mt-6">
-            <ResumeDialog
-              mode="create"
-              onSuccess={fetchResumes}
-              trigger={<Button>Create Resume</Button>}
-            />
+            <Button onClick={toggleDialog}>Create Resume</Button>
           </div>
         </div>
       )}

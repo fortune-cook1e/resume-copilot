@@ -12,42 +12,47 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Field, FieldLabel, FieldDescription, FieldGroup, FieldError } from '@/components/ui/field';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { createResume, updateResume } from '@/services/resume';
 import { sampleResume } from '@/types/resume/sample';
 import { defaultResumeData, type ResumeItem, resumeSchema } from '@/types';
 
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 interface ResumeDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   mode: 'create' | 'edit';
   onSuccess?: () => void;
-  trigger: React.ReactNode;
   resume?: ResumeItem;
 }
 
-const resumeInfoSchema = resumeSchema.pick({ title: true, description: true });
+const resumeDialogSchema = resumeSchema
+  .pick({ title: true, description: true, visibility: true })
+  .required();
+type ResumeDialogValues = z.infer<typeof resumeDialogSchema>;
 
-// Todo: 增加visibility 设置
-export function ResumeDialog({ mode, onSuccess, trigger, resume }: ResumeDialogProps) {
-  const [open, setOpen] = useState(false);
-
+export function ResumeDialog({ open, onOpenChange, mode, onSuccess, resume }: ResumeDialogProps) {
   const [useTemplate, setUseTemplate] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<z.infer<typeof resumeInfoSchema>>({
-    resolver: zodResolver(resumeInfoSchema),
+  const { handleSubmit, reset, control } = useForm<ResumeDialogValues>({
+    resolver: zodResolver(resumeDialogSchema),
     defaultValues: {
       title: resume?.title || '',
       description: resume?.description || '',
+      visibility: resume?.visibility || 'private',
     },
   });
 
@@ -59,28 +64,32 @@ export function ResumeDialog({ mode, onSuccess, trigger, resume }: ResumeDialogP
       reset({
         title: resume?.title || '',
         description: resume?.description || '',
+        visibility: resume?.visibility || 'private',
       });
       setUseTemplate(false);
     }
   }, [open, resume]);
 
-  const onSubmit = async (values: { title: string; description: string }) => {
+  const onSubmit = async (values: ResumeDialogValues) => {
     if (isSaving) return;
     setIsSaving(true);
+    const _values = {
+      title: values.title,
+      description: values.description,
+      visibility: values.visibility,
+    };
     try {
       if (isCreate) {
         await createResume({
-          title: values.title,
-          description: values.description,
+          ..._values,
           ...(useTemplate ? { data: sampleResume } : { data: defaultResumeData }),
         });
       } else if (resume) {
         await updateResume(resume.id, {
-          title: values.title,
-          description: values.description,
+          ..._values,
         });
       }
-      setOpen(false);
+      onOpenChange(false);
       onSuccess?.();
     } catch (error) {
       console.error('Failed to save resume:', error);
@@ -90,9 +99,8 @@ export function ResumeDialog({ mode, onSuccess, trigger, resume }: ResumeDialogP
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
           <DialogTitle>{isCreate ? 'Create new resume' : 'Edit resume'}</DialogTitle>
           <DialogDescription>
@@ -101,52 +109,98 @@ export function ResumeDialog({ mode, onSuccess, trigger, resume }: ResumeDialogP
               : 'Update the title and description for this resume.'}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                placeholder="e.g. Frontend Developer Resume"
-                {...register('title', { required: 'Title is required' })}
-                disabled={isSaving}
-              />
-              {errors.title && (
-                <span className="text-xs text-destructive">{errors.title.message as string}</span>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <FieldGroup>
+            <Controller
+              name="title"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel>Title</FieldLabel>
+                  <Input
+                    {...field}
+                    disabled={isSaving}
+                    id="title"
+                    aria-invalid={fieldState.invalid}
+                    placeholder="e.g. Frontend Developer Resume"
+                  />
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
               )}
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="description">Description (optional)</Label>
-              <Textarea
-                id="description"
-                placeholder="Brief description of this resume..."
-                {...register('description')}
-                rows={3}
-                disabled={isSaving}
-              />
-            </div>
-            {isCreate && (
-              <div className="flex items-center gap-2">
-                <input
-                  aria-label="use sample template"
-                  type="checkbox"
+            />
+          </FieldGroup>
+
+          <FieldGroup>
+            <Controller
+              name="description"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field aria-invalid={fieldState.invalid}>
+                  <FieldLabel>Description (optional)</FieldLabel>
+                  <Textarea
+                    {...field}
+                    disabled={isSaving}
+                    id="description"
+                    aria-invalid={fieldState.invalid}
+                    placeholder="e.g. A resume highlighting my experience as a frontend developer, including projects and skills."
+                  />
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
+          </FieldGroup>
+
+          <FieldGroup>
+            <Controller
+              name="visibility"
+              control={control}
+              render={({ field }) => (
+                <Field>
+                  <FieldLabel>Visibility</FieldLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    disabled={isSaving}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select visibility" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="private">Private</SelectItem>
+                        <SelectItem value="public">Public</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <FieldDescription>
+                    Public resumes can be viewed by anyone with the link.
+                  </FieldDescription>
+                </Field>
+              )}
+            />
+          </FieldGroup>
+
+          {isCreate && (
+            <FieldGroup>
+              <Field orientation="horizontal">
+                <Checkbox
                   id="useTemplate"
+                  name="useTemplate"
+                  aria-invalid={false}
                   checked={useTemplate}
-                  onChange={e => setUseTemplate(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300"
-                  disabled={isSaving}
+                  onCheckedChange={(state: boolean) => setUseTemplate(state)}
                 />
-                <Label htmlFor="useTemplate" className="text-sm font-normal cursor-pointer">
-                  Use sample template as starting point
-                </Label>
-              </div>
-            )}
-          </div>
+                <FieldLabel htmlFor="useTemplate">Use sample template as starting point</FieldLabel>
+              </Field>
+            </FieldGroup>
+          )}
+
           <DialogFooter>
             <Button
               variant="outline"
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={() => onOpenChange(false)}
               disabled={isSaving}
             >
               Cancel

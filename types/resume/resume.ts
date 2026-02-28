@@ -25,7 +25,7 @@ export const defaultResumeData = {
 
 export const resumeSchema = z.object({
   id: z.string(),
-  title: z.string(),
+  title: z.string().min(1, 'Title is required').max(20, 'Title must be at most 20 characters'),
   data: resumeDataSchema.default(defaultResumeData),
   description: z.string(),
   visibility: z.enum(['public', 'private']).default('private'),
