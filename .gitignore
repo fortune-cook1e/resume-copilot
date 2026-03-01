@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ai
+__pycache__
+jobs.csv
+resume-sample.json
+resumes.jsonl
