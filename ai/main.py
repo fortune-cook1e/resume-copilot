@@ -1,19 +1,43 @@
-from preprocessing.resume_processor import ResumeProcessor
+from llm.rewriter import ResumeRewriter
+from matching.matcher import Matcher
+from matching.semantic_matcher import SemanticMatcher
 from preprocessing.jd_processor import JDProcessor
-
+from preprocessing.resume_processor import ResumeProcessor
 
 if __name__ == "__main__":
+    # Step1: Processing dataset
     resume_processor = ResumeProcessor("datasets/resumes.jsonl")
     jd_processor = JDProcessor("datasets/jobs.csv")
 
-    candidates = resume_processor.load()
+    resumes = resume_processor.load()
     jobs = jd_processor.load()
 
-    print("Loaded resumes:", len(candidates))
-    print("Loaded jobs:", len(jobs))
+    # Step2: Matching
+    sample_resume = resumes[0]
 
-    print("\nSample Resume:")
-    print(candidates[0])
+    semantic_matcher = SemanticMatcher()
+    matcher = Matcher(
+        semantic_matcher=semantic_matcher,
+        skill_weight=0.5,
+        exp_weight=0.2,
+        semantic_weight=0.3,
+    )
 
-    print("\nSample Job:")
-    print(jobs[0])
+    # Step3: Rewriting
+    rewriter = ResumeRewriter()
+    print("\n=== Original Resume ===\n")
+    print(sample_resume.text)
+    print("\n=== Job Description ===\n")
+    print(jobs[1].text)
+    improved = rewriter.rewrite(sample_resume.text, jobs[0].text)
+
+    # print("\n=== Improved Resume ===\n")
+    # print(improved)
+
+
+# ranked_jobs = matcher.rank_jobs(sample_resume, jobs)
+
+# print("\nTop 10 Matching Jobs:\n")
+
+# for job_id, score in ranked_jobs[:10]:
+#     print(f"{job_id}  ->  {score:.4f}")
