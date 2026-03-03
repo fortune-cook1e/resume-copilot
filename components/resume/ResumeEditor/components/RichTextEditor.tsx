@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import TurndownService from 'turndown';
 import { marked } from 'marked';
 import { Button } from '@/components/ui/button';
+import { Sparkles, Check, X, Loader2 } from 'lucide-react';
+import { polishText } from '@/services/ai';
 
 interface RichTextEditorProps {
   value: string;
@@ -19,6 +21,8 @@ const markdownToHtml = (markdown: string) => (marked.parse(markdown || '') as st
 export default function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
   const lastValueRef = useRef(value);
   const turndownService = useMemo(() => new TurndownService({ bulletListMarker: '-' }), []);
+  const [isPolishing, setIsPolishing] = useState(false);
+  const [comparison, setComparison] = useState<{ original: string; polished: string } | null>(null);
 
   const editor = useEditor({
     extensions: [
@@ -51,6 +55,35 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
     lastValueRef.current = value;
   }, [editor, value]);
 
+  const handlePolish = async () => {
+    if (!editor || isPolishing) return;
+    const html = editor.getHTML();
+    const markdown = turndownService.turndown(html).trim();
+    if (!markdown) return;
+
+    setIsPolishing(true);
+    try {
+      const polished = await polishText(markdown);
+      setComparison({ original: markdown, polished });
+    } catch (err) {
+      console.error('AI polish failed:', err);
+    } finally {
+      setIsPolishing(false);
+    }
+  };
+
+  const handleAccept = () => {
+    if (!editor || !comparison) return;
+    editor.commands.setContent(markdownToHtml(comparison.polished), false);
+    lastValueRef.current = comparison.polished;
+    onChange(comparison.polished);
+    setComparison(null);
+  };
+
+  const handleDiscard = () => {
+    setComparison(null);
+  };
+
   const setLink = () => {
     if (!editor) return;
     const previousUrl = editor.getAttributes('link').href as string | undefined;
@@ -65,53 +98,130 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-2">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-input bg-muted/30 px-2 py-1.5">
         <Button
           type="button"
-          variant={editor?.isActive('bold') ? 'default' : 'outline'}
+          variant={editor?.isActive('bold') ? 'secondary' : 'ghost'}
           size="sm"
+          className="h-7 px-2 text-xs"
           onClick={() => editor?.chain().focus().toggleBold().run()}
-          disabled={!editor}
+          disabled={!editor || !!comparison}
         >
           Bold
         </Button>
         <Button
           type="button"
-          variant={editor?.isActive('italic') ? 'default' : 'outline'}
+          variant={editor?.isActive('italic') ? 'secondary' : 'ghost'}
           size="sm"
+          className="h-7 px-2 text-xs"
           onClick={() => editor?.chain().focus().toggleItalic().run()}
-          disabled={!editor}
+          disabled={!editor || !!comparison}
         >
           Italic
         </Button>
         <Button
           type="button"
-          variant={editor?.isActive('bulletList') ? 'default' : 'outline'}
+          variant={editor?.isActive('bulletList') ? 'secondary' : 'ghost'}
           size="sm"
+          className="h-7 px-2 text-xs"
           onClick={() => editor?.chain().focus().toggleBulletList().run()}
-          disabled={!editor}
+          disabled={!editor || !!comparison}
         >
           Bullet
         </Button>
         <Button
           type="button"
-          variant={editor?.isActive('orderedList') ? 'default' : 'outline'}
+          variant={editor?.isActive('orderedList') ? 'secondary' : 'ghost'}
           size="sm"
+          className="h-7 px-2 text-xs"
           onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-          disabled={!editor}
+          disabled={!editor || !!comparison}
         >
           Numbered
         </Button>
-        <Button type="button" variant="outline" size="sm" onClick={setLink} disabled={!editor}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs"
+          onClick={setLink}
+          disabled={!editor || !!comparison}
+        >
           Link
         </Button>
+
+        <div className="ml-auto">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handlePolish}
+            disabled={!editor || isPolishing || !!comparison}
+            className="h-7 gap-1 px-2 text-xs text-purple-600 hover:bg-purple-50 hover:text-purple-700 disabled:opacity-40"
+          >
+            {isPolishing ? (
+              <>
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Polishing...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-3 w-3" />
+                AI Polish
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
-      {placeholder && !editor?.getText() && (
+      {placeholder && !editor?.getText() && !comparison && (
         <div className="text-sm text-muted-foreground">{placeholder}</div>
       )}
 
-      <EditorContent editor={editor} />
+      {comparison ? (
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Before</p>
+              <div
+                className="min-h-28 rounded-md border border-input bg-muted/40 px-3 py-2 text-sm text-muted-foreground [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1"
+                dangerouslySetInnerHTML={{ __html: markdownToHtml(comparison.original) }}
+              />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-purple-600">After (AI)</p>
+              <div
+                className="min-h-28 rounded-md border border-purple-200 bg-purple-50/40 px-3 py-2 text-sm [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1"
+                dangerouslySetInnerHTML={{ __html: markdownToHtml(comparison.polished) }}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleDiscard}
+              className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10"
+            >
+              <X className="h-3.5 w-3.5" />
+              Discard
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleAccept}
+              className="gap-1.5 bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              <Check className="h-3.5 w-3.5" />
+              Accept
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <EditorContent editor={editor} />
+      )}
     </div>
   );
 }

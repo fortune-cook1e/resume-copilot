@@ -34,6 +34,7 @@
     "lucide-react": "^0.563.0",
     "marked": "^12.0.2",
     "next": "16.1.5",
+    "ollama": "^0.6.3",
     "postgres": "^3.4.8",
     "puppeteer": "^24.36.1",
     "puppeteer-core": "^24.36.1",
