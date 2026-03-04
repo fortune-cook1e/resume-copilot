@@ -162,16 +162,22 @@ export async function POST(request: NextRequest) {
       { timeout: 60000 }, // 60s — React hydration can be slow on low-memory server
     );
 
-    // Wait for all images to finish downloading (avatar, etc.)
-    await page.waitForFunction(
-      () => {
-        const imgs = Array.from(document.querySelectorAll('#resume-document img'));
-        return imgs.every(
-          img => (img as HTMLImageElement).complete && (img as HTMLImageElement).naturalHeight !== 0,
-        );
-      },
-      { timeout: 30000 },
-    );
+    // Wait for all images to settle (loaded or errored) — don't block on broken URLs
+    await page.evaluate(() => {
+      const imgs = Array.from(document.querySelectorAll('#resume-document img'));
+      return Promise.all(
+        imgs.map(
+          img =>
+            new Promise<void>(resolve => {
+              const el = img as HTMLImageElement;
+              // Already settled (cached or failed)
+              if (el.complete) return resolve();
+              el.addEventListener('load', () => resolve(), { once: true });
+              el.addEventListener('error', () => resolve(), { once: true });
+            }),
+        ),
+      );
+    });
     console.log('[PDF] Document ready in', Date.now() - navStart, 'ms');
 
     // Generate PDF
