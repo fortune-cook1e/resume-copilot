@@ -27,6 +27,10 @@ export function success<T>(data: T, status = 200): NextResponse<ApiResponse<T>> 
 }
 
 /** Return an error response */
-export function error(msg: string, status = 400): NextResponse<ApiResponse<null>> {
-  return NextResponse.json({ code: ResponseCode.ERROR, msg, data: null }, { status });
+export function error(
+  msg: string,
+  status = 400,
+  code = ResponseCode.ERROR,
+): NextResponse<ApiResponse<null>> {
+  return NextResponse.json({ code, msg, data: null }, { status });
 }
