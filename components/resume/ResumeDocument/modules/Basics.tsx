@@ -37,14 +37,14 @@ const Basics = () => {
 
   return (
     <div className="flex items-start gap-4 border-b border-resume-theme pb-5">
-      {/* Avatar: temporaryly hidden since  waitUntil option is set as "load" */}
-      {picture.url && (
+      {/* Todo: Add profile picture support (currently requires custom template with image URL in basics.picture.url) */}
+      {/* {picture.url && (
         <img
           src={picture.url}
           alt={name}
           className="w-16 h-16 rounded-full object-cover flex-shrink-0"
         />
-      )}
+      )} */}
 
       <div className="flex-1 space-y-2">
         <div>
