@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from './lib/auth';
 import { headers } from 'next/headers';
+import { error } from '@/lib/api-response';
 
 const apiPublicPaths = ['/api/auth'];
 
@@ -26,6 +27,12 @@ export async function proxy(request: NextRequest) {
   }
 
   if (!session) {
+    // API requests: return 401 JSON response
+    if (pathname.startsWith('/api/')) {
+      return error('Unauthorized', 401);
+    }
+
+    // Page requests: redirect to login
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);

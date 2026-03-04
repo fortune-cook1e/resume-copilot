@@ -1,28 +1,61 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useResumeStore } from '@/stores/resume-store';
 import ResumeDocument from '@/components/resume/ResumeDocument';
-import { sampleResume } from '@/types/resume/sample';
 import Page from '@/components/resume/Page';
+import { ResumeData } from '@/types';
+import { getResume } from '@/services/resume';
 
-// Todo: sample data needs to replaced by real data from server, but we need to make sure the data is loaded before rendering the document, otherwise it will cause hydration error since the document content is different between server and client. We can set a flag in the store to indicate whether the data is loaded or not, and only render the document when the data is loaded.
-export default function ResumePrintPage() {
-  const { resume, setResume } = useResumeStore();
+declare global {
+  interface Window {
+    __RESUME_DATA__?: { id: string; data: ResumeData; isPrint?: boolean };
+  }
+}
+
+function ResumePrintContent() {
+  const searchParams = useSearchParams();
+  const resumeId = searchParams.get('id');
+  const { resume, setResume, setResumeId } = useResumeStore();
 
   useEffect(() => {
-    if (!resume) {
-      setResume(sampleResume);
+    const injected = window.__RESUME_DATA__;
+    if (injected && injected.isPrint) {
+      setResumeId(injected.id);
+      setResume(injected.data);
+      return;
     }
-  }, [resume, setResume]);
+
+    if (!resumeId) {
+      return;
+    }
+
+    getResume(resumeId)
+      .then(res => {
+        setResumeId(res.id);
+        setResume(res.data);
+      })
+      .catch(err => {
+        console.error('Failed to load resume for print:', err);
+      });
+  }, [resumeId, setResume, setResumeId]);
 
   if (!resume) return null;
 
   return (
-    <div className="bg-white mx-auto" style={{ width: '794px' }}>
+    <div className="bg-white mx-auto w-198.5">
       <Page>
         <ResumeDocument />
       </Page>
     </div>
+  );
+}
+
+export default function ResumePrintPage() {
+  return (
+    <Suspense>
+      <ResumePrintContent />
+    </Suspense>
   );
 }

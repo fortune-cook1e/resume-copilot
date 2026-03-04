@@ -11,6 +11,9 @@ WORKDIR /app
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
 
+# Skip puppeteer's bundled Chromium download — we use system chromium in runner
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
 # Install dependencies with retry and better error handling
 RUN pnpm install --frozen-lockfile || \
     (echo "Frozen lockfile failed, trying without frozen..." && pnpm install)
@@ -38,6 +41,7 @@ ARG NEXT_PUBLIC_APP_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 # Build application
 RUN pnpm build
@@ -51,6 +55,20 @@ WORKDIR /app
 
 # Install pnpm for running database migrations
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
+
+# Install system Chromium + fonts for PDF generation
+# This is much lighter than running a separate Chrome Docker container (~100MB vs ~512MB)
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    font-noto-cjk
+
+# Set Chromium path for puppeteer-core (auto-detected in route.ts)
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 # Set production environment
 ENV NODE_ENV=production

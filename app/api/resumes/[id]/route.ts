@@ -10,17 +10,11 @@ type Params = { params: Promise<{ id: string }> };
 
 /** GET /api/resumes/[id] — get a single resume */
 export async function GET(_request: NextRequest, { params }: Params) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) {
-    return error('Unauthorized', 401);
-  }
-
   const { id } = await params;
-
   const [found] = await db
     .select()
     .from(resume)
-    .where(and(eq(resume.id, id), eq(resume.userId, session.user.id)));
+    .where(and(eq(resume.id, id)));
 
   if (!found) {
     return error('Resume not found', 404);
@@ -48,7 +42,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   const [updated] = await db
     .update(resume)
     .set(updateData)
-    .where(and(eq(resume.id, id), eq(resume.userId, session.user.id)))
+    .where(and(eq(resume.id, id)))
     .returning();
 
   if (!updated) {
