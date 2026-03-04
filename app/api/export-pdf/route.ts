@@ -161,6 +161,17 @@ export async function POST(request: NextRequest) {
       () => document.querySelector('#resume-document')?.getAttribute('data-ready') === 'true',
       { timeout: 60000 }, // 60s — React hydration can be slow on low-memory server
     );
+
+    // Wait for all images to finish downloading (avatar, etc.)
+    await page.waitForFunction(
+      () => {
+        const imgs = Array.from(document.querySelectorAll('#resume-document img'));
+        return imgs.every(
+          img => (img as HTMLImageElement).complete && (img as HTMLImageElement).naturalHeight !== 0,
+        );
+      },
+      { timeout: 30000 },
+    );
     console.log('[PDF] Document ready in', Date.now() - navStart, 'ms');
 
     // Generate PDF
