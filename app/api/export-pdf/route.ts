@@ -1,33 +1,109 @@
 import { NextRequest, NextResponse } from 'next/server';
 import puppeteer from 'puppeteer-core';
+import { db } from '@/db';
+import { resume } from '@/db/schema';
+import { and, eq } from 'drizzle-orm';
+import { error, success } from '@/lib/api-response';
+import { auth } from '@/lib/auth';
+import { headers } from 'next/headers';
+
+/**
+ * Detect Chrome/Chromium executable path based on environment:
+ * - Production (Docker Alpine): system chromium via PUPPETEER_EXECUTABLE_PATH env
+ * - Development: auto-detect local Chrome installation
+ */
+async function getChromePath(): Promise<string> {
+  // Allow explicit override via environment variable (set in Dockerfile)
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    return process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+
+  // Auto-detect local Chrome by platform
+  const platformPaths: Record<string, string[]> = {
+    darwin: [
+      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      '/Applications/Chromium.app/Contents/MacOS/Chromium',
+    ],
+    win32: [
+      'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+      'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    ],
+    linux: ['/usr/bin/chromium-browser', '/usr/bin/chromium', '/usr/bin/google-chrome'],
+  };
+
+  const fs = await import('fs');
+  for (const p of platformPaths[process.platform] || []) {
+    if (fs.existsSync(p)) return p;
+  }
+
+  throw new Error(
+    `Chrome/Chromium not found on ${process.platform}. ` +
+      `Set PUPPETEER_EXECUTABLE_PATH or install Google Chrome.`,
+  );
+}
 
 export async function POST(request: NextRequest) {
   let browser;
   let page;
 
   try {
-    const { title = 'Resume' } = await request.json();
+    const { title = 'Resume', resumeId } = await request.json();
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
 
-    // CHROME_WS_ENDPOINT: ws endpoint of the remote Chrome (browserless v2)
-    // CHROME_TARGET_URL: URL that Chrome container uses to reach this app
-    //   - Production (docker-compose): ws://chrome:3000/chrome + http://app:3000
-    //   - Development: ws://localhost:3006/chrome + http://host.docker.internal:3000
-    const chromeWsEndpoint = process.env.CHROME_WS_ENDPOINT;
-    const chromeTargetUrl = process.env.CHROME_TARGET_URL ?? 'http://host.docker.internal:3000';
+    if (!session) {
+      return error('Unauthorized', 401);
+    }
 
-    if (!chromeWsEndpoint) {
-      throw new Error('CHROME_WS_ENDPOINT not set. Start Chrome via: docker-compose up -d chrome');
+    if (!resumeId) {
+      return NextResponse.json(
+        { code: 1, msg: 'resumeId is required', data: null },
+        { status: 400 },
+      );
     }
 
     const startTime = Date.now();
-    console.log('[PDF] Connecting to Chrome:', chromeWsEndpoint);
-    console.log('[PDF] Target URL:', chromeTargetUrl);
+    const executablePath = await getChromePath();
+    console.log('[PDF] Using Chrome:', executablePath);
 
-    // Connect to remote Chrome (browserless v2 uses /chrome path)
-    browser = await puppeteer.connect({
-      browserWSEndpoint: chromeWsEndpoint,
+    // Fetch resume data directly from DB (no auth needed, server-side)
+    const [found] = await db
+      .select()
+      .from(resume)
+      .where(and(eq(resume.id, resumeId), eq(resume.userId, session.user.id)));
+    if (!found) {
+      return error('Resume not found', 404);
+    }
+
+    console.log('[PDF] Resume fetched from DB:', found.id);
+
+    // Launch Chromium with memory-optimized flags
+    // These flags minimize RAM usage on low-spec servers (2C2G)
+    browser = await puppeteer.launch({
+      executablePath,
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage', // Write shared memory to /tmp instead of /dev/shm
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process', // Run all in one process to reduce memory (~50MB savings)
+        '--disable-extensions',
+        '--disable-background-networking',
+        '--disable-default-apps',
+        '--disable-sync',
+        '--disable-translate',
+        '--metrics-recording-only',
+        '--mute-audio',
+        '--no-default-browser-check',
+        '--hide-scrollbars',
+      ],
     });
-    console.log('[PDF] Connected in', Date.now() - startTime, 'ms');
+    console.log('[PDF] Browser launched in', Date.now() - startTime, 'ms');
 
     page = await browser.newPage();
 
@@ -45,8 +121,20 @@ export async function POST(request: NextRequest) {
       console.warn('[Browser Request Failed]', req.url(), req.failure()?.errorText),
     );
 
-    const printUrl = `${chromeTargetUrl}/resume/print`;
+    // Always use localhost — Chromium runs in the same container/machine as Next.js
+    const port = process.env.PORT || '3000';
+    const printUrl = `${process.env.NEXT_PUBLIC_APP_URL}/resume/print?id=${resumeId}`;
+    // const printUrl = `http://localhost:${port}/resume/print?id=${resumeId}`;
     console.log('[PDF] Navigating to:', printUrl);
+
+    // Inject resume data into page before it loads
+    // This avoids the print page needing to call /api/resumes (which requires auth)
+    await page.evaluateOnNewDocument(
+      data => {
+        (window as any).__RESUME_DATA__ = data;
+      },
+      { id: found.id, data: found.data, isPrint: true },
+    );
 
     const navStart = Date.now();
     // Use 'load' to wait for all resources (images, fonts, CSS) to finish loading.
@@ -73,6 +161,8 @@ export async function POST(request: NextRequest) {
       () => document.querySelector('#resume-document')?.getAttribute('data-ready') === 'true',
       { timeout: 60000 }, // 60s — React hydration can be slow on low-memory server
     );
+
+    // Wait for all images to settle (loaded or errored) — don't block on broken URLs
     console.log('[PDF] Document ready in', Date.now() - navStart, 'ms');
 
     // Generate PDF
@@ -96,9 +186,9 @@ export async function POST(request: NextRequest) {
     console.error('PDF generation error:', error);
     return NextResponse.json({ code: 1, msg: String(error), data: null }, { status: 500 });
   } finally {
-    // Always clean up: close page and disconnect
+    // Always clean up: close page and browser
     await page?.close().catch(() => {});
-    await browser?.disconnect().catch(() => {});
+    await browser?.close().catch(() => {});
   }
 }
 

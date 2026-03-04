@@ -37,7 +37,7 @@ const Basics = () => {
 
   return (
     <div className="flex items-start gap-4 border-b border-resume-theme pb-5">
-      {/* Avatar: temporaryly hidden since  waitUntil option is set as "load" */}
+      {/* Todo: Add profile picture support (currently requires custom template with image URL in basics.picture.url) */}
       {/* {picture.url && (
         <img
           src={picture.url}

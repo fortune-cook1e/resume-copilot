@@ -5,6 +5,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useResumeStore } from '@/stores/resume-store';
 import {
   Tag,
@@ -68,7 +75,7 @@ export default function Basics() {
   return (
     <div className="space-y-6">
       {/* Picture */}
-      <div className="space-y-2">
+      {/* <div className="space-y-2">
         <Label htmlFor="picture-url">Picture</Label>
         <div className="flex items-center gap-4">
           {basics.picture.url && (
@@ -91,7 +98,7 @@ export default function Basics() {
             className="flex-1"
           />
         </div>
-      </div>
+      </div> */}
 
       {/* Full Name */}
       <div className="space-y-2">
@@ -157,12 +164,13 @@ export default function Basics() {
             />
             <Popover>
               <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 rounded"
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
                 >
-                  <Tag className="h-4 w-4 text-gray-500" />
-                </button>
+                  <Tag className="h-3.5 w-3.5" />
+                </Button>
               </PopoverTrigger>
               <PopoverContent className="w-80" align="end">
                 <div className="space-y-2">
@@ -223,17 +231,22 @@ export default function Basics() {
             <div className="flex items-center justify-center w-10">
               <IconComponent className="h-5 w-5 text-gray-500" />
             </div>
-            <select
+            <Select
               value={field.icon}
-              onChange={e => updateCustomField(index, 'icon', e.target.value)}
-              className="w-32 border rounded-md px-3 py-2 text-sm"
+              onValueChange={value => updateCustomField(index, 'icon', value)}
             >
-              {commonIcons.map(icon => (
-                <option key={icon.name} value={icon.name}>
-                  {icon.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {commonIcons.map(icon => (
+                  <SelectItem key={icon.name} value={icon.name}>
+                    <icon.component className="h-4 w-4" />
+                    {icon.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Input
               placeholder="Label (e.g., Github)"
               value={field.label}

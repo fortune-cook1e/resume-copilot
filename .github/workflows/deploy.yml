@@ -88,8 +88,8 @@ jobs:
             fi
             echo "✅ Migrations completed successfully"
 
-            # Start new containers
-            docker compose -f docker-compose.prod.yml up -d
+            # Start new containers (--remove-orphans cleans up containers no longer in compose file, e.g. old chrome service)
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
             # Clean up old images
             docker image prune -af --filter "until=72h"

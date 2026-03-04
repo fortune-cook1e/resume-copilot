@@ -14,6 +14,7 @@ export const auth = betterAuth({
   }),
   advanced: {
     cookiePrefix: COOKIE_PREFIX,
+    disableOriginCheck: true, // Disable origin check to allow API calls from different origins (e.g. localhost:3000 and localhost:3001)
     cookies: {
       session_token: {
         name: COOKIE_NAMES.SESSION_TOKEN,

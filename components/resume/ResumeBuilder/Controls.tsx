@@ -1,4 +1,4 @@
-import { ZoomIn, ZoomOut, RotateCcw, Download, Home } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Download, Home, Eye, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useControls } from 'react-zoom-pan-pinch';
 import { useState } from 'react';
@@ -13,13 +13,24 @@ export default function Controls() {
   const [isExporting, setIsExporting] = useState(false);
   const router = useRouter();
 
+  const handlePrintPreview = () => {
+    if (!resume) return;
+    const { resumeId } = useResumeStore.getState();
+    if (resumeId) {
+      window.open(`/resume/print?id=${resumeId}`, '_blank');
+    }
+  };
+
   const handleExportPDF = async () => {
     if (isExporting || !resume) return;
+
+    const { resumeId } = useResumeStore.getState();
+    if (!resumeId) return;
 
     setIsExporting(true);
 
     try {
-      const blob = await exportResumePDF(resume.basics.name || 'Resume');
+      const blob = await exportResumePDF(resume.basics.name || 'Resume', resumeId);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -74,7 +85,15 @@ export default function Controls() {
       >
         <RotateCcw className="h-4 w-4" />
       </Button>
-      <div className="w-px bg-gray-200" />
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={handlePrintPreview}
+        title="Preview"
+        className="cursor-pointer"
+      >
+        <Eye className="h-4 w-4" />
+      </Button>
       <Button
         variant="ghost"
         size="icon"
@@ -86,7 +105,7 @@ export default function Controls() {
         {isExporting ? (
           <div className="h-4 w-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
         ) : (
-          <Download className="h-4 w-4" />
+          <Printer className="h-4 w-4" />
         )}
       </Button>
     </div>

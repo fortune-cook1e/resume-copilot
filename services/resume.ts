@@ -45,10 +45,10 @@ export async function deleteResume(id: string): Promise<{ id: string }> {
 }
 
 /** Export a resume as PDF (returns Blob) */
-export async function exportResumePDF(title: string): Promise<Blob> {
+export async function exportResumePDF(title: string, resumeId: string): Promise<Blob> {
   const data = (await request.post(
     '/export-pdf',
-    { title },
+    { title, resumeId },
     {
       responseType: 'blob',
       timeout: 120000,
