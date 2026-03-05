@@ -71,6 +71,7 @@ jobs:
           # key: ${{ secrets.ALIYUN_SSH_KEY }}
           password: ${{ secrets.ALIYUN_SSH_PASSWORD }}
           port: ${{ secrets.ALIYUN_SSH_PORT || 22 }}
+          command_timeout: 20m
           script: |
             # Navigate to app directory
             cd ${{ secrets.ALIYUN_APP_DIR }} || exit 1
@@ -84,10 +85,27 @@ jobs:
               --password-stdin \
               ${{ secrets.ALIYUN_REGISTRY }}
 
-            # Pull latest images
-            echo "📥 Pulling latest images..."
-            docker pull ${{ secrets.ALIYUN_REGISTRY }}/resume-copilot:latest
-            docker pull ${{ secrets.ALIYUN_REGISTRY }}/resume-copilot-ai:latest
+            # Pull latest images with retry logic
+            pull_with_retry() {
+              local image="$1"
+              local max_retries=3
+              local attempt=1
+              while [ $attempt -le $max_retries ]; do
+                echo "📥 Pulling $image (attempt $attempt/$max_retries)..."
+                if docker pull "$image"; then
+                  echo "✅ Successfully pulled $image"
+                  return 0
+                fi
+                echo "⚠️ Pull failed, retrying in 10s..."
+                sleep 10
+                attempt=$((attempt + 1))
+              done
+              echo "❌ Failed to pull $image after $max_retries attempts"
+              return 1
+            }
+
+            pull_with_retry "${{ secrets.ALIYUN_REGISTRY }}/resume-copilot:latest" || exit 1
+            pull_with_retry "${{ secrets.ALIYUN_REGISTRY }}/resume-copilot-ai:latest" || exit 1
 
             # Stop and remove old containers (keep database running)
             docker compose -f docker-compose.prod.yml down app ai-service
