@@ -1,0 +1,80 @@
+# Python cache
+
+**pycache**/
+_.py[cod]
+_$py.class
+\*.so
+.Python
+
+# Virtual environments
+
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+
+.vscode/
+.idea/
+_.swp
+_.swo
+.DS_Store
+
+# Testing
+
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Documentation
+
+README.md
+docs/
+\*.md
+
+# Exclude unused datasets (only keep technical_skills.csv)
+
+datasets/\*
+!datasets/technical_skills.csv
+
+# Training/evaluation artifacts
+
+evaluate/
+NER/
+_.pth
+_.h5
+_.pkl
+_.joblib
+
+# Model checkpoints
+
+checkpoints/
+models/_.pth
+models/_.h5
+
+# Logs
+
+\*.log
+logs/
+
+# Environment files
+
+.env
+.env.\*
+
+# Git
+
+.git/
+.gitignore
+
+# Docker
+
+Dockerfile
+.dockerignore
+
+# OS
+
+.DS_Store
+Thumbs.db

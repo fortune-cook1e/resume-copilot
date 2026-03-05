@@ -28,8 +28,8 @@ jobs:
           username: ${{ secrets.ALIYUN_REGISTRY_USERNAME }}
           password: ${{ secrets.ALIYUN_REGISTRY_PASSWORD }}
 
-      # 4. Build and push Docker image
-      - name: Build and push Docker image
+      # 4. Build and push Docker images (App + AI)
+      - name: Build and push App Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -40,6 +40,16 @@ jobs:
             ${{ secrets.ALIYUN_REGISTRY }}/resume-copilot:${{ github.sha }}
           build-args: |
             NEXT_PUBLIC_APP_URL=${{ secrets.APP_URL }}
+
+      - name: Build and push AI Service Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./ai
+          file: ./ai/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.ALIYUN_REGISTRY }}/resume-copilot-ai:latest
+            ${{ secrets.ALIYUN_REGISTRY }}/resume-copilot-ai:${{ github.sha }}
 
       # 5. Copy docker-compose file to server
       - name: Copy docker-compose.prod.yml to server
@@ -74,11 +84,13 @@ jobs:
               --password-stdin \
               ${{ secrets.ALIYUN_REGISTRY }}
 
-            # Pull latest image
+            # Pull latest images
+            echo "📥 Pulling latest images..."
             docker pull ${{ secrets.ALIYUN_REGISTRY }}/resume-copilot:latest
+            docker pull ${{ secrets.ALIYUN_REGISTRY }}/resume-copilot-ai:latest
 
-            # Stop and remove old app container (keep database running)
-            docker compose -f docker-compose.prod.yml down app
+            # Stop and remove old containers (keep database running)
+            docker compose -f docker-compose.prod.yml down app ai-service
 
             # Run database migrations
             echo "📦 Running database migrations..."

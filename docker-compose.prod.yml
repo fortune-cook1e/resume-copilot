@@ -20,6 +20,32 @@ services:
       timeout: 5s
       retries: 5
 
+  # Python AI Service
+  ai-service:
+    image: ${ALIYUN_REGISTRY}/resume-copilot-ai:latest
+    container_name: resume-copilot-ai
+    restart: unless-stopped
+    ports:
+      - '3006:8000'
+    environment:
+      PYTHONUNBUFFERED: 1
+    networks:
+      - resume-network
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    volumes:
+      - ai_models:/app/models_cache
+
   # Resume Copilot Application
   app:
     image: ${ALIYUN_REGISTRY}/resume-copilot:latest
@@ -37,11 +63,16 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL}
 
+      # Python AI Service
+      PYTHON_SERVICE_URL: http://ai-service:8000
+
       # Next.js
       NODE_ENV: production
       PORT: ${PORT:-3000}
     depends_on:
       postgres:
+        condition: service_healthy
+      ai-service:
         condition: service_healthy
     networks:
       - resume-network
@@ -53,6 +84,8 @@ volumes:
     name: resume-copilot-pgdata-prod
   app_logs:
     name: resume-copilot-app-logs
+  ai_models:
+    name: resume-copilot-ai-models
 
 networks:
   resume-network:

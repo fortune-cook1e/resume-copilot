@@ -5,7 +5,7 @@ import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { db } from '@/db';
 import { resume } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { ResumeData } from '@/types/resume';
 import { extractSkills, extractYears, buildResumeText } from '@/lib/job-parse';
 import pythonClient from '@/lib/python-client';
@@ -31,16 +31,17 @@ Guidelines:
 - Respond in the same language as the job description`;
 
 export interface ParseJobRequest {
-  job_description: string;
+  job_description: string; // Example:
   resume_id: string; // required: used to fetch resume and compute match score
 }
 
+// Todo: for test: https://www.linkedin.com/jobs/collections/recommended/?currentJobId=4353932501
 export async function POST(req: Request) {
   try {
-    // const session = await auth.api.getSession({ headers: await headers() });
-    // if (!session) {
-    //   return error('Unauthorized', 401);
-    // }
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) {
+      return error('Unauthorized', 401);
+    }
 
     const body = (await req.json()) as ParseJobRequest;
     const { job_description, resume_id } = body;
@@ -52,8 +53,10 @@ export async function POST(req: Request) {
       return error('resume_id is required', 400);
     }
 
-    // Fetch resume from DB
-    const [found] = await db.select().from(resume).where(eq(resume.id, resume_id));
+    const [found] = await db
+      .select()
+      .from(resume)
+      .where(and(eq(resume.id, resume_id), eq(resume.userId, session.user.id)));
 
     if (!found) {
       return error('Resume not found', 404);
@@ -72,7 +75,7 @@ export async function POST(req: Request) {
 
     // Run Python matching + Ollama suggestion in parallel
     const [matchSettled, aiSettled] = await Promise.allSettled([
-      pythonClient.post('/api/job/analyze', payload),
+      pythonClient.post('/api/resume/analyze', payload),
       ollama.chat({
         model: OLLAMA_MODEL,
         stream: false,

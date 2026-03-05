@@ -3,8 +3,10 @@ Parse raw LinkedIn / general Job Description text into structured data.
 Extracts: title, sections, skills, required_years of experience.
 """
 
+import csv
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Optional
 
 from preprocessing.utils import normalize_skill
@@ -40,75 +42,30 @@ SECTION_HEADERS = [
     "perks",
 ]
 
+
 # Common tech skill keywords used for extraction
-COMMON_TECH_SKILLS = {
-    "python",
-    "java",
-    "javascript",
-    "typescript",
-    "go",
-    "golang",
-    "rust",
-    "c++",
-    "c#",
-    "ruby",
-    "php",
-    "swift",
-    "kotlin",
-    "scala",
-    "r",
-    "react",
-    "vue",
-    "angular",
-    "next.js",
-    "nextjs",
-    "node.js",
-    "nodejs",
-    "django",
-    "flask",
-    "fastapi",
-    "spring",
-    "express",
-    "sql",
-    "mysql",
-    "postgresql",
-    "mongodb",
-    "redis",
-    "elasticsearch",
-    "aws",
-    "azure",
-    "gcp",
-    "docker",
-    "kubernetes",
-    "k8s",
-    "terraform",
-    "git",
-    "ci/cd",
-    "github actions",
-    "jenkins",
-    "machine learning",
-    "deep learning",
-    "nlp",
-    "llm",
-    "pytorch",
-    "tensorflow",
-    "sklearn",
-    "scikit-learn",
-    "pandas",
-    "numpy",
-    "rest",
-    "graphql",
-    "grpc",
-    "microservices",
-    "linux",
-    "bash",
-    "shell",
-    "html",
-    "css",
-    "tailwind",
-    "webpack",
-    "vite",
-}
+def _load_skills_from_csv() -> set[str]:
+    """Load technical skills from CSV dataset."""
+    csv_path = Path(__file__).parent.parent / "datasets" / "technical_skills.csv"
+    skills = set()
+
+    try:
+        with open(csv_path, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                skill_name = row.get("Skill Name", "").strip()
+                if skill_name:
+                    # Store normalized version for matching
+                    skills.add(normalize_skill(skill_name))
+    except FileNotFoundError:
+        print(f"Warning: Skills CSV not found at {csv_path}. Using empty skill set.")
+    except Exception as e:
+        print(f"Warning: Error loading skills CSV: {e}. Using empty skill set.")
+
+    return skills
+
+
+COMMON_TECH_SKILLS = _load_skills_from_csv()
 
 YEARS_PATTERNS = [
     r"(\d+)\+?\s*(?:to|-)\s*(\d+)\s*years?",  # 3-5 years / 3 to 5 years

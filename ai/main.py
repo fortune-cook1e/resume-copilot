@@ -30,14 +30,3 @@ if __name__ == "__main__":
     print("\n=== Job Description ===\n")
     print(jobs[1].text)
     improved = rewriter.rewrite(sample_resume.text, jobs[0].text)
-
-    # print("\n=== Improved Resume ===\n")
-    # print(improved)
-
-
-# ranked_jobs = matcher.rank_jobs(sample_resume, jobs)
-
-# print("\nTop 10 Matching Jobs:\n")
-
-# for job_id, score in ranked_jobs[:10]:
-#     print(f"{job_id}  ->  {score:.4f}")

@@ -52,12 +52,13 @@ class SkillMatchResult(BaseModel):
     final_score: float
 
 
-class AnalyzeJobResponse(BaseModel):
-    title: str
-    sections: dict[str, str]
+class JobAnalysisResult(BaseModel):
     extracted_skills: list[str]
     required_years: float
-    requirements_text: str
+
+
+class AnalyzeJobResponse(BaseModel):
+    job: Optional[JobAnalysisResult] = None
     match: Optional[SkillMatchResult] = None
 
 
@@ -68,7 +69,7 @@ def health():
 
 
 # ── Main endpoint ─────────────────────────────────────────────────────────── #
-@app.post("/api/job/analyze", response_model=AnalyzeJobResponse)
+@app.post("/api/resume/analyze", response_model=AnalyzeJobResponse)
 def analyze_job(req: AnalyzeJobRequest):
     """
     Parse a raw LinkedIn JD and optionally compute a match score
@@ -86,11 +87,13 @@ def analyze_job(req: AnalyzeJobRequest):
         )
 
         response = AnalyzeJobResponse(
-            title=parsed.title,
-            sections=parsed.sections,
-            extracted_skills=sorted(parsed.skills),
-            required_years=parsed.required_years,
-            requirements_text=parsed.requirements_text,
+            job=JobAnalysisResult(
+                # title=parsed.title,
+                # sections=parsed.sections,
+                # requirements_text=parsed.requirements_text,
+                extracted_skills=sorted(parsed.skills),
+                required_years=parsed.required_years,
+            ),
         )
 
         # 2. If resume data supplied, compute match score
