@@ -58,7 +58,6 @@ jobs:
         with:
           host: ${{ secrets.ALIYUN_HOST }}
           username: ${{ secrets.ALIYUN_SSH_USER }}
-          # key: ${{ secrets.ALIYUN_SSH_KEY }}
           password: ${{ secrets.ALIYUN_SSH_PASSWORD }}
           port: ${{ secrets.ALIYUN_SSH_PORT || 22 }}
           script: |
