@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ResizableHandle, ResizablePanel, ResizableGroup } from '@/components/ui/resizable';
 import ResumeEditor from '@/components/resume/ResumeEditor';
+import ResumeFeaturesPanel from '@/components/resume/ResumeFeaturesPanel';
 import { useResumeStore } from '@/stores/resume-store';
 import { useDefaultLayout } from 'react-resizable-panels';
 import ResumeBuilder from '@/components/resume/ResumeBuilder';
@@ -32,7 +33,7 @@ function ResumeInner() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
-    id: 'unique-layout-id',
+    id: 'resume-editor-layout',
     storage: createSafeStorage(),
   });
 
@@ -90,7 +91,8 @@ function ResumeInner() {
     <div className="h-screen flex flex-col bg-gray-50">
       <main className="flex-1 overflow-hidden">
         <ResizableGroup defaultLayout={defaultLayout} onLayoutChanged={onLayoutChanged}>
-          <ResizablePanel id="left" minSize={400} maxSize={500}>
+          {/* Left Panel - Editor */}
+          <ResizablePanel id="left" minSize={25} defaultSize={25}>
             <div className="h-full bg-white border-r border-gray-200">
               <div className="h-full overflow-y-auto">
                 <ResumeEditor />
@@ -100,8 +102,20 @@ function ResumeInner() {
 
           <ResizableHandle withHandle />
 
-          <ResizablePanel id="right" minSize={500}>
+          {/* Middle Panel - Resume Preview */}
+          <ResizablePanel id="middle" minSize={35} defaultSize={45}>
             <ResumeBuilder />
+          </ResizablePanel>
+
+          <ResizableHandle withHandle />
+
+          {/* Right Panel - Features */}
+          <ResizablePanel id="right" minSize={20} defaultSize={30}>
+            <div className="h-full bg-white border-r border-gray-200">
+              <div className="h-full overflow-y-auto">
+                <ResumeFeaturesPanel />
+              </div>
+            </div>
           </ResizablePanel>
         </ResizableGroup>
       </main>

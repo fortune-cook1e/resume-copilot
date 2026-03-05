@@ -20,14 +20,15 @@ export default function ResumeBuilder() {
   return (
     <TransformWrapper
       centerOnInit
-      maxScale={2}
-      minScale={0.4}
-      initialScale={0.8}
+      maxScale={2.5}
+      minScale={0.3}
+      initialScale={1}
       ref={transformRef}
       limitToBounds={false}
+      centerZoomedOut
     >
       <TransformComponent
-        wrapperClass="!w-screen !h-screen"
+        wrapperClass="!w-full !h-full"
         contentClass="grid items-start justify-center space-x-12 pointer-events-none"
       >
         <Page mode="builder">

@@ -90,10 +90,10 @@ export async function POST(req: Request) {
     ]);
 
     const matchResult = matchSettled.status === 'fulfilled' ? matchSettled.value.data : null;
-    const ai_suggestions =
+    const suggestions =
       aiSettled.status === 'fulfilled' ? (aiSettled.value.message.content?.trim() ?? null) : null;
 
-    return success({ ...(matchResult as object), ai_suggestions });
+    return success({ ...(matchResult as object), suggestions });
   } catch (err) {
     if (axios.isAxiosError(err)) {
       console.error('Python service error:', err.response?.status, err.response?.data);
