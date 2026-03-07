@@ -8,6 +8,8 @@ export interface AnalyzeResult {
   job: {
     extracted_skills: string[];
     required_years: number;
+    hard_skills: string[];
+    soft_skills: string[];
   };
   match: {
     matched_skills: string[];
@@ -17,6 +19,15 @@ export interface AnalyzeResult {
     overall_score: number; // 0–1
     semantic_score: number; // 0–1
     final_score: number; // 0–1, weighted average of all factors
+    // 细分 hard / soft
+    matched_hard_skills: string[];
+    missing_hard_skills: string[];
+    hard_skill_score: number;
+    matched_soft_skills: string[];
+    missing_soft_skills: string[];
+    soft_skill_score: number;
+    resume_years: number;
+    jd_required_years: number;
   };
   suggestions: string; // markdown string with actionable resume improvement suggestions
 }
