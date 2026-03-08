@@ -33,7 +33,7 @@ export default function ResumeEditor() {
   };
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="min-w-0 p-6 space-y-8">
       <section className="space-y-4">
         <div className="text-lg font-semibold text-gray-900">Basics</div>
         <Basics />
@@ -48,7 +48,7 @@ export default function ResumeEditor() {
       <Skills />
 
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="text-lg font-semibold text-gray-900">Custom Module</div>
           <Button type="button" variant="outline" size="sm" onClick={activateCustomModule}>
             Add Custom Module

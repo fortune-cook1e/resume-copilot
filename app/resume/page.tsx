@@ -92,10 +92,18 @@ function ResumeInner() {
       <main className="flex-1 overflow-hidden">
         <ResizableGroup defaultLayout={defaultLayout} onLayoutChanged={onLayoutChanged}>
           {/* Left Panel - Editor */}
-          <ResizablePanel id="left" minSize={25} defaultSize={25}>
-            <div className="h-full bg-white border-r border-gray-200">
-              <div className="h-full overflow-y-auto">
-                <ResumeEditor />
+          <ResizablePanel
+            id="left"
+            minSize="25%"
+            maxSize="35%"
+            defaultSize="25%"
+            className="min-w-0"
+          >
+            <div className="h-full min-w-0 bg-white border-r border-gray-200">
+              <div className="h-full min-w-0 overflow-y-auto overflow-x-auto">
+                <div className="w-full min-w-0">
+                  <ResumeEditor />
+                </div>
               </div>
             </div>
           </ResizablePanel>
@@ -103,17 +111,21 @@ function ResumeInner() {
           <ResizableHandle withHandle />
 
           {/* Middle Panel - Resume Preview */}
-          <ResizablePanel id="middle" minSize={35} defaultSize={45}>
-            <ResumeBuilder />
+          <ResizablePanel id="middle" minSize="30%" defaultSize="45%">
+            <div className="h-full w-full overflow-hidden">
+              <ResumeBuilder />
+            </div>
           </ResizablePanel>
 
           <ResizableHandle withHandle />
 
           {/* Right Panel - Features */}
-          <ResizablePanel id="right" minSize={20} defaultSize={30}>
+          <ResizablePanel id="right" minSize="20%" maxSize="30%" defaultSize="25%">
             <div className="h-full bg-white border-r border-gray-200">
-              <div className="h-full overflow-y-auto">
-                <ResumeFeaturesPanel />
+              <div className="h-full overflow-y-auto overflow-x-hidden">
+                <div className="w-full min-w-0">
+                  <ResumeFeaturesPanel />
+                </div>
               </div>
             </div>
           </ResizablePanel>

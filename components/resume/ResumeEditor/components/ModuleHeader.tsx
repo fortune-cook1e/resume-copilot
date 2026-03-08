@@ -19,11 +19,11 @@ export default function ModuleHeader({ moduleId, canEditName = true }: ModuleHea
 
   if (!resume) return null;
 
-  const module = resume.modules[moduleId];
+  const moduleData = resume.modules[moduleId];
 
   const startEditing = () => {
     if (!canEditName) return;
-    setDraftName(module.name || '');
+    setDraftName(moduleData.name || '');
     setIsEditing(true);
   };
 
@@ -53,8 +53,8 @@ export default function ModuleHeader({ moduleId, canEditName = true }: ModuleHea
   };
 
   return (
-    <div className="flex items-center justify-between gap-3">
-      <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
         {isEditing ? (
           <Input
             value={draftName}
@@ -70,11 +70,11 @@ export default function ModuleHeader({ moduleId, canEditName = true }: ModuleHea
                 setIsEditing(false);
               }
             }}
-            className="h-8 w-48"
+            className="h-8 w-full max-w-full sm:w-48"
             autoFocus
           />
         ) : (
-          <h3 className="text-lg font-semibold text-gray-900">{module.name}</h3>
+          <h3 className="truncate text-lg font-semibold text-gray-900">{moduleData.name}</h3>
         )}
 
         {canEditName && (
@@ -90,7 +90,7 @@ export default function ModuleHeader({ moduleId, canEditName = true }: ModuleHea
         )}
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex shrink-0 items-center gap-1">
         {isCustomModule && (
           <Button
             type="button"
@@ -107,9 +107,9 @@ export default function ModuleHeader({ moduleId, canEditName = true }: ModuleHea
           variant="ghost"
           size="icon"
           onClick={toggleVisibility}
-          title={module.visible ? 'Hide module' : 'Show module'}
+          title={moduleData.visible ? 'Hide module' : 'Show module'}
         >
-          {module.visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          {moduleData.visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
         </Button>
       </div>
     </div>

@@ -132,7 +132,7 @@ export default function Basics() {
       </div>
 
       {/* Email and Website */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input
@@ -193,7 +193,7 @@ export default function Basics() {
       </div>
 
       {/* Phone and Location */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
         <div className="space-y-2">
           <Label htmlFor="phone">Phone</Label>
           <Input
@@ -227,15 +227,15 @@ export default function Basics() {
         const IconComponent = commonIcons.find(i => i.name === field.icon)?.component || LinkIcon;
 
         return (
-          <div key={index} className="flex items-center gap-2">
-            <div className="flex items-center justify-center w-10">
+          <div key={index} className="flex flex-wrap items-center gap-2">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center">
               <IconComponent className="h-5 w-5 text-gray-500" />
             </div>
             <Select
               value={field.icon}
               onValueChange={value => updateCustomField(index, 'icon', value)}
             >
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-full min-w-[140px] sm:w-32">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -251,19 +251,20 @@ export default function Basics() {
               placeholder="Label (e.g., Github)"
               value={field.label}
               onChange={e => updateCustomField(index, 'label', e.target.value)}
-              className="flex-1"
+              className="min-w-[180px] flex-1"
             />
             <Input
               placeholder="https://example.com"
               value={field.link}
               onChange={e => updateCustomField(index, 'link', e.target.value)}
-              className="flex-1"
+              className="min-w-[220px] flex-1"
             />
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={() => removeCustomField(index)}
+              className="shrink-0"
             >
               <X className="h-4 w-4" />
             </Button>
