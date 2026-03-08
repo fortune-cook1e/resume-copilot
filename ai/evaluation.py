@@ -145,13 +145,15 @@ def evaluate_extractors(jd_text: str, resume_text: str):
         for mode, matcher in matchers.items()
     }
 
-    ranking = sorted(results.items(), key=lambda item: item[1].final_score, reverse=True)
+    ranking = sorted(
+        results.items(), key=lambda item: item[1].final_score, reverse=True
+    )
     winner_mode, winner_result = ranking[0]
     has_resume = bool(resume_text)
 
     if has_resume:
         quick_read = f"""
-### Quick takeaway (Beginner-friendly)
+### Quick takeaway 
 - Recommended mode: **{winner_mode}**
 - Why: highest overall score (**{winner_result.final_score:.1%}**)
 - Interpretation: {_mode_explanation(winner_mode)}
@@ -239,7 +241,7 @@ No resume was provided, so this compares JD extraction only and skips full match
 
 
 with gr.Blocks(title="Extractor Evaluation Dashboard") as demo:
-    gr.Markdown("# 3-Mode Skill Extraction Comparison (Beginner View)")
+    gr.Markdown("# 3-Mode Skill Extraction Comparison ")
     gr.Markdown(
         """
 ### Steps
