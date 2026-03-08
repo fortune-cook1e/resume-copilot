@@ -48,10 +48,10 @@ type ResumeDialogValues = z.infer<typeof resumeDialogSchema>;
 export function ResumeDialog({ open, onOpenChange, mode, onSuccess, resume }: ResumeDialogProps) {
   const [useTemplate, setUseTemplate] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  // new codes for file upload and parsing, not implemented yet 
+  // new codes for file upload and parsing, not implemented yet
   const [file, setFile] = useState<File | null>(null);
   const [isParsing, setIsParsing] = useState(false); // 解析状态
-  // end of new codes 
+  // end of new codes
   const { handleSubmit, reset, control } = useForm<ResumeDialogValues>({
     resolver: zodResolver(resumeDialogSchema),
     defaultValues: {
@@ -80,28 +80,34 @@ export function ResumeDialog({ open, onOpenChange, mode, onSuccess, resume }: Re
     setIsSaving(true);
 
     try {
-    let initialResumeData = useTemplate ? sampleResume : defaultResumeData;
+      let initialResumeData = useTemplate ? sampleResume : defaultResumeData;
 
       // --- 新增：PDF 解析逻辑 ---
       if (isCreate && file) {
         setIsParsing(true);
         const parsedResult = await parseResumePdf(file);
-        
+
         // 如果你想更新简历内部的详细文本：
         initialResumeData = {
           ...initialResumeData,
-          basics: { 
-            ...initialResumeData.basics, 
-            ...parsedResult.basics // 填充姓名、联系方式
+          basics: {
+            ...initialResumeData.basics,
+            ...parsedResult.basics, // 填充姓名、联系方式
           },
-          modules: { 
-            ...initialResumeData.modules, 
+          modules: {
+            ...initialResumeData.modules,
             // 填充教育、工作经历
-            education: { ...initialResumeData.modules.education, ...parsedResult.modules.education },
-            experience: { ...initialResumeData.modules.experience, ...parsedResult.modules.experience },
+            education: {
+              ...initialResumeData.modules.education,
+              ...parsedResult.modules.education,
+            },
+            experience: {
+              ...initialResumeData.modules.experience,
+              ...parsedResult.modules.experience,
+            },
             skills: { ...initialResumeData.modules.skills, ...parsedResult.modules.skills },
             projects: { ...initialResumeData.modules.projects, ...parsedResult.modules.projects },
-          }
+          },
         };
         console.log(initialResumeData); // 调试输出解析结果
         setIsParsing(false);
@@ -209,7 +215,7 @@ export function ResumeDialog({ open, onOpenChange, mode, onSuccess, resume }: Re
               )}
             />
           </FieldGroup>
-          
+
           {/* 在 form 内部，Title FieldGroup 之前添加 */}
           {isCreate && (
             <FieldGroup>
@@ -219,7 +225,7 @@ export function ResumeDialog({ open, onOpenChange, mode, onSuccess, resume }: Re
                   <Input
                     type="file"
                     accept=".pdf"
-                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                    onChange={e => setFile(e.target.files?.[0] || null)}
                     className="cursor-pointer"
                   />
                   <FieldDescription>

@@ -1,4 +1,5 @@
 import request from '@/lib/request';
+import { Basics, Modules } from '@/types';
 
 export interface PolishResult {
   polished: string;
@@ -50,13 +51,14 @@ export async function analyzeResume(
   return result;
 }
 
-/** * 新增：PDF 解析结果的接口 
+/** * 新增：PDF 解析结果的接口
  * 对应 Python 后端的 ParsedResumeData 模型
  */
 export interface ParsePdfResult {
   title: string;
   description: string;
-  extracted_text: string;
+  basics: Basics;
+  modules: Modules;
 }
 
 /** * 新增：调用后端解析 PDF 的函数
@@ -72,6 +74,6 @@ export async function parseResumePdf(file: File): Promise<ParsePdfResult> {
       'Content-Type': 'multipart/form-data',
     },
   })) as unknown as ParsePdfResult;
-  
+
   return result;
 }

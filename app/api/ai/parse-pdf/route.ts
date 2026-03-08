@@ -13,6 +13,7 @@ const ollama = new Ollama({
 });
 
 // 复制 analyze 的系统提示词逻辑，但针对解析任务进行优化
+// FixMe: 这里逻辑有bug,例如 projects 少了 website字段 从而导致渲染失败
 const PARSE_SYSTEM_PROMPT = `You are an expert resume parser. 
 Extract info from text and return ONLY valid JSON matching, flowing this structure:
 1. education must includes:
@@ -51,12 +52,12 @@ export async function POST(req: Request) {
     if (!session) return error('Unauthorized', 401);
 
     const formData = await req.formData();
-    
+
     // ✅ 正确做法：通过 HTTP 访问已启动的 Python 服务，而不是直接加载文件
     const pythonRes = await pythonClient.post('/api/resume/parse-pdf', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
-    
+
     const { extracted_text } = pythonRes.data;
 
     // 模仿 analyze 的 ollama 调用
@@ -83,8 +84,8 @@ export async function POST(req: Request) {
     };
 
     // 为列表项生成唯一 ID 并确保字段完整性
-    const sanitizeItems = (items: any[]) => 
-      (items || []).map((item) => ({
+    const sanitizeItems = (items: any[]) =>
+      (items || []).map(item => ({
         id: crypto.randomUUID(), // 必须生成 ID 以供前端渲染 key
         visible: true, // 默认可见
         ...item,
@@ -99,46 +100,46 @@ export async function POST(req: Request) {
         description: 'AI 从 PDF 自动解析生成',
         basics: sanitizedBasics,
         modules: {
-          education: { 
-            id: 'education', 
-            name: 'Education', 
-            visible: true, 
-            items: sanitizeItems(structuredData.modules?.education?.items) 
+          education: {
+            id: 'education',
+            name: 'Education',
+            visible: true,
+            items: sanitizeItems(structuredData.modules?.education?.items),
           },
-          experience: { 
-            id: 'experience', 
-            name: 'Experience', 
-            visible: true, 
-            items: sanitizeItems(structuredData.modules?.experience?.items) 
+          experience: {
+            id: 'experience',
+            name: 'Experience',
+            visible: true,
+            items: sanitizeItems(structuredData.modules?.experience?.items),
           },
-          projects: { 
-            id: 'projects', 
-            name: 'Projects', 
-            visible: true, 
-            items: sanitizeItems(structuredData.modules?.projects?.items) 
+          projects: {
+            id: 'projects',
+            name: 'Projects',
+            visible: true,
+            items: sanitizeItems(structuredData.modules?.projects?.items),
           },
-          skills: { 
-            id: 'skills', 
-            name: 'Skills', 
-            visible: true, 
+          skills: {
+            id: 'skills',
+            name: 'Skills',
+            visible: true,
             items: (structuredData.modules?.skills?.items || []).map((skill: any) => ({
               id: crypto.randomUUID(),
               name: String(skill.name || ''),
               level: String(skill.level || ''),
               keywords: Array.isArray(skill.keywords) ? skill.keywords.map(String) : [],
-            })) 
+            })),
           },
-        }
+        },
       },
-      msg: 'Success'
+      msg: 'Success',
     });
   } catch (err: any) {
-  // 强制在终端打印出详细错误堆栈
+    // 强制在终端打印出详细错误堆栈
     console.error('--- DEBUG: PARSE PDF FAILED ---');
-    console.error(err); 
+    console.error(err);
     if (err.response) console.error('Python Response:', err.response.data);
     console.error('-------------------------------');
-    
+
     return error(err.message || 'Internal server error', 500);
   }
 }

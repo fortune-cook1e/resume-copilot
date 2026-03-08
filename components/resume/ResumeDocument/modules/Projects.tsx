@@ -31,9 +31,11 @@ const Projects = () => {
 
             <div className="flex justify-between gap-4 text-sm">
               <div className="text-gray-700">{item.description}</div>
-              <div className="text-right text-resume-theme flex-shrink-0">
-                <Link url={item.website} label={item.website.label || 'Project'} />
-              </div>
+              {item.website && (
+                <div className="text-right text-resume-theme flex-shrink-0">
+                  <Link url={item.website} label={item.website.label || 'Project'} />
+                </div>
+              )}
             </div>
 
             {item.summary && (
