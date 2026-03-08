@@ -4,6 +4,12 @@ Run with: uvicorn server:app --reload --port 8000
 """
 
 import traceback
+# 新增pdf文件处理相关库
+import io  # 新增：处理二进制流
+import pdfplumber  # 新增：PDF 解析库
+from typing import Optional, List # 确保引入 List
+from fastapi import FastAPI, HTTPException, UploadFile, File # 新增：UploadFile 和 File
+# 新增结束
 from typing import Optional
 
 from extractor.skill import (
@@ -28,6 +34,12 @@ app = FastAPI(title="Resume Copilot AI Service", version="0.1.0")
 _scorer: Optional[JobBERTSemanticScorer] = None
 _matchers: dict[str, ResumeJDMatcher] = {}
 
+# ── 新增：解析后的简历响应模型 ────────────────────────────────────────── #
+class ParsedResumeData(BaseModel):
+    title: str
+    description: Optional[str] = ""
+    extracted_text: str  # 提取的原始文本，可供后续 NLP 进一步处理
+    # 你可以根据需求增加更多字段，如 skills: List[str]
 
 def get_matcher(extractor_name: str = "regular") -> ResumeJDMatcher:
     global _scorer, _matchers
@@ -52,6 +64,46 @@ def get_matcher(extractor_name: str = "regular") -> ResumeJDMatcher:
 def health():
     return {"status": "ok"}
 
+# ── 新增：PDF 解析接口 ────────────────────────────────────────────────── #
+@app.post("/api/resume/parse-pdf", response_model=ParsedResumeData)
+async def parse_resume_pdf(file: UploadFile = File(...)):
+    """
+    接收 PDF 文件，提取文本并尝试结构化。
+    这是一个标准的 NLP 信息抽取流程。
+    """
+    try:
+        # 1. 读取上传的文件内容
+        contents = await file.read()
+        
+        # 2. 使用 pdfplumber 提取文本 (NLP 预处理步骤)
+        raw_text = ""
+        with pdfplumber.open(io.BytesIO(contents)) as pdf:
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    raw_text += page_text + "\n"
+
+        if not raw_text.strip():
+            raise HTTPException(status_code=400, detail="Could not extract text from PDF.")
+
+        # 3. 结构化处理 (简易 NLP 逻辑)
+        # 实际开发中，这里通常会调用 LLM (如 GPT-4) 来根据 raw_text 生成结构化 JSON
+        # 这里演示一个简单的逻辑：提取第一行作为标题
+        lines = [line.strip() for line in raw_text.split('\n') if line.strip()]
+        suggested_title = lines[0] if lines else "New Resume"
+        suggested_desc = " ".join(lines[1:3]) if len(lines) > 1 else ""
+
+        return ParsedResumeData(
+            title=suggested_title,
+            description=suggested_desc,
+            extracted_text=raw_text
+        )
+
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"PDF parsing failed: {str(e)}")
+
+# ── 现有的 analyze_job 接口保持不变 ────────────────────────────────────── #
 
 # ── Main endpoint ─────────────────────────────────────────────────────────── #
 @app.post("/api/resume/analyze", response_model=AnalyzeJobResponse)
