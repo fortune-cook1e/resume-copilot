@@ -1,36 +1,135 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Resume Copilot
 
-## Getting Started
+AI-powered resume builder with job matching analysis.
 
-First, run the development server:
+## Tech Stack
+
+- **Frontend / Backend**: Next.js 15 (App Router, TypeScript)
+- **Database**: PostgreSQL 16 (via Docker)
+- **AI Service**: Python FastAPI + JobBERT (uv)
+- **Package Manager**: pnpm
+
+---
+
+## Prerequisites
+
+| Tool           | Version | Install                                                      |
+| -------------- | ------- | ------------------------------------------------------------ |
+| Node.js        | ≥ 20    | [nodejs.org](https://nodejs.org)                             |
+| pnpm           | ≥ 9     | `npm i -g pnpm`                                              |
+| Docker Desktop | latest  | [docker.com](https://www.docker.com/products/docker-desktop) |
+| uv (Python)    | latest  | `brew install uv`                                            |
+
+---
+
+## Local Development Setup
+
+### 1. Clone & install dependencies
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repo-url>
+cd resume-copilot
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Configure environment variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cp .env.example .env
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The default `.env` works out-of-the-box for local development:
 
-## Learn More
+```env
+DATABASE_URL=postgresql://resume:resume123@localhost:5432/resume_copilot
 
-To learn more about Next.js, take a look at the following resources:
+BETTER_AUTH_SECRET=resume-copilot-secret-key-change-in-production
+# Equal to NEXT_PUBLIC_APP_URL
+BETTER_AUTH_URL=http://localhost:3000
+APP_URL=http://localhost:3000
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# The base URL of the server
+# Starts with NEXT_PUBLIC_ to be exposed to the client-side code
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Python AI Service
+PYTHON_SERVICE_URL=http://localhost:8000
 
-## Deploy on Vercel
+# Ollama Cloud
+OLLAMA_BASE_URL=https://ollama.com
+OLLAMA_MODEL=gpt-oss:20b
+OLLAMA_API_KEY=xxxx
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+
+### 3. Start required containers (PostgreSQL)
+
+```bash
+docker compose up -d
+```
+
+This starts PostgreSQL on `localhost:5432`. Verify it's running:
+
+```bash
+docker compose ps
+```
+
+### 4. Run database migrations
+
+```bash
+pnpm drizzle-kit migrate
+```
+
+### 5. Start the Python AI service
+
+In a separate terminal:
+
+```bash
+cd ai
+uv sync          # first time only — creates .venv and installs dependencies
+uv run uvicorn server:app --reload --port 8000
+```
+
+The AI service will be available at **http://localhost:8000**.  
+API docs: **http://localhost:8000/docs**
+
+### 6. Start the Next.js dev server
+
+Back in the project root:
+
+```bash
+pnpm dev
+```
+
+Open **http://localhost:3000**.
+
+---
+
+## Stopping
+
+```bash
+# Stop Next.js: Ctrl+C in its terminal
+# Stop Python:  Ctrl+C in its terminal
+
+# Stop Docker containers
+docker compose down
+```
+
+---
+
+## Project Structure
+
+```
+resume-copilot/
+├── app/                  # Next.js App Router pages & API routes
+├── components/           # React components
+├── ai/                   # Python FastAPI AI service
+│   ├── server.py         # FastAPI entrypoint
+│   ├── NER/              # Skill extraction (JobBERT embeddings)
+│   ├── matching/         # Resume-job matching & scoring
+│   └── preprocessing/    # JD & resume parsers
+├── db/                   # Drizzle ORM schema & client
+├── services/             # Next.js → AI service API clients
+└── docker-compose.yml    # Local PostgreSQL
+```

@@ -28,8 +28,8 @@ jobs:
           username: ${{ secrets.ALIYUN_REGISTRY_USERNAME }}
           password: ${{ secrets.ALIYUN_REGISTRY_PASSWORD }}
 
-      # 4. Build and push Docker image
-      - name: Build and push Docker image
+      # 4. Build and push App Docker image
+      - name: Build and push App Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -73,10 +73,11 @@ jobs:
               --password-stdin \
               ${{ secrets.ALIYUN_REGISTRY }}
 
-            # Pull latest image
+            # Pull latest images
+            echo "📥 Pulling latest images..."
             docker pull ${{ secrets.ALIYUN_REGISTRY }}/resume-copilot:latest
 
-            # Stop and remove old app container (keep database running)
+            # Stop and remove old containers (keep database running)
             docker compose -f docker-compose.prod.yml down app
 
             # Run database migrations

@@ -95,10 +95,10 @@ export function ResumeCard({ resume, onDeleted, onEdit }: ResumeCardProps) {
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handlePreview}>
+                {/* <DropdownMenuItem onClick={handlePreview}>
                   <Eye className="mr-2 h-4 w-4" />
                   Preview
-                </DropdownMenuItem>
+                </DropdownMenuItem> */}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -115,11 +115,23 @@ export function ResumeCard({ resume, onDeleted, onEdit }: ResumeCardProps) {
           </p>
         </CardContent>
 
-        <CardFooter className="pt-0 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
+        <CardFooter className="pt-0 flex items-center justify-between">
+          {/* 左侧：更新时间 */}
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <Clock className="h-3 w-3" />
             <span>Updated {formatDate(resume.updatedAt)}</span>
           </div>
+
+          {/* 右下角：新增的预览按钮 */}
+          <Button 
+            variant="outline" 
+            size="default" 
+            className="h-8 gap-1.5 text-sm font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
+            onClick={handlePreview}
+          >
+            <Eye className="h-3.5 w-3.5" />
+            Preview
+          </Button>
         </CardFooter>
       </Card>
     </>
