@@ -33,9 +33,10 @@ Guidelines:
 export interface ParseJobRequest {
   job_description: string; // Example:
   resume_id: string; // required: used to fetch resume and compute match score
+  extractor?: 'regular' | 'ner';
 }
 
-// Todo: for test: https://www.linkedin.com/jobs/collections/recommended/?currentJobId=4353932501
+// Tip: for test: https://www.linkedin.com/jobs/collections/recommended/?currentJobId=4353932501
 export async function POST(req: Request) {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
     }
 
     const body = (await req.json()) as ParseJobRequest;
-    const { job_description, resume_id } = body;
+    const { job_description, resume_id, extractor = 'regular' } = body;
 
     if (!job_description?.trim()) {
       return error('job_description is required', 400);
@@ -67,10 +68,8 @@ export async function POST(req: Request) {
 
     const payload = {
       job_description: job_description.trim(),
-      resume_id,
-      resume_skills: extractSkills(resumeData),
-      resume_years: extractYears(resumeData),
       resume_text: resumeText,
+      extractor,
     };
 
     // Run Python matching + Ollama suggestion in parallel

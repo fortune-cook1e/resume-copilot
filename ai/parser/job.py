@@ -3,13 +3,12 @@ Parse raw LinkedIn / general Job Description text into structured data.
 Extracts: title, sections, skills, required_years of experience.
 """
 
-import csv
 import re
-from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Optional
 
-from preprocessing.utils import normalize_skill
+from model import ParsedJD
+
+from parser.utils import load_skills, normalize_skill
 
 # ---------------------------------------------------------------------------
 # Common LinkedIn JD section headings (case-insensitive)
@@ -43,29 +42,8 @@ SECTION_HEADERS = [
 ]
 
 
-# Common tech skill keywords used for extraction
-def _load_skills_from_csv() -> set[str]:
-    """Load technical skills from CSV dataset."""
-    csv_path = Path(__file__).parent.parent / "datasets" / "technical_skills.csv"
-    skills = set()
-
-    try:
-        with open(csv_path, "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                skill_name = row.get("Skill Name", "").strip()
-                if skill_name:
-                    # Store normalized version for matching
-                    skills.add(normalize_skill(skill_name))
-    except FileNotFoundError:
-        print(f"Warning: Skills CSV not found at {csv_path}. Using empty skill set.")
-    except Exception as e:
-        print(f"Warning: Error loading skills CSV: {e}. Using empty skill set.")
-
-    return skills
-
-
-COMMON_TECH_SKILLS = _load_skills_from_csv()
+COMMON_HARD_SKILLS = load_skills("hard")
+COMMON_SOFT_SKILLS = load_skills("soft")
 
 YEARS_PATTERNS = [
     r"(\d+)\+?\s*(?:to|-)\s*(\d+)\s*years?",  # 3-5 years / 3 to 5 years
@@ -74,16 +52,6 @@ YEARS_PATTERNS = [
     r"minimum\s+(?:of\s+)?(\d+)\s*years?",  # minimum of 3 years
     r"(\d+)\s*years?\s+of\s+experience",  # 3 years of experience
 ]
-
-
-@dataclass
-class ParsedJD:
-    raw_text: str
-    title: str = ""
-    sections: dict = field(default_factory=dict)
-    skills: set = field(default_factory=set)
-    required_years: float = 0.0
-    requirements_text: str = ""
 
 
 def _detect_section(line: str) -> Optional[str]:
@@ -113,18 +81,27 @@ def parse_sections(text: str) -> dict[str, str]:
     return {k: v.strip() for k, v in sections.items() if v.strip()}
 
 
-def extract_skills_from_text(text: str) -> set[str]:
-    """Extract known tech skills mentioned in text."""
-    text_lower = text.lower()
-    found = set()
+def extract_skills_from_text(text: str) -> tuple[set[str], set[str]]:
+    """Extract known hard and soft skills mentioned in text.
 
-    for skill in COMMON_TECH_SKILLS:
-        # Use word boundary matching, handle special chars like c++, c#
+    Returns:
+        (hard_skills, soft_skills)
+    """
+    text_lower = text.lower()
+    hard_found: set[str] = set()
+    soft_found: set[str] = set()
+
+    for skill in COMMON_HARD_SKILLS:
         pattern = r"(?<![a-z0-9])" + re.escape(skill) + r"(?![a-z0-9])"
         if re.search(pattern, text_lower):
-            found.add(normalize_skill(skill))
+            hard_found.add(normalize_skill(skill))
 
-    return found
+    for skill in COMMON_SOFT_SKILLS:
+        pattern = r"(?<![a-z0-9])" + re.escape(skill) + r"(?![a-z0-9])"
+        if re.search(pattern, text_lower):
+            soft_found.add(normalize_skill(skill))
+
+    return hard_found, soft_found
 
 
 def extract_required_years(text: str) -> float:
@@ -168,16 +145,17 @@ def parse_raw_jd(raw_text: str) -> ParsedJD:
         "\n".join(v for k, v in sections.items() if k in requirement_keys) or text
     )  # fallback to full text if no requirement section found
 
-    skills = extract_skills_from_text(text)  # scan full text for skills
+    hard_skills, soft_skills = extract_skills_from_text(text)
     required_years = extract_required_years(
         requirements_text
     ) or extract_required_years(text)
 
     return ParsedJD(
-        raw_text=raw_text,
-        title=title,
-        sections=sections,
-        skills=skills,
+        # raw_text=raw_text,
+        # title=title,
+        # sections=sections,
+        # requirements_text=requirements_text,
+        hard_skills=hard_skills,
+        soft_skills=soft_skills,
         required_years=required_years,
-        requirements_text=requirements_text,
     )
