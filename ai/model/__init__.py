@@ -6,6 +6,7 @@ from model.model import (
     MatchResult,
     NERExtractionEval,
     ParsedJD,
+    ParsedResumeData,
     ResumeAnalysisResult,
     SkillMatchResult,
     SkillProfile,
@@ -22,4 +23,5 @@ __all__ = [
     "JobAnalysisResult",
     "SkillMatchResult",
     "ResumeAnalysisResult",
+    "ParsedResumeData",
 ]

@@ -122,3 +122,13 @@ class AnalyzeJobResponse(BaseModel):
     job: Optional[JobAnalysisResult] = None
     resume: Optional[ResumeAnalysisResult] = None
     match: Optional[SkillMatchResult] = None
+
+
+# ── 新增：解析后的简历响应模型 ────────────────────────────────────────── #
+
+
+class ParsedResumeData(BaseModel):
+    title: str
+    description: Optional[str] = ""
+    extracted_text: str  # 提取的原始文本，可供后续 NLP 进一步处理
+    # 你可以根据需求增加更多字段，如 skills: List[str]
