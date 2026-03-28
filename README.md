@@ -2,11 +2,24 @@
 
 AI-powered resume builder with job matching analysis.
 
+Resume Copilot is a Next.js-based platform for writing and optimizing resumes, with AI-powered parsing and job matching analysis.
+
+## Documentation
+
+- Project guide (overview/directories/commands/doc index): [`docs/project-guide.md`](docs/project-guide.md)
+- Chinese project guide: [`docs/zh-cn/project-guide.md`](docs/zh-cn/project-guide.md)
+- Development commands and DB operations: [`docs/infra/commands.md`](docs/infra/commands.md)
+- Authentication flow details: [`docs/infra/auth-flow.md`](docs/infra/auth-flow.md)
+- CI/CD deployment guide: [`docs/infra/cicd.md`](docs/infra/cicd.md)
+- AI sub-service docs: [`ai/README.md`](ai/README.md)
+
 ## Tech Stack
 
-- **Frontend / Backend**: Next.js 15 (App Router, TypeScript)
+- **Frontend / Backend**: Next.js 16 (App Router, TypeScript)
 - **Database**: PostgreSQL 16 (via Docker)
-- **AI Service**: Python FastAPI + JobBERT (uv)
+- **ORM**: Drizzle ORM + drizzle-kit
+- **Auth**: better-auth
+- **AI Service**: Python FastAPI + NLP/Embedding pipeline (uv)
 - **Package Manager**: pnpm
 
 ---
@@ -58,7 +71,7 @@ PYTHON_SERVICE_URL=http://localhost:8000
 # Ollama Cloud
 OLLAMA_BASE_URL=https://ollama.com
 OLLAMA_MODEL=gpt-oss:20b
-OLLAMA_API_KEY=xxxx
+OLLAMA_API_KEY={create your API key in Ollama dashboard and paste here}
 
 
 ```
