@@ -13,10 +13,14 @@
 [PRINCIPLE_2_DESCRIPTION]
 <!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
 
-### [PRINCIPLE_3_NAME]
+### [Test-First]
 <!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
+[Test-First_DESCRIPTION]
 <!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+No implementation code shall be written before:
+1. Unit tests are written, implemented by vitest
+2. Tests are validated and approved by the user
+3. Tests are confirmed to FAIL (Red phase)
 
 ### [PRINCIPLE_4_NAME]
 <!-- Example: IV. Integration Testing -->
