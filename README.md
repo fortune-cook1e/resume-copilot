@@ -4,14 +4,6 @@ AI-powered resume builder with job matching analysis.
 
 Resume Copilot is a Next.js-based platform for writing and optimizing resumes, with AI-powered parsing and job matching analysis.
 
-## Documentation
-
-- Project guide (overview/directories/commands/doc index): [`docs/project-guide.md`](docs/project-guide.md)
-- Chinese project guide: [`docs/zh-cn/project-guide.md`](docs/zh-cn/project-guide.md)
-- Development commands and DB operations: [`docs/infra/commands.md`](docs/infra/commands.md)
-- Authentication flow details: [`docs/infra/auth-flow.md`](docs/infra/auth-flow.md)
-- CI/CD deployment guide: [`docs/infra/cicd.md`](docs/infra/cicd.md)
-- AI sub-service docs: [`ai/README.md`](ai/README.md)
 
 ## Tech Stack
 
@@ -131,18 +123,4 @@ docker compose down
 
 ---
 
-## Project Structure
 
-```
-resume-copilot/
-├── app/                  # Next.js App Router pages & API routes
-├── components/           # React components
-├── ai/                   # Python FastAPI AI service
-│   ├── server.py         # FastAPI entrypoint
-│   ├── NER/              # Skill extraction (JobBERT embeddings)
-│   ├── matching/         # Resume-job matching & scoring
-│   └── preprocessing/    # JD & resume parsers
-├── db/                   # Drizzle ORM schema & client
-├── services/             # Next.js → AI service API clients
-└── docker-compose.yml    # Local PostgreSQL
-```
