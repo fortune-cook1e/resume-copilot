@@ -77,6 +77,7 @@ npx drizzle-kit studio
 Recommended reading order: commands first, then auth, then deployment.
 
 - Development commands and DB operations: `docs/infra/commands.md`
+- SDD development workflow (Spec Kit): `docs/workflow/sdd-spec-kit-workflow.md`
 - Reusable DB development workflow (Drizzle): `docs/workflow/drizzle-database-workflow.md`
 - Authentication flow (Better Auth + schema): `docs/infra/auth-flow.md`
 - CI/CD and production deployment: `docs/infra/cicd.md`
