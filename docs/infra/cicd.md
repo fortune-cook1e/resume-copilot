@@ -109,7 +109,7 @@ GitHub Actions Runner
 ```
 仓库名称: resume-copilot
 命名空间: mycompany
-仓库类型: 私有
+仓库类型: public
 代码源: 本地仓库
 ```
 

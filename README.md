@@ -2,11 +2,16 @@
 
 AI-powered resume builder with job matching analysis.
 
+Resume Copilot is a Next.js-based platform for writing and optimizing resumes, with AI-powered parsing and job matching analysis.
+
+
 ## Tech Stack
 
-- **Frontend / Backend**: Next.js 15 (App Router, TypeScript)
+- **Frontend / Backend**: Next.js 16 (App Router, TypeScript)
 - **Database**: PostgreSQL 16 (via Docker)
-- **AI Service**: Python FastAPI + JobBERT (uv)
+- **ORM**: Drizzle ORM + drizzle-kit
+- **Auth**: better-auth
+- **AI Service**: Python FastAPI + NLP/Embedding pipeline (uv)
 - **Package Manager**: pnpm
 
 ---
@@ -58,7 +63,7 @@ PYTHON_SERVICE_URL=http://localhost:8000
 # Ollama Cloud
 OLLAMA_BASE_URL=https://ollama.com
 OLLAMA_MODEL=gpt-oss:20b
-OLLAMA_API_KEY=xxxx
+OLLAMA_API_KEY={create your API key in Ollama dashboard and paste here}
 
 
 ```
@@ -118,18 +123,4 @@ docker compose down
 
 ---
 
-## Project Structure
 
-```
-resume-copilot/
-├── app/                  # Next.js App Router pages & API routes
-├── components/           # React components
-├── ai/                   # Python FastAPI AI service
-│   ├── server.py         # FastAPI entrypoint
-│   ├── NER/              # Skill extraction (JobBERT embeddings)
-│   ├── matching/         # Resume-job matching & scoring
-│   └── preprocessing/    # JD & resume parsers
-├── db/                   # Drizzle ORM schema & client
-├── services/             # Next.js → AI service API clients
-└── docker-compose.yml    # Local PostgreSQL
-```
