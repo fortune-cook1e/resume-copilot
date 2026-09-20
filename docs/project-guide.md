@@ -85,6 +85,6 @@ Recommended reading order: commands first, then auth, then deployment.
 
 ## Quick Navigation
 
-- Main local development entry: root `README.md`
+- Main local development entry: [development setup](development.md)
 - Project structure and module map: this document (`docs/project-guide.md`)
 - Auth model and flow details: `docs/infra/auth-flow.md`
