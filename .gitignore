@@ -1,58 +1,29 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
+# Dependencies
+node_modules/
 .pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
 
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# typescript
+# Build output and caches
+**/.next/
+out/
+dist/
+build/
+coverage/
 *.tsbuildinfo
 next-env.d.ts
 
-# ai
-__pycache__
-jobs.csv
-resume-sample.json
-resumes.jsonl
-soft_skills.csv
-hard_skills.csv
-**/.gradio/
+# Local configuration and secrets
+.env*
+!.env.example
+*.pem
+.vercel/
+
+# Logs and operating-system files
+*.log
+.DS_Store
 
 # Playwright
-node_modules/
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
-/playwright/.auth/
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
+playwright/.auth/

@@ -1,17 +1,17 @@
 # Dependencies
-node_modules
+**/node_modules
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
 # Next.js
-.next
-out
-dist
+**/.next
+**/out
+**/dist
 
 # Production
-build
+**/build
 
 # Misc
 .DS_Store
@@ -21,10 +21,7 @@ build
 *.log
 
 # Local env files
-.env
-.env*.local
-.env.development
-.env.test
+**/.env*
 
 # Vercel
 .vercel
@@ -57,5 +54,7 @@ docs
 *.db
 
 # Test
-coverage
+**/coverage
+**/playwright-report
+**/test-results
 .nyc_output
