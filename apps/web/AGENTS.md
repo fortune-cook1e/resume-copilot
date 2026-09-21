@@ -1,9 +1,35 @@
 # Web working rules
 
-- Follow the root `AGENTS.md` and the project scope described in `../../README.md`.
-- Run application commands from the root with `pnpm --filter @resume-copilot/web <command>`.
-- For React and Next.js work, consult `.agents/skills/vercel-react-best-practices/SKILL.md` at the repository root.
-- Preserve server/client boundaries; never expose server credentials through client components or `NEXT_PUBLIC_*` variables.
-- Before changing an API route, inspect its UI callers, auth checks, and data dependencies. Moving it to another application requires an explicit migration task.
-- Keep Vitest tests separate from `e2e/`; Playwright owns browser flows.
-- Validate changes with `typecheck`, `lint`, and relevant tests. Use `build` for routing, package, or build-configuration changes.
+## React and Next.js
+
+- Keep Server Components as the default; use Client Components for interaction, client state, and browser APIs.
+- Keep server credentials and server-only dependencies out of client bundles and `NEXT_PUBLIC_*` variables.
+- Consult `.agents/skills/vercel-react-best-practices/SKILL.md` at the repository root for React / Next.js work.
+- Inspect callers, authentication, and data dependencies before changing legacy API routes; migration requires an explicit task.
+- Treat client validation and route guards as UX, not authorization; enforce access checks on the server.
+
+## Directory responsibilities
+
+- Organize by technical responsibility, without a `features/` layer. Apply this to new work; do not reorganize legacy code without an explicit task.
+- `app/`: routes, layouts, and page composition; keep complex business interactions in components or hooks.
+- `components/`: UI components, with reusable primitives in `ui/` and business-specific groups as needed.
+- `hooks/`: reusable React logic and Query hooks. `services/`: API requests, independent of React and UI stores.
+- `stores/`: shared client state, not a duplicate of Query caches. `lib/`: general-purpose utilities and foundational integrations, not miscellaneous business code.
+- Use consistent business names across directories, such as `services/resumes.ts` and `hooks/use-resumes.ts`; create files only when needed.
+
+## State and data
+
+- When needed, use TanStack Query for server-state caching, React Hook Form for forms, and Zustand for shared client state; do not duplicate ownership across them.
+- Keep local UI state local and derive values rather than synchronizing duplicate state through effects.
+- Give each editable draft one authoritative owner; define form / draft synchronization in the feature design.
+- Define query keys, invalidation, and identity-change cache cleanup when introducing authenticated queries.
+- Apply these conventions to scoped new work; do not silently migrate existing requests or stores.
+
+## UI and verification
+
+- Reuse existing UI components and styling conventions before introducing alternatives.
+- Keep reusable UI primitives independent of business APIs and stores; compose business behavior in feature-specific components or hooks without forcing every component to be generic.
+- Handle relevant loading, empty, and error states; preserve semantic controls, keyboard access, and responsive layouts.
+- Use Vitest for component / state behavior and Playwright for critical browser flows; keep their tests separate.
+- Run Web commands from the repository root with `pnpm --filter @resume-copilot/web <command>`.
+- Include a production build when changing routing, dependencies, server/client boundaries, or build configuration.

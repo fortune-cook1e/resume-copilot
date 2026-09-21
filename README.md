@@ -35,6 +35,12 @@ packages/
 
 尚未提前安装 Agent、向量检索或新版鉴权依赖。后续根据具体需求引入。
 
+## Web data-fetching foundation
+
+- `@tanstack/react-query` is initialized through `QueryProvider` in the root layout. The layout remains a Server Component, and each mounted provider owns a stable QueryClient rather than sharing a server-side singleton.
+- Existing Axios requests, React Hook Form usage, and Zustand stores are unchanged. No business query migration, SSR prefetch/hydration, Devtools, or persisted cache is included.
+- Define cache invalidation and identity-change cleanup when introducing authenticated queries; provider setup alone does not implement that lifecycle.
+
 ## 环境与安装
 
 使用 Node.js 22（至少 22.12）及 `packageManager` 固定的 pnpm 9.15.9：
@@ -75,13 +81,13 @@ Python AI 服务已经移除，旧 Web 的岗位分析与 PDF 解析接口仍引
 pnpm typecheck                # 各应用与共享包的源码类型检查
 pnpm build                    # Web、API 与共享包构建
 pnpm lint                     # 根配置、各应用与共享包的 ESLint
-pnpm test                     # API 启动测试；Web 暂无 Vitest 用例
+pnpm test                     # API bootstrap and Web query-provider tests
 pnpm --filter @resume-copilot/web exec playwright install chromium
 pnpm test:e2e                 # 启动独立的 3100 端口，验证旧首页
 ```
 
 - API 测试先由 TypeScript 编译，再通过 Vitest 测试真实编译产物，保留 NestJS 所需的 decorator metadata，同时检查测试文件类型。
-- Web 的 Vitest 排除 Playwright 和 Next.js 产物；无单元测试时允许退出，但不表示已有业务单元测试覆盖。
+- Web Vitest excludes Playwright and Next.js artifacts. Its provider tests cover cache stability across rerenders and isolation between provider instances, not the full editor workflow.
 - Playwright 首页检查不依赖真实用户、数据库数据或模型调用，使用测试专用环境变量。
 - 依赖安装仍会提示旧 Web 的 Tiptap v2/v3 peer dependency 不匹配；本轮保留原业务依赖，后续重构编辑器时处理。
 - 旧 Web 当前仍有 ESLint 错误，`pnpm lint` 会如实失败；没有关闭规则或忽略业务目录来隐藏问题。新 API 和根配置可分别检查：
