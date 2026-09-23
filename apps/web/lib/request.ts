@@ -1,55 +1,87 @@
-import { ApiResponse, ResponseCode } from '@/lib/api-response';
-import axios from 'axios';
+import { httpErrorSchema, httpSuccessSchema } from '@resume-copilot/contracts';
+import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios';
+import { z } from 'zod';
 
-const baseURL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+const successSchema = httpSuccessSchema(z.unknown());
 
-const request = axios.create({
-  baseURL: baseURL + '/api',
+export class ApiRequestError extends Error {
+  readonly name = 'ApiRequestError';
+
+  constructor(
+    message: string,
+    readonly code: string,
+    readonly status: number,
+    readonly requestId?: string,
+  ) {
+    super(message);
+  }
+}
+
+function requestIdOf(response: AxiosResponse): string | undefined {
+  const requestId: unknown = response.headers['x-request-id'];
+  return typeof requestId === 'string' ? requestId : undefined;
+}
+
+function responseError(response: AxiosResponse): ApiRequestError {
+  const parsed = httpErrorSchema.safeParse(response.data);
+  const requestId = requestIdOf(response);
+  if (!parsed.success) {
+    return new ApiRequestError('Invalid server response', 'INVALID_RESPONSE', response.status, requestId);
+  }
+  return new ApiRequestError(
+    parsed.data.error.message,
+    parsed.data.error.code,
+    response.status,
+    requestId,
+  );
+}
+
+const client = axios.create({
+  baseURL: '/api',
   timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true, // send cookies with every request (for better-auth session)
+  withCredentials: true, // Include session cookies for same-origin business requests.
 });
 
-// Request interceptor
-request.interceptors.request.use(
-  config => {
-    return config;
-  },
-  error => {
-    return Promise.reject(error);
-  },
-);
-
-// Response interceptor — unwraps data so callers receive it directly
-request.interceptors.response.use(
-  response => {
-    const body = response.data;
-
-    // Unified API responses: { code, msg, data }
-    // Unwrap and return inner `data` directly
-    if (body && typeof body === 'object' && 'code' in body) {
-      const apiRes = body as ApiResponse;
-      if (apiRes.code !== ResponseCode.SUCCESS) {
-        return Promise.reject(new Error(apiRes.msg || 'Request failed'));
-      }
-      // Return inner data directly — callers get the payload without extra unwrapping
-      return apiRes.data;
-    }
-
-    // Non-standard responses (binary/blob, better-auth, etc.) — return raw data
+client.interceptors.response.use(response => {
+  // Binary/download endpoints do not use the business JSON envelope.
+  if (
+    response.config.responseType === 'blob' ||
+    response.config.responseType === 'arraybuffer' ||
+    response.config.responseType === 'stream'
+  ) {
     return response.data;
+  }
+
+  const parsed = successSchema.safeParse(response.data);
+  if (!parsed.success) {
+    throw new ApiRequestError('Invalid server response', 'INVALID_RESPONSE', response.status, requestIdOf(response));
+  }
+  return parsed.data.data;
+}, error => {
+  if (axios.isAxiosError(error) && error.response) throw responseError(error.response);
+  return Promise.reject(error);
+});
+
+// Axios' default return type is AxiosResponse<T>, but the interceptor returns T.
+const request = {
+  get<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    return client.get<T, T>(url, config);
   },
-  error => {
-    // Handle 401 - redirect to login
-    if (error.response?.status === 401) {
-      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-        window.location.href = '/login';
-      }
-    }
-    return Promise.reject(error);
+  post<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+    return client.post<T, T>(url, data, config);
   },
-);
+  patch<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+    return client.patch<T, T>(url, data, config);
+  },
+  put<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+    return client.put<T, T>(url, data, config);
+  },
+  delete<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    return client.delete<T, T>(url, config);
+  },
+};
 
 export default request;
