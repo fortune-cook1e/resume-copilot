@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { QueryProvider } from './query-provider';
+import { QueryProvider } from '@/components/query-provider';
 
 function CacheProbe({ label }: { label: string }) {
   const client = useQueryClient();
