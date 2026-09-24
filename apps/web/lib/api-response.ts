@@ -1,36 +1,13 @@
+import { STATUS_CODES } from 'node:http';
 import { NextResponse } from 'next/server';
+import type { HttpErrorResponse, HttpSuccessResponse } from '@resume-copilot/contracts';
 
-/**
- * Unified API response format:
- * { code: 0 | 1, msg: string, data: T | null }
- *
- * code 0 = success, code 1 = error
- *
- * NOTE: This is only for application API routes (e.g. /api/resumes).
- * Do NOT use for better-auth routes (/api/auth/*) — they have their own format.
- */
-
-export enum ResponseCode {
-  SUCCESS = 0,
-  ERROR = 1,
+/** Legacy Web business routes share the API's public envelope, not Better Auth's native protocol. */
+export function success<T>(data: T, status = 200): NextResponse<HttpSuccessResponse<T>> {
+  return NextResponse.json({ data, error: null }, { status });
 }
 
-export interface ApiResponse<T = unknown> {
-  code: ResponseCode;
-  msg: string;
-  data: T | null;
-}
-
-/** Return a success response */
-export function success<T>(data: T, status = 200): NextResponse<ApiResponse<T>> {
-  return NextResponse.json({ code: ResponseCode.SUCCESS, msg: 'success', data }, { status });
-}
-
-/** Return an error response */
-export function error(
-  msg: string,
-  status = 400,
-  code = ResponseCode.ERROR,
-): NextResponse<ApiResponse<null>> {
-  return NextResponse.json({ code, msg, data: null }, { status });
+export function error(message: string, status = 400): NextResponse<HttpErrorResponse> {
+  const code = (STATUS_CODES[status] ?? 'Request Failed').toUpperCase().replace(/[^A-Z0-9]+/g, '_');
+  return NextResponse.json({ data: null, error: { code, message } }, { status, headers: { 'Cache-Control': 'no-store' } });
 }

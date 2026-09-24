@@ -1,6 +1,6 @@
 # Authentication and Session Workflow Design
 
-Status: Scope and Delivery Slices A → B → C are approved; none have started or been authorized for implementation. The [API Foundation](api-foundation.md) is complete. Auth will reuse its configuration, logging, exception handling, and lifecycle instead of recreating them.
+Status: NestJS owns Google-only Better Auth, and the confirmed local development and isolated test databases have the API-owned migrations (including nullable Google profile `user.image`). The user reports a successful real-browser Auth B login, dashboard refresh, sidebar identity, and owned resume flow after the page boundary moved to `/api/me`; this was not independently observed. Auth C sign-out/session lifecycle is implemented and covered by isolated tests, but real multi-tab sign-out and browser Cookie renewal remain unverified. The [API Foundation](api-foundation.md) is complete and reused.
 
 This document separates agreed requirements, design guidance, and implementation prerequisites. Recording a design does not authorize dependency installation, data deletion, migrations, or deployment.
 
@@ -27,7 +27,7 @@ This document separates agreed requirements, design guidance, and implementation
 
 ## 2. Repository inspection baseline
 
-This is the static baseline observed when designing Auth, not verification of a real database or runtime. Subsequent API Foundation progress is in [API Foundation](api-foundation.md); Auth itself remains unimplemented.
+This is the static baseline observed when designing Auth, not verification of a real database or runtime. Subsequent API Foundation progress is in [API Foundation](api-foundation.md); the Auth A implementation and test-only database are summarized in the current status and handoff.
 
 | Item | Observed path/state at design time |
 | --- | --- |
@@ -82,7 +82,7 @@ Ownership is agreed, but implementation must confirm the selected Better Auth ve
 5. Better Auth creates a database session and sets an HttpOnly Cookie. Use Secure in production; configure SameSite, Path, and public URL explicitly.
 6. Return to `/dashboard/resumes`. Web obtains the session using the Better Auth client and shows the user in the existing sidebar. Legacy Web server code checks the session with NestJS before protected business access.
 
-Unverified emails, denied authorization, invalid callbacks, and replayed callbacks must not yield usable sessions. Failure pages give safe guidance, not tokens, secrets, or internal errors.
+Google profiles may include `picture`, which Better Auth persists as nullable `user.image`; omitting that column prevented real first sign-in from creating a user. `/api/me` intentionally continues to expose only the minimal id/name/email fields. Unverified emails, denied authorization, invalid callbacks, and replayed callbacks must not yield usable sessions. Failure pages give safe guidance, not tokens, secrets, or internal errors.
 
 ### 3.3 Session validation
 
@@ -90,11 +90,11 @@ Unverified emails, denied authorization, invalid callbacks, and replayed callbac
 - Missing, forged, expired, or revoked sessions return 401. Dependency outages fail closed but report a service error, not a false "not signed in" result.
 - After validation, construct a minimal trusted user context. Never use a client-supplied `userId` as proof of identity.
 - `GET /api/me` returns minimal trusted user fields for Web server-side bridging and automated HTTP verification of the NestJS Guard. This custom business JSON endpoint follows the shared `data` response contract; it needs no dedicated page and must not return session tokens, OAuth tokens, or full database rows.
-- Web server calls a fixed internal NestJS URL, forwards the current request's auth Cookie, sets a timeout, and disallows caching. Treat 401 as signed out; fail closed on network/service errors without misreporting them as signed out. Forward renewal Set-Cookie through a writable browser response boundary rather than silently discarding it.
+- Web server calls a fixed internal NestJS URL, forwards the current request's auth Cookie, sets a timeout, and disallows caching. Treat 401 as signed out; fail closed on network/service errors without misreporting them as signed out. Server Components cannot forward renewal Set-Cookie; native browser Better Auth session requests go through the same-origin rewrite, where renewal Cookie behavior still needs browser verification.
 - Legacy business operations keep their existing resource ownership checks using the verified user ID. Do not trust a browser identity header or import API-internal types across applications.
-- Do not publicly cache session responses. Preserve Cookie and any renewal Set-Cookie correctly across proxy and server-side calls.
+- Do not publicly cache session responses. Dashboard's server layout and the resume editor's server page check `/api/me` before rendering: 401 redirects to login; outages show a retryable error instead. The separate `/resume/print` page stays public for PDF rendering. A client session boundary rechecks on cross-tab notices, hides old-user content on expiry/identity change, and clears browser-private state without becoming the API authorization source.
 - Web page redirects are UX, not API authorization. Sensitive server reads in Web also need trusted authentication; NestJS protects its APIs.
-- A Guard is not a substitute for future business resource-ownership checks. Cookie-authenticated write endpoints still need explicit CSRF protection; sign-in alone does not solve it.
+- A Guard is not a substitute for business resource-ownership checks. The Web proxy rejects wrong or absent Origin for unsafe methods on Web-owned `/api/*` routes by default, except `/api/auth/*` forwarded to NestJS, which checks its own writes. CORS alone is not CSRF protection; GET/HEAD/OPTIONS and page navigation do not require an Origin.
 
 ### 3.4 Sign-out and identity changes
 
@@ -123,17 +123,17 @@ Revocation does not roll back business requests already authorized before sign-o
 - The old database may be abandoned, but its target, any deletion/recreation command, and permissions need separate confirmation. Integration tests always use isolated databases.
 - For rollback, stop the new route switch first; do not restore weak legacy origin checks or password endpoints. Deleting an old database cannot be undone by code rollback, so data operations require separate authorization and warning about irreversible effects.
 
-## 5. Delivery Slices (approved order and scope; none started)
+## 5. Delivery Slices (approved order and scope; Auth C awaiting browser acceptance)
 
 Implement one authorized slice at a time; do not automatically begin the next.
 
 | Slice | Observable outcome | Scope and dependencies | Acceptance boundary | Status |
 | --- | --- | --- | --- | --- |
-| A: Auth service and protected boundary | NestJS handles Google auth/database sessions and serves `/api/me` for a trusted identity | Configuration, database lifecycle, Better Auth handler, Google provider, Guard, minimal public contract; new database retains structure needed by resumes; depends on isolated test DB and version compatibility | First and returning sign-in map to the same identity with a controlled provider; unverified email rejected; valid session succeeds, missing/forged/expired sessions fail; NestJS password endpoints unavailable | Approved, not started |
-| B: Web sign-in and auth switch | Google sign-in enters `/dashboard/resumes`; refresh preserves identity and sidebar shows the user | Login button, session state, explicit same-origin routes, full replacement of old auth; legacy Web server checks sessions with NestJS, not resume business changes; depends on A | Full browser callback; cancellation/failure retryable; one auth service and password entry disabled; existing resume entry and ownership checks show no auth regression; build passes | Approved, not started |
-| C: Sign-out and session lifecycle | Signed-out current session cannot be reused; other devices remain signed in; tabs have no stale user state | Sidebar sign-out error handling, identity cleanup, cross-tab sync, renewal/expiry verification; depends on A/B | Replayed revoked credential fails; another session remains valid; failures are not falsely reported as success; expiry/renewal match requirements; late responses cannot restore old state | Approved, not started |
+| A: Auth service and protected boundary | NestJS handles Google auth/database sessions and serves `/api/me` for a trusted identity | Configuration, database lifecycle, Better Auth handler, Google provider, Guard, minimal public contract; new database retains structure needed by resumes; depends on isolated test DB and version compatibility | First and returning sign-in map to the same identity with a controlled provider; unverified email rejected; valid session succeeds, missing/forged/expired sessions fail; NestJS password endpoints unavailable | Implemented with isolated DB HTTP checks; user reports successful real Google browser sign-in during B acceptance |
+| B: Web sign-in and auth switch | Google sign-in enters `/dashboard/resumes`; refresh preserves identity and sidebar shows the user | Login button, session state, explicit same-origin routes, full replacement of old auth; legacy Web server checks sessions with NestJS, not resume business changes; depends on A | Full browser callback; cancellation/failure retryable; one auth service and password entry disabled; existing resume entry and ownership checks show no auth regression; build passes | Implemented; user confirms real browser login, refresh, sidebar identity and owned resume flow |
+| C: Sign-out and session lifecycle | Signed-out current session cannot be reused; other devices remain signed in; tabs have no stale user state | Sidebar sign-out error handling, identity cleanup, cross-tab sync, renewal/expiry verification; depends on A/B | Replayed revoked credential fails; another session remains valid; failures are not falsely reported as success; expiry/renewal match requirements; late responses cannot restore old state | Implemented and isolated tests pass; real two-tab/device behavior and Web renewal Cookie awaiting browser verification |
 
-Slice A does not include client integration (that belongs to B); its tests must not claim a complete browser flow. Even after all slices, use a real Google test account for manual acceptance before claiming Google sign-in integration is verified.
+Slice A does not include client integration (that belongs to B); its tests must not claim a complete browser flow. The installed Better Auth 1.4.18 returns native HTTP 400 (disabled) for email/password sign-in/up, not 404; tests assert both remain unusable. Because cookie-free OAuth initiation is not Origin-validated by default in that version, the NestJS adapter now rejects non-GET auth requests without the configured public Origin, applies the configured body-size limit before native parsing, and disables caching of native auth responses. `/api/me` responses are also `no-store`. Web browser auth writes send that public Origin; any future Web server-side auth writes must forward it explicitly. Even after all slices, use a real Google test account for manual acceptance before claiming Google sign-in integration is verified.
 
 ## 6. Verification strategy
 
@@ -149,14 +149,14 @@ Existing tests did not cover Auth risks. Add the smallest set of risk-focused be
 
 ## 7. Preconditions for implementation
 
-The design decisions are settled. Auth bridging, the retained database structure, and page selection need not be reopened without material change. These are preparation steps, not a request to redesign scope:
+The design decisions are settled. Auth bridging, the retained database structure, and page selection need not be reopened without material change. Auth A has begun; the remaining prerequisites and operational checks are:
 
-1. **Google access:** Google OAuth is not configured yet. Follow Section 8 to prepare project, client, and test account; do not claim real Google integration until tested.
-2. **Database operation:** An empty database must hold new auth tables and the existing structure needed by resumes. Confirm the target, whether to delete an old database, and initialization commands separately; test DB must be isolated.
-3. **Version compatibility:** Verify Better Auth/NestJS module format, handler integration, and renewal Cookie forwarding. Discuss only material architectural obstacles.
-4. **Implementation authorization:** A → B → C delivery was agreed, but writing the design alone did not authorize code edits, dependency installation, or data operations.
+1. **Google access:** The user reports local Google Secret configuration and updated the Console redirect URI to `http://localhost:3000/api/auth/callback/google`; this cloud setting and real credentials have not been independently verified. HTTP smoke tests observed that NestJS generates that URI, but do not claim real Google integration until a browser sign-in succeeds.
+2. **Database operation:** The isolated `resume_copilot_test` database remains separate. After confirming the local Docker target and receiving explicit authorization, the old local `resume_copilot` development database was dropped, recreated, and migrated; its previous data is gone. A separately authorized follow-up added nullable `user.image` (migration 0001) to both local databases without clearing or recreating them. The ignored local `apps/api/.env` now has a verified `DATABASE_URL` pointing to this migrated database; the tracked example contains only a password placeholder. No production database was accessed; never point integration tests at the development database.
+3. **Version compatibility:** On Node >=22.12, the NestJS CommonJS build loads Better Auth 1.4.18 with static imports compiled to `require(esm)` using TypeScript's `Node20` module mode; `Node16` mode rejects those imports. The native handler runs before Nest body parsing. Real proxy/Cookie forwarding awaits B; the API has not been converted to ESM.
+4. **Implementation authorization:** User authorized Auth A backend implementation, dependency installation, isolated test DB creation, and separately confirmed clearing/recreating `resume_copilot` locally. Auth B and C were subsequently authorized separately; neither authorization included a production deployment.
 
-## 8. Google OAuth setup (not performed)
+## 8. Google OAuth setup (not verified)
 
 These are instructions, not a claim that cloud resources exist. Console menus may change. The plan uses Better Auth's default `/api/auth` path; the installed version's callback generation was checked for `/callback/google`. Update the console if implementation changes the path.
 
@@ -181,7 +181,7 @@ These are instructions, not a claim that cloud resources exist. Console menus ma
 
 ### 8.3 Proposed NestJS environment contract
 
-These variables are planned, not yet read by the API. The API foundation now loads its own development env and validates current variables; Auth implementation must add validation and a credential-free example for these new variables.
+These variables are validated by the API. Its private development env and credential-free example live under `apps/api/`; Web also requires a trusted `API_INTERNAL_URL` outside local development.
 
 | Setting | Purpose and requirements |
 | --- | --- |
@@ -191,7 +191,7 @@ These variables are planned, not yet read by the API. The API foundation now loa
 | `BETTER_AUTH_URL` | Browser-visible public origin, locally `http://localhost:3000`, with explicit `/api/auth` basePath |
 | `DATABASE_URL` | New database connection; use a separate isolated test database, never production data |
 
-The browser uses same-origin `/api/auth` without Google Secret or database credentials. Web's server may have a separate internal NestJS URL, which cannot replace the public OAuth callback origin. Use the public URL for strict trusted-origin checks; do not turn off Origin/CSRF checks to make integration pass.
+The browser uses same-origin `/api/auth` without Google Secret or database credentials. Web uses an internal NestJS URL for rewrites and server-side checks; it cannot replace the public OAuth callback origin. Use the public URL for strict trusted-origin checks; do not turn off Origin/CSRF checks to make integration pass.
 
 ### 8.4 Manual acceptance and troubleshooting
 

@@ -29,6 +29,7 @@ const initialState: ResumeState = {
 
 // Debounce timer for auto-save
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
+let draftEpoch = 0;
 const SAVE_DEBOUNCE_MS = 1000;
 
 export const useResumeStore = create<ResumeStore>()(
@@ -65,6 +66,7 @@ export const useResumeStore = create<ResumeStore>()(
     saveToServer: async () => {
       const { resumeId, resume, isSaving } = get();
       if (!resumeId || !resume || isSaving) return;
+      const epoch = draftEpoch;
 
       set(state => {
         state.isSaving = true;
@@ -73,16 +75,18 @@ export const useResumeStore = create<ResumeStore>()(
       try {
         await updateResumeAPI(resumeId, { data: resume });
       } catch (error) {
-        console.error('Failed to save resume:', error);
+        if (epoch === draftEpoch) console.error('Failed to save resume:', error);
       } finally {
-        set(state => {
+        if (epoch === draftEpoch) set(state => {
           state.isSaving = false;
         });
       }
     },
 
     reset: () => {
+      draftEpoch++;
       if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = null;
       set(initialState);
     },
   })),

@@ -1,6 +1,5 @@
 import { success, error } from '@/lib/api-response';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
+import { getCurrentUser } from '@/lib/current-user';
 import { Ollama } from 'ollama';
 
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'gpt-oss:120b';
@@ -25,10 +24,8 @@ Guidelines:
 
 export async function POST(req: Request) {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session) {
-      return error('Unauthorized', 401);
-    }
+    const { failure } = await getCurrentUser();
+    if (failure) return failure;
 
     const body = await req.json();
     const { content } = body as { content?: string };

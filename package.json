@@ -10,11 +10,15 @@
     "dev": "pnpm --parallel --filter './apps/*' --filter './packages/*' --if-present run dev",
     "dev:web": "pnpm --filter @resume-copilot/web dev",
     "dev:api": "pnpm --filter @resume-copilot/api dev",
+    "db:generate": "pnpm --filter @resume-copilot/api run db:generate",
+    "db:migrate": "pnpm --filter @resume-copilot/api run db:migrate",
+    "db:push": "pnpm --filter @resume-copilot/api run db:push",
+    "db:studio": "pnpm --filter @resume-copilot/api run db:studio",
     "build": "pnpm -r --if-present run build",
     "lint": "pnpm lint:root && pnpm -r --if-present run lint",
     "lint:root": "eslint eslint.config.mjs",
     "typecheck": "pnpm -r --if-present run typecheck",
-    "test": "pnpm -r --if-present run test",
+    "test": "pnpm -r --workspace-concurrency=1 --if-present run test",
     "test:e2e": "pnpm --filter @resume-copilot/web test:e2e"
   },
   "devDependencies": {

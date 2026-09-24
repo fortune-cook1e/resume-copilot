@@ -1,55 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from './lib/auth';
-import { headers } from 'next/headers';
 import { error } from '@/lib/api-response';
 
-const apiPublicPaths = ['/api/auth'];
+const inPath = (pathname: string, prefix: string) =>
+  pathname === prefix || pathname.startsWith(`${prefix}/`);
 
-const appPublicPaths = ['/', '/login', '/register', '/resume/print'];
-
-const publicPaths = [...apiPublicPaths, ...appPublicPaths];
-
-export async function proxy(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  // Allow public paths
-  const isPublicPath = publicPaths.some(path => {
-    if (path === '/') return pathname === '/';
-    return pathname.startsWith(path);
-  });
-
-  if (isPublicPath) {
-    return NextResponse.next();
-  }
-
-  if (!session) {
-    // API requests: return 401 JSON response
-    if (pathname.startsWith('/api/')) {
-      return error('Unauthorized', 401);
-    }
-
-    // Page requests: redirect to login
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('callbackUrl', pathname);
-    return NextResponse.redirect(loginUrl);
+  // NestJS checks its own /api/auth writes; Web business writes require a trusted Origin by default.
+  if (inPath(pathname, '/api') && !inPath(pathname, '/api/auth') &&
+    !['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
+    const publicOrigin = new URL(
+      process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
+    ).origin;
+    if (request.headers.get('origin') !== publicOrigin) return error('Forbidden', 403);
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match all paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization)
-     * - favicon.ico
-     * - public folder
-     */
-    '/((?!_next/static|_next/image|favicon.ico|public).*)',
-  ],
+  matcher: ['/api/:path*'],
 };

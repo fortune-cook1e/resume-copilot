@@ -2,10 +2,11 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import type { ConfigType } from '@nestjs/config';
 import { ConsoleLogger, Logger as NestLogger, ServiceUnavailableException, type Type } from '@nestjs/common';
-import type { NextFunction, Request, Response } from 'express';
+import { text, type NextFunction, type Request, type Response } from 'express';
 import type { Server } from 'node:http';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
+import { toNodeHandler } from 'better-auth/node';
 import { Logger, PinoLogger } from 'nestjs-pino';
 import { pino } from 'pino';
 import { requestLogging } from './common/logging';
@@ -13,6 +14,7 @@ import { AppModule } from './app.module';
 import { appConfig, ConfigurationError } from './config/app.config';
 import { installShutdownHandlers } from './lifecycle/shutdown';
 import { ApplicationState } from './lifecycle/application-state';
+import { AuthService } from './auth/auth.service';
 
 export async function createApplication(rootModule: Type = AppModule) {
   let app: NestExpressApplication;
@@ -55,6 +57,17 @@ export async function createApplication(rootModule: Type = AppModule) {
     }
     next();
   });
+  // Better Auth owns its redirects, Cookies and body parsing; mount it before Nest parsers.
+  app.use('/api/auth', (request: Request, response: Response, next: NextFunction) => {
+    response.setHeader('Cache-Control', 'no-store');
+    // Better Auth permits cookie-free OAuth initiation without an Origin check;
+    // browser-facing mutations here must always originate from the public origin.
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method) && request.headers.origin !== config.BETTER_AUTH_URL) {
+      response.status(403).end();
+      return;
+    }
+    next();
+  }, text({ type: () => true, limit: config.BODY_LIMIT_BYTES }), toNodeHandler(app.get(AuthService).auth));
   app.useBodyParser('json', { limit: config.BODY_LIMIT_BYTES });
   app.useBodyParser('urlencoded', { limit: config.BODY_LIMIT_BYTES, extended: false });
   app.setGlobalPrefix('api');

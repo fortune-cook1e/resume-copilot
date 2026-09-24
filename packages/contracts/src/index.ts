@@ -1,3 +1,4 @@
+export { currentUserSchema, type CurrentUser } from './auth';
 export { httpErrorSchema, type HttpErrorResponse } from './http-error';
 export {
   httpSuccessSchema,

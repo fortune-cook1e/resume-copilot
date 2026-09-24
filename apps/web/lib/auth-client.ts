@@ -1,8 +1,6 @@
 import { createAuthClient } from 'better-auth/react';
 
-export const authClient = createAuthClient({
-  // The base URL of the server
-  baseURL: process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
-});
+// Browser and auth handler share an origin; the NestJS handler is reached through Next.js rewrites.
+export const authClient = createAuthClient();
 
-export const { signIn, signUp, signOut, useSession, getSession } = authClient;
+export const { signIn, signOut, useSession } = authClient;

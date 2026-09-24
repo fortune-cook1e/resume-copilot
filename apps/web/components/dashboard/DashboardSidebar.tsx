@@ -16,10 +16,9 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { FileText, User, LogOut } from 'lucide-react';
-import { useSession, signOut } from '@/lib/auth-client';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
+import { FileText, User } from 'lucide-react';
+import { useSession } from '@/lib/auth-client';
+import { SignOutButton } from '@/components/dashboard/SignOutButton';
 
 const navItems = [
   {
@@ -37,13 +36,6 @@ const navItems = [
 export function DashboardSidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const router = useRouter();
-
-  const handleSignOut = async () => {
-    await signOut();
-    router.push('/login');
-  };
-
   const userInitials = session?.user?.name
     ? session.user.name
         .split(' ')
@@ -93,9 +85,7 @@ export function DashboardSidebar() {
             <p className="text-sm font-medium truncate">{session?.user?.name || 'User'}</p>
             <p className="text-xs text-muted-foreground truncate">{session?.user?.email || ''}</p>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleSignOut}>
-            <LogOut className="h-4 w-4" />
-          </Button>
+          <SignOutButton />
         </div>
       </SidebarFooter>
 

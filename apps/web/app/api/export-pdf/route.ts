@@ -4,8 +4,7 @@ import { db } from '@/db';
 import { resume } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { error, success } from '@/lib/api-response';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
+import { getCurrentUser } from '@/lib/current-user';
 
 /**
  * Detect Chrome/Chromium executable path based on environment:
@@ -48,19 +47,11 @@ export async function POST(request: NextRequest) {
 
   try {
     const { title = 'Resume', resumeId } = await request.json();
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-
-    if (!session) {
-      return error('Unauthorized', 401);
-    }
+    const { user, failure } = await getCurrentUser();
+    if (failure) return failure;
 
     if (!resumeId) {
-      return NextResponse.json(
-        { code: 1, msg: 'resumeId is required', data: null },
-        { status: 400 },
-      );
+      return error('resumeId is required', 400);
     }
 
     const startTime = Date.now();
@@ -71,7 +62,7 @@ export async function POST(request: NextRequest) {
     const [found] = await db
       .select()
       .from(resume)
-      .where(and(eq(resume.id, resumeId), eq(resume.userId, session.user.id)));
+      .where(and(eq(resume.id, resumeId), eq(resume.userId, user.id)));
     if (!found) {
       return error('Resume not found', 404);
     }
@@ -182,9 +173,9 @@ export async function POST(request: NextRequest) {
         'Content-Disposition': `attachment; filename="${encodeURIComponent(title)}.pdf"`,
       },
     });
-  } catch (error) {
-    console.error('PDF generation error:', error);
-    return NextResponse.json({ code: 1, msg: String(error), data: null }, { status: 500 });
+  } catch (cause) {
+    console.error('PDF generation error:', cause);
+    return error('Internal Server Error', 500);
   } finally {
     // Always clean up: close page and browser
     await page?.close().catch(() => {});

@@ -2,7 +2,7 @@
 
 Resume Copilot aims to help job seekers keep a reusable record of their experience and create tailored resumes. The planned workspace will support manual editing, preview, and PDF export, with optional collaboration through Codex. An in-product agent is planned for a later phase.
 
-> **Early development:** The new authentication, experience library, resume editor, and Codex integration are not yet available. The current Web app is a preserved legacy version.
+> **Early development:** Web routes Google sign-in to NestJS; the user reports a successful real browser Auth B flow. Auth C sign-out/session changes need browser acceptance. The experience library, new resume editor, and Codex integration are not yet complete. Web business routes remain legacy.
 
 ## Run locally
 
@@ -18,3 +18,26 @@ pnpm dev
 Open the Web app at <http://localhost:3000>. The NestJS API runs on port 3001 and provides a health check at <http://localhost:3001/api/health>.
 
 To start only one application, use `pnpm dev:web` or `pnpm dev:api`.
+
+## Google authentication (Auth C browser acceptance pending)
+
+NestJS owns the Google-only Better Auth handler at `/api/auth/*` and a session-guarded business endpoint `GET /api/me`. `/api/me` returns `{ data: { id, name, email }, error: null }`; Better Auth redirects, Cookies and errors retain its native protocol. Web routes only `/api/auth/*` and `/api/me` to NestJS; legacy resume/AI routes remain in Web and check identity with NestJS before accessing data. The old Web password-auth handler is removed. The dashboard server layout and resume editor page check `/api/me` before rendering; `/resume/print` stays public for PDF rendering. The Web proxy only checks the Origin of unsafe Web business API requests (NestJS owns `/api/auth/*` checks). Web's Google login redirects to `/dashboard/resumes`; the user reports successful browser login, refresh, sidebar identity, and owned resume access. Auth C adds sign-out failure handling, client-state cleanup, cross-tab revalidation, and session-renewal tests; real multi-tab sign-out and Cookie renewal through Web still require browser verification.
+
+For local API development, set `DATABASE_URL`, `BETTER_AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and browser-visible `BETTER_AUTH_URL` using `apps/api/.env.example` as a guide. Never commit real values. Database tables must be initialized on an **empty, confirmed** development database using `pnpm --filter @resume-copilot/api exec drizzle-kit migrate` with `DATABASE_URL` explicitly set to that target. The confirmed local `resume_copilot` development database was cleared, recreated, and migrated with the new schema; previous local data is gone. A later additive migration added nullable `user.image` because real Google profiles can include a picture; it was applied to both local development and the isolated test database without resetting either one. The ignored `apps/api/.env` now points `DATABASE_URL` at this development database; `.env.example` documents the URL shape without committing a working password. Keep the actual local database password private and never reuse it in production. Web's existing resume table can be used with the new user IDs through its server-side NestJS identity bridge; old user data is gone. Do not apply historical Web Drizzle migrations to the new database—NestJS owns schema migrations. Production requires HTTPS for `BETTER_AUTH_URL`. The Google redirect URI must be `http://localhost:3000/api/auth/callback/google` locally. Web uses `API_INTERNAL_URL` (defaults to `http://127.0.0.1:3001` for local development) for auth routing and server calls; set it to a trusted, reachable NestJS origin when building Web for another environment. The existing `docker-compose.prod.yml` still runs only Web and PostgreSQL, **not the API**, so it cannot serve this authentication flow until a separately approved deployment update. See the [Auth design](docs/designs/auth.md).
+
+## Database commands
+
+NestJS is the sole owner of new schema migrations. Run from the repository root (or use `pnpm --filter @resume-copilot/api db:<command>`):
+
+| Command | Purpose |
+| --- | --- |
+| `pnpm db:generate` | Generate a migration from `apps/api/src/database/schema/`; review the SQL before applying it. |
+| `pnpm db:migrate` | Apply pending API migrations to the **explicitly selected** database. |
+| `pnpm db:push` | Directly synchronize a disposable database; it bypasses migration history. Do not use on the migrated dev/test databases or production. |
+| `pnpm db:studio` | Open Drizzle Studio for a trusted local database; do not expose it publicly. |
+
+`migrate`, `push`, and `studio` read `DATABASE_URL` from the command's environment, **not automatically from** `apps/api/.env`. Confirm its host and database name before invoking them; these scripts do not run any operation by themselves. Web's historical migrations must not be applied to the new database.
+
+The Python-dependent PDF import and job-match analysis have been retired (including their Web routes and UI). Manual resume creation and editing, Ollama-only text polishing, and browser-based PDF export remain. Browser business requests still use Axios through `apps/web/lib/request.ts` and `services/`; resume CRUD and PDF export currently still access the database from Web. Move those operations to NestJS in separate slices before removing Web's database code.
+
+API and Web auth tests share a separate, already-migrated local PostgreSQL database named `resume_copilot_test`; root tests run sequentially to avoid concurrent fixture resets. Set `AUTH_TEST_DATABASE_URL` to **that test database only** before running `pnpm test`; tests refuse other database names and clear test-only rows between runs. Never point the test variable at the development or production database. The controlled Google provider in automated tests does not establish real Google interoperability. Full lint remains blocked by pre-existing Web errors.

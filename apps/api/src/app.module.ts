@@ -9,9 +9,11 @@ import { ResponseInterceptor } from './common/responses/response.interceptor';
 import { appConfig } from './config/app.config';
 import { AppController } from './app.controller';
 import { ApplicationState } from './lifecycle/application-state';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
+    AuthModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: resolve(__dirname, '../.env'),

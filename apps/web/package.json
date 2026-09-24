@@ -11,9 +11,6 @@
     "test": "pnpm --filter @resume-copilot/contracts build && vitest run",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
-    "drizzle:generate": "drizzle-kit generate",
-    "drizzle:migate": "drizzle-kit migrate",
-    "drizzle:push": "drizzle-kit push",
     "drizzle:pull": "drizzle-kit pull",
     "drizzle:studio": "drizzle-kit studio"
   },

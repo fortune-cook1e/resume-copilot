@@ -13,6 +13,7 @@ const require = createRequire(import.meta.url);
 const { createApplication } = require('../dist/main.js') as typeof import('../dist/main.js');
 const { AppModule } = require('../dist/app.module.js') as typeof import('../dist/app.module.js');
 const { ApplicationState } = require('../dist/lifecycle/application-state.js') as typeof import('../dist/lifecycle/application-state.js');
+const { appConfig } = require('../dist/config/app.config.js') as typeof import('../dist/config/app.config.js');
 const { RawResponse } = require('../dist/common/responses/raw-response.js') as typeof import('../dist/common/responses/raw-response.js');
 
 @Controller('test-errors')
@@ -154,6 +155,26 @@ describe('API bootstrap', () => {
     expect(result.status).toBe(1);
     expect(result.stdout + result.stderr).toContain('Invalid configuration: PORT');
     expect(result.stdout + result.stderr).not.toContain('private-dev-invalid-port');
+  });
+
+  it('normalizes a trailing slash in the public auth origin used for request checks', () => {
+    const previous = process.env.BETTER_AUTH_URL;
+    process.env.BETTER_AUTH_URL = 'http://localhost:3000/';
+    try {
+      expect(appConfig().BETTER_AUTH_URL).toBe('http://localhost:3000');
+    } finally {
+      process.env.BETTER_AUTH_URL = previous;
+    }
+  });
+
+  it('rejects an insecure public auth origin in production', () => {
+    const previous = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      expect(() => appConfig()).toThrow('Invalid configuration: BETTER_AUTH_URL');
+    } finally {
+      process.env.NODE_ENV = previous;
+    }
   });
 
   it('wraps business JSON while leaving the HTTP status and request ID header intact', async () => {
@@ -298,7 +319,7 @@ describe('API bootstrap', () => {
   });
 
   it('emits JSON startup logs in production, including early initialization', async () => {
-    const runtime = await startChild({ NODE_ENV: 'production' });
+    const runtime = await startChild({ NODE_ENV: 'production', BETTER_AUTH_URL: 'https://app.example.test' });
     await vi.waitFor(() => expect(runtime.output.join('')).toContain('Starting Nest application'));
     const records = runtime.output.join('').trim().split('\n').filter(Boolean).map(line => JSON.parse(line) as Record<string, unknown>);
     expect(records).toEqual(expect.arrayContaining([

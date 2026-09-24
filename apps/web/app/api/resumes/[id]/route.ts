@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
+import { getCurrentUser } from '@/lib/current-user';
 import { db } from '@/db';
 import { resume } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -10,11 +9,14 @@ type Params = { params: Promise<{ id: string }> };
 
 /** GET /api/resumes/[id] — get a single resume */
 export async function GET(_request: NextRequest, { params }: Params) {
+  const { user, failure } = await getCurrentUser();
+  if (failure) return failure;
+
   const { id } = await params;
   const [found] = await db
     .select()
     .from(resume)
-    .where(and(eq(resume.id, id)));
+    .where(and(eq(resume.id, id), eq(resume.userId, user.id)));
 
   if (!found) {
     return error('Resume not found', 404);
@@ -25,10 +27,8 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
 /** PATCH /api/resumes/[id] — update a resume */
 export async function PATCH(request: NextRequest, { params }: Params) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) {
-    return error('Unauthorized', 401);
-  }
+  const { user, failure } = await getCurrentUser();
+  if (failure) return failure;
 
   const { id } = await params;
   const body = await request.json();
@@ -42,7 +42,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   const [updated] = await db
     .update(resume)
     .set(updateData)
-    .where(and(eq(resume.id, id)))
+    .where(and(eq(resume.id, id), eq(resume.userId, user.id)))
     .returning();
 
   if (!updated) {
@@ -54,16 +54,14 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
 /** DELETE /api/resumes/[id] — delete a resume */
 export async function DELETE(_request: NextRequest, { params }: Params) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) {
-    return error('Unauthorized', 401);
-  }
+  const { user, failure } = await getCurrentUser();
+  if (failure) return failure;
 
   const { id } = await params;
 
   const [deleted] = await db
     .delete(resume)
-    .where(and(eq(resume.id, id), eq(resume.userId, session.user.id)))
+    .where(and(eq(resume.id, id), eq(resume.userId, user.id)))
     .returning({ id: resume.id });
 
   if (!deleted) {

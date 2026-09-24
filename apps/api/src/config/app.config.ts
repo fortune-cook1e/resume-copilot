@@ -12,6 +12,15 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   SHUTDOWN_TIMEOUT_MS: integer(100, 120000, '10000'),
   BODY_LIMIT_BYTES: integer(1, 10485760, '1048576'),
+  DATABASE_URL: z.url().refine(value => ['postgres:', 'postgresql:'].includes(new URL(value).protocol)),
+  GOOGLE_CLIENT_ID: z.string().min(1),
+  GOOGLE_CLIENT_SECRET: z.string().min(1),
+  BETTER_AUTH_SECRET: z.string().min(32),
+  BETTER_AUTH_URL: z.url().refine(value => new URL(value).origin === value.replace(/\/$/, '')).transform(value => new URL(value).origin),
+}).superRefine((env, context) => {
+  if (env.NODE_ENV === 'production' && (!URL.canParse(env.BETTER_AUTH_URL) || new URL(env.BETTER_AUTH_URL).protocol !== 'https:')) {
+    context.addIssue({ code: 'custom', path: ['BETTER_AUTH_URL'], message: 'HTTPS is required in production' });
+  }
 });
 
 export class ConfigurationError extends Error {
