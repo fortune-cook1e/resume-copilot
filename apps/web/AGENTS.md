@@ -17,8 +17,11 @@
 - `stores/`: shared client state, not a duplicate of Query caches. `lib/`: general-purpose utilities and foundational integrations, not miscellaneous business code.
 - Use consistent business names across directories, such as `services/resumes.ts` and `hooks/use-resumes.ts`; create files only when needed.
 
-## State and data
+## HTTP requests and state
 
+- For new browser-side business API requests, use the existing Axios wrapper in `lib/request.ts` (base URL, credentials, response envelope and error handling); define named, typed operations in `services/`. Components and hooks call those service functions rather than importing Axios, calling `request` directly, or writing `fetch` inline.
+- Use TanStack Query on top of service functions **when server-state caching, deduplication, refetching or invalidation is needed**; it is not mandatory for every request. One-off actions can call a service directly. Keep transport, service operations and optional Query hooks as distinct responsibilities; do not wrap every service call in a Query hook by default.
+- Direct `fetch` is exceptional, not an alternative default. If a framework/SDK boundary, streaming protocol or server-only request cannot use the browser Axios wrapper, use the appropriate transport at that boundary and state why; preserve authentication, Cookie propagation, error handling and cache semantics. Do not import a browser-only relative-URL client into server code or replace a framework/SDK's own required transport without checking its contract.
 - When needed, use TanStack Query for server-state caching, React Hook Form for forms, and Zustand for shared client state; do not duplicate ownership across them.
 - Keep local UI state local and derive values rather than synchronizing duplicate state through effects.
 - Give each editable draft one authoritative owner; define form / draft synchronization in the feature design.
