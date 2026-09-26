@@ -10,10 +10,12 @@ import { appConfig } from './config/app.config';
 import { AppController } from './app.controller';
 import { ApplicationState } from './lifecycle/application-state';
 import { AuthModule } from './auth/auth.module';
+import { ResumesModule } from './resumes/resumes.module';
 
 @Module({
   imports: [
     AuthModule,
+    ResumesModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: resolve(__dirname, '../.env'),

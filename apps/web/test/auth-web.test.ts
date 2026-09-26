@@ -1,79 +1,29 @@
 // @vitest-environment node
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
-import postgres from 'postgres';
 
 vi.mock('next/headers', () => ({ headers: async () => new Headers({ cookie: 'test-session=owner' }) }));
 
 describe('authenticated resume access', () => {
-  let sql: ReturnType<typeof postgres>;
-  let getResume: typeof import('../app/api/resumes/[id]/route').GET;
-  let patchResume: typeof import('../app/api/resumes/[id]/route').PATCH;
-  let listResumes: typeof import('../app/api/resumes/route').GET;
-  let createResume: typeof import('../app/api/resumes/route').POST;
   const ownerId = 'web-auth-test-owner';
-  const otherId = 'web-auth-test-other';
-  const resumeId = 'web-auth-test-foreign-resume';
-
-  beforeAll(async () => {
-    const testURL = process.env.AUTH_TEST_DATABASE_URL;
-    if (!testURL || new URL(testURL).pathname !== '/resume_copilot_test') throw new Error('Web auth tests require isolated resume_copilot_test');
-    process.env.DATABASE_URL = testURL;
-    sql = postgres(testURL);
-    const [target] = await sql`SELECT current_database() AS name`;
-    if (target.name !== 'resume_copilot_test') throw new Error('Refusing to mutate a non-test database');
-    await sql`INSERT INTO "user" (id, name, email) VALUES (${ownerId}, 'Owner', 'web-owner@example.test'), (${otherId}, 'Other', 'web-other@example.test')`;
-    await sql`INSERT INTO "resume" (id, user_id, title, data) VALUES (${resumeId}, ${otherId}, 'Private resume', ${sql.json({})})`;
-    ({ GET: getResume, PATCH: patchResume } = await import('../app/api/resumes/[id]/route'));
-    ({ GET: listResumes, POST: createResume } = await import('../app/api/resumes/route'));
-  });
 
   beforeEach(() => {
     vi.stubGlobal('fetch', async () => Response.json({ data: { id: ownerId, name: 'Owner', email: 'web-owner@example.test' }, error: null }));
   });
 
-  afterAll(async () => {
-    vi.unstubAllGlobals();
-    if (sql) {
-      await sql`DELETE FROM "user" WHERE id IN (${ownerId}, ${otherId})`;
-      await sql.end();
-    }
-  });
-
-  it('returns an empty authenticated resume list in the shared business response format', async () => {
-    const response = await listResumes();
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ data: [], error: null });
-  });
-
-  it('keeps manual blank-resume creation available without document parsing', async () => {
-    const response = await createResume(new NextRequest('http://localhost:3000/api/resumes', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', origin: 'http://localhost:3000' },
-      body: JSON.stringify({ title: 'Manual resume' }),
-    }));
-    expect(response.status).toBe(201);
-    const body = await response.json() as { data: { title: string; userId: string; data: unknown }; error: null };
-    expect(body).toMatchObject({ data: { title: 'Manual resume', userId: ownerId, data: expect.any(Object) }, error: null });
-  });
-
-  it('does not reveal another user’s resume by its ID', async () => {
-    const response = await getResume(new NextRequest(`http://localhost:3000/api/resumes/${resumeId}`), {
-      params: Promise.resolve({ id: resumeId }),
-    });
-    expect(response.status).toBe(404);
-  });
-
-  it('does not let another user change a resume by its ID', async () => {
-    const response = await patchResume(new NextRequest(`http://localhost:3000/api/resumes/${resumeId}`, {
-      method: 'PATCH', body: JSON.stringify({ title: 'Stolen' }), headers: { 'content-type': 'application/json' },
-    }), { params: Promise.resolve({ id: resumeId }) });
-    expect(response.status).toBe(404);
-    vi.stubGlobal('fetch', async () => Response.json({ data: { id: otherId, name: 'Other', email: 'web-other@example.test' }, error: null }));
-    const ownerResponse = await getResume(new NextRequest(`http://localhost:3000/api/resumes/${resumeId}`), {
-      params: Promise.resolve({ id: resumeId }),
-    });
-    expect((await ownerResponse.json() as { data: { title: string } }).data.title).toBe('Private resume');
+  it('routes resume CRUD to Nest while retaining Web PDF and polish routes', async () => {
+    const { default: config } = await import('../next.config');
+    const rewrites = await config.rewrites?.();
+    expect(rewrites).toHaveProperty('beforeFiles');
+    if (!rewrites || !('beforeFiles' in rewrites)) throw new Error('Missing beforeFiles rewrites');
+    expect(rewrites.beforeFiles).toEqual(expect.arrayContaining([
+      expect.objectContaining({ source: '/api/resumes', destination: expect.stringMatching(/\/api\/resumes$/) }),
+      expect.objectContaining({ source: '/api/resumes/:path*', destination: expect.stringMatching(/\/api\/resumes\/:path\*$/) }),
+    ]));
+    expect(rewrites.beforeFiles?.some(route => route.source === '/api/export-pdf' || route.source === '/api/ai-polish')).toBe(false);
+    const { defaultResumeData: apiDefault } = await import('@resume-copilot/contracts');
+    const { defaultResumeData: webDefault } = await import('../types/resume/resume');
+    expect(apiDefault).toEqual(webDefault);
   });
 
   it('rejects cross-origin writes to new Web business APIs by default', async () => {
@@ -120,12 +70,4 @@ describe('authenticated resume access', () => {
     });
   });
 
-  it('fails closed as unavailable rather than treating an auth outage as sign-out', async () => {
-    vi.stubGlobal('fetch', async () => { throw new Error('internal network failure'); });
-    const response = await getResume(new NextRequest(`http://localhost:3000/api/resumes/${resumeId}`), {
-      params: Promise.resolve({ id: resumeId }),
-    });
-    expect(response.status).toBe(503);
-    expect(JSON.stringify(await response.json())).not.toContain('internal network failure');
-  });
 });

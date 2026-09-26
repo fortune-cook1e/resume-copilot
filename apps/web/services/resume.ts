@@ -30,6 +30,7 @@ export async function createResume(params: CreateResumeParams): Promise<Resume> 
   return (await request.post('/resumes', {
     title: params.title || 'Untitled Resume',
     description: params.description ?? '',
+    ...(params.visibility ? { visibility: params.visibility } : {}),
     ...(params.data ? { data: params.data } : {}),
   })) as unknown as Resume;
 }

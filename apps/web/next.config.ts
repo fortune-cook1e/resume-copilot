@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
     return { beforeFiles: [
       { source: '/api/auth/:path*', destination: `${apiOrigin}/api/auth/:path*` },
       { source: '/api/me', destination: `${apiOrigin}/api/me` },
+      { source: '/api/resumes', destination: `${apiOrigin}/api/resumes` },
+      { source: '/api/resumes/:path*', destination: `${apiOrigin}/api/resumes/:path*` },
+      { source: '/api/mcp', destination: `${apiOrigin}/api/mcp` },
+      { source: '/.well-known/:path*', destination: `${apiOrigin}/.well-known/:path*` },
     ] };
   },
   // Enable standalone output for Docker deployment
