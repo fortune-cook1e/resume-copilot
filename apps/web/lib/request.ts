@@ -3,6 +3,7 @@ import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios';
 import { z } from 'zod';
 
 const successSchema = httpSuccessSchema(z.unknown());
+type ResponseConfig = AxiosRequestConfig & { rawResponse?: boolean }; // Auth provider responses are not business envelopes.
 
 export class ApiRequestError extends Error {
   readonly name = 'ApiRequestError';
@@ -46,8 +47,9 @@ const client = axios.create({
 });
 
 client.interceptors.response.use(response => {
-  // Binary/download endpoints do not use the business JSON envelope.
+  // Auth-provider JSON and binary downloads do not use the business envelope.
   if (
+    (response.config as ResponseConfig).rawResponse ||
     response.config.responseType === 'blob' ||
     response.config.responseType === 'arraybuffer' ||
     response.config.responseType === 'stream'
@@ -70,8 +72,14 @@ const request = {
   get<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
     return client.get<T, T>(url, config);
   },
+  getRaw<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    return client.get<T, T>(url, { ...config, rawResponse: true } as ResponseConfig);
+  },
   post<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
     return client.post<T, T>(url, data, config);
+  },
+  postRaw<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+    return client.post<T, T>(url, data, { ...config, rawResponse: true } as ResponseConfig);
   },
   patch<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
     return client.patch<T, T>(url, data, config);

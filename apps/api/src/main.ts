@@ -15,6 +15,8 @@ import { appConfig, ConfigurationError } from './config/app.config';
 import { installShutdownHandlers } from './lifecycle/shutdown';
 import { ApplicationState } from './lifecycle/application-state';
 import { AuthService } from './auth/auth.service';
+import { ConnectionsService } from './oauth/connections.service';
+import { localMcpHandler } from './mcp/local-mcp';
 
 export async function createApplication(rootModule: Type = AppModule) {
   let app: NestExpressApplication;
@@ -62,12 +64,29 @@ export async function createApplication(rootModule: Type = AppModule) {
     response.setHeader('Cache-Control', 'no-store');
     // Better Auth permits cookie-free OAuth initiation without an Origin check;
     // browser-facing mutations here must always originate from the public origin.
-    if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method) && request.headers.origin !== config.BETTER_AUTH_URL) {
+    const desktopTokenRequest = config.MCP_ENABLED && request.path === '/oauth2/token' && request.method === 'POST'
+      && !request.headers.cookie && !request.headers.origin;
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method) && !desktopTokenRequest
+      && request.headers.origin !== config.BETTER_AUTH_URL) {
       response.status(403).end();
       return;
     }
     next();
   }, text({ type: () => true, limit: config.BODY_LIMIT_BYTES }), toNodeHandler(app.get(AuthService).auth));
+  // Rewrites preserve the browser Origin, but the API must reject direct
+  // cross-origin Cookie writes even when reached without Web's proxy.
+  app.use('/api/resumes', (request: Request, response: Response, next: NextFunction) => {
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method) && request.headers.origin !== config.BETTER_AUTH_URL) {
+      response.status(403).end();
+      return;
+    }
+    next();
+  });
+  if (config.MCP_ENABLED) {
+    const authHandler = toNodeHandler(app.get(AuthService).auth);
+    app.use('/.well-known', authHandler);
+    app.use('/api/mcp', localMcpHandler(config.BETTER_AUTH_URL, app.get(ConnectionsService)));
+  }
   app.useBodyParser('json', { limit: config.BODY_LIMIT_BYTES });
   app.useBodyParser('urlencoded', { limit: config.BODY_LIMIT_BYTES, extended: false });
   app.setGlobalPrefix('api');

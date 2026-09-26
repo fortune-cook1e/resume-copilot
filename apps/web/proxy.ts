@@ -6,8 +6,8 @@ const inPath = (pathname: string, prefix: string) =>
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  // NestJS checks its own /api/auth writes; Web business writes require a trusted Origin by default.
-  if (inPath(pathname, '/api') && !inPath(pathname, '/api/auth') &&
+  // NestJS owns native auth/MCP protocols. Web business writes require a trusted Origin.
+  if (inPath(pathname, '/api') && !inPath(pathname, '/api/auth') && !inPath(pathname, '/api/mcp') &&
     !['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
     const publicOrigin = new URL(
       process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',

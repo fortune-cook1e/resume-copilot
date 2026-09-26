@@ -4,12 +4,24 @@ import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { signIn } from '@/lib/auth-client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 
 function GoogleLogin() {
   const searchParams = useSearchParams();
   const [pending, setPending] = useState(false);
+  const consentQuery = searchParams.get('mcp_consent');
+  const returnToConsent =
+    consentQuery?.startsWith('?') && consentQuery.length < 4096
+      ? `/oauth/consent${consentQuery}`
+      : '/dashboard/resumes';
   const [error, setError] = useState<string | null>(null);
 
   const startLogin = async () => {
@@ -19,7 +31,7 @@ function GoogleLogin() {
     try {
       const result = await signIn.social({
         provider: 'google',
-        callbackURL: '/dashboard/resumes',
+        callbackURL: returnToConsent,
         errorCallbackURL: '/login?error=google',
       });
       if (result.error) setError('Could not start Google sign-in. Please try again.');
@@ -39,13 +51,22 @@ function GoogleLogin() {
         </CardHeader>
         <CardContent>
           {(error || searchParams.has('error')) && (
-            <p role="alert" className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            <p
+              role="alert"
+              className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive"
+            >
               {error ?? 'Google sign-in was not completed. Please try again.'}
             </p>
           )}
         </CardContent>
         <CardFooter>
-          <Button type="button" className="w-full" size="lg" disabled={pending} onClick={startLogin}>
+          <Button
+            type="button"
+            className="w-full"
+            size="lg"
+            disabled={pending}
+            onClick={startLogin}
+          >
             {pending && <Loader2 className="size-4 animate-spin" />}
             Continue with Google
           </Button>
@@ -56,5 +77,9 @@ function GoogleLogin() {
 }
 
 export default function LoginPage() {
-  return <Suspense><GoogleLogin /></Suspense>;
+  return (
+    <Suspense>
+      <GoogleLogin />
+    </Suspense>
+  );
 }
