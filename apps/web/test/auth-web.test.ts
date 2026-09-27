@@ -11,7 +11,7 @@ describe('authenticated resume access', () => {
     vi.stubGlobal('fetch', async () => Response.json({ data: { id: ownerId, name: 'Owner', email: 'web-owner@example.test' }, error: null }));
   });
 
-  it('routes resume CRUD to Nest while retaining Web PDF and polish routes', async () => {
+  it('routes resume CRUD and PDF export to Nest', async () => {
     const { default: config } = await import('../next.config');
     const rewrites = await config.rewrites?.();
     expect(rewrites).toHaveProperty('beforeFiles');
@@ -19,8 +19,8 @@ describe('authenticated resume access', () => {
     expect(rewrites.beforeFiles).toEqual(expect.arrayContaining([
       expect.objectContaining({ source: '/api/resumes', destination: expect.stringMatching(/\/api\/resumes$/) }),
       expect.objectContaining({ source: '/api/resumes/:path*', destination: expect.stringMatching(/\/api\/resumes\/:path\*$/) }),
+      expect.objectContaining({ source: '/api/export-pdf', destination: expect.stringMatching(/\/api\/export-pdf$/) }),
     ]));
-    expect(rewrites.beforeFiles?.some(route => route.source === '/api/export-pdf' || route.source === '/api/ai-polish')).toBe(false);
     const { defaultResumeData: apiDefault } = await import('@resume-copilot/contracts');
     const { defaultResumeData: webDefault } = await import('../types/resume/resume');
     expect(apiDefault).toEqual(webDefault);

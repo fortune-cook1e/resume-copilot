@@ -2,10 +2,14 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { defaultResumeData, type CreateResume, type UpdateResume } from '@resume-copilot/contracts';
 import { ResumesRepository } from './resumes.repository';
+import { PdfRenderer } from './pdf.renderer';
 
 @Injectable()
 export class ResumesService {
-  constructor(private readonly repository: ResumesRepository) {}
+  constructor(
+    private readonly repository: ResumesRepository,
+    private readonly pdfRenderer: PdfRenderer,
+  ) {}
 
   list(userId: string) {
     return this.repository.list(userId);
@@ -36,5 +40,10 @@ export class ResumesService {
     const deleted = await this.repository.delete(userId, id);
     if (!deleted) throw new NotFoundException();
     return deleted;
+  }
+
+  async exportPdf(userId: string, id: string) {
+    const found = await this.find(userId, id);
+    return this.pdfRenderer.render(found.id, found.data);
   }
 }

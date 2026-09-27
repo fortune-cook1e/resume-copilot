@@ -113,4 +113,50 @@ describe('resume CRUD over authenticated HTTP', () => {
     });
     expect(noOrigin.status).toBe(403);
   });
+
+  it('protects PDF export before starting Chromium', async () => {
+    const created = await call('POST', '', otherCookie, { title: 'Other PDF' });
+    const { data: { id } } = await created.json() as { data: { id: string } };
+    const exportPdf = (cookie?: string, resumeId?: string, origin = publicOrigin) =>
+      fetch(`${baseURL}/api/export-pdf`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin, ...(cookie ? { cookie } : {}) },
+        body: JSON.stringify({ resumeId }),
+      });
+
+    expect((await exportPdf(undefined, id)).status).toBe(401);
+    expect((await exportPdf(ownerCookie, id)).status).toBe(404);
+    expect((await exportPdf(ownerCookie, '')).status).toBe(400);
+    expect((await exportPdf(otherCookie, id, 'https://untrusted.invalid')).status).toBe(403);
+  });
+
+  it('returns the owned resume as a raw PDF response without leaking renderer failures', async () => {
+    const { PdfRenderer } = require('../dist/resumes/pdf.renderer.js') as typeof import('../dist/resumes/pdf.renderer.js');
+    const pdf = Buffer.from('%PDF-1.4\nmock PDF');
+    const render = vi.spyOn(app.get(PdfRenderer), 'render').mockResolvedValue(pdf);
+    try {
+      const created = await call('POST', '', ownerCookie, { title: 'My PDF' });
+      const { data: { id, data } } = await created.json() as { data: { id: string; data: unknown } };
+      const exportPdf = () => fetch(`${baseURL}/api/export-pdf`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: publicOrigin, cookie: ownerCookie },
+        body: JSON.stringify({ resumeId: id, title: 'Untrusted filename' }),
+      });
+
+      const response = await exportPdf();
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toMatch(/^application\/pdf/);
+      expect(response.headers.get('content-disposition')).toBe('attachment; filename="resume.pdf"');
+      expect(response.headers.get('cache-control')).toBe('no-store');
+      expect(Buffer.from(await response.arrayBuffer())).toEqual(pdf);
+      expect(render).toHaveBeenCalledWith(id, data);
+
+      render.mockRejectedValueOnce(new Error('private rendering detail'));
+      const failed = await exportPdf();
+      expect(failed.status).toBe(500);
+      expect(JSON.stringify(await failed.json())).not.toContain('private rendering detail');
+    } finally {
+      render.mockRestore();
+    }
+  });
 });

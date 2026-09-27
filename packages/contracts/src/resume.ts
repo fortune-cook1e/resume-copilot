@@ -37,5 +37,9 @@ export const updateResumeSchema = z.object({
   visibility: resumeVisibilitySchema.optional(),
 }).refine(value => Object.keys(value).length > 0);
 
+export const exportResumePdfSchema = z.object({
+  resumeId: z.string().trim().min(1),
+});
+
 export type CreateResume = z.infer<typeof createResumeSchema>;
 export type UpdateResume = z.infer<typeof updateResumeSchema>;

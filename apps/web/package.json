@@ -38,7 +38,6 @@
     "next": "16.1.5",
     "ollama": "^0.6.3",
     "postgres": "^3.4.8",
-    "puppeteer-core": "^24.36.1",
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",

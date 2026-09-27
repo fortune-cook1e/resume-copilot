@@ -80,6 +80,9 @@ importers:
       postgres:
         specifier: 3.4.8
         version: 3.4.8
+      puppeteer-core:
+        specifier: 24.36.1
+        version: 24.36.1
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -177,9 +180,6 @@ importers:
       postgres:
         specifier: ^3.4.8
         version: 3.4.8
-      puppeteer-core:
-        specifier: ^24.36.1
-        version: 24.36.1
       radix-ui:
         specifier: ^1.4.3
         version: 1.4.3(@types/react-dom@19.2.3(@types/react@19.2.9))(@types/react@19.2.9)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)

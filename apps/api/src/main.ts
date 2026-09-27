@@ -75,7 +75,7 @@ export async function createApplication(rootModule: Type = AppModule) {
   }, text({ type: () => true, limit: config.BODY_LIMIT_BYTES }), toNodeHandler(app.get(AuthService).auth));
   // Rewrites preserve the browser Origin, but the API must reject direct
   // cross-origin Cookie writes even when reached without Web's proxy.
-  app.use('/api/resumes', (request: Request, response: Response, next: NextFunction) => {
+  app.use(['/api/resumes', '/api/export-pdf'], (request: Request, response: Response, next: NextFunction) => {
     if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method) && request.headers.origin !== config.BETTER_AUTH_URL) {
       response.status(403).end();
       return;

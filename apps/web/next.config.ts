@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
       { source: '/api/me', destination: `${apiOrigin}/api/me` },
       { source: '/api/resumes', destination: `${apiOrigin}/api/resumes` },
       { source: '/api/resumes/:path*', destination: `${apiOrigin}/api/resumes/:path*` },
+      { source: '/api/export-pdf', destination: `${apiOrigin}/api/export-pdf` },
       { source: '/api/mcp', destination: `${apiOrigin}/api/mcp` },
       { source: '/.well-known/:path*', destination: `${apiOrigin}/.well-known/:path*` },
     ] };
@@ -20,13 +21,6 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname, '../..'),
   },
-
-  // outputFileTracingIncludes: {
-  //   'app/api/export-pdf/route': [
-  //     './node_modules/@sparticuz/chromium/bin/**',
-  //     './node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/bin/**',
-  //   ],
-  // },
 };
 
 export default nextConfig;
