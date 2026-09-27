@@ -5,7 +5,7 @@ Status: The shared response foundation is implemented and relevant checks were r
 ## 1. Scope and ownership
 
 - New NestJS **business JSON** endpoints use a shared format by default. Web parses them with public Zod schemas and inferred types in `@resume-copilot/contracts`; API uses the same package for its output contract. Do not put Nest, Next, or database entities in the shared package.
-- Resume CRUD now uses the NestJS business envelope through the existing Axios wrapper and same-origin Web rewrite. AI polish and PDF export remain Web routes; PDF returns a blob rather than business JSON. The wrapper returns `data` on JSON success and uses HTTP status and `error.code` on failure. Do not duplicate response state across Zustand, pages, and request layers.
+- Resume CRUD uses the NestJS business envelope through the existing Axios wrapper and same-origin Web rewrite. PDF export also runs in NestJS but returns native PDF bytes rather than business JSON. The independent Web AI polish route has been removed. The wrapper returns `data` on JSON success and uses HTTP status and `error.code` on failure. Do not duplicate response state across Zustand, pages, and request layers.
 - Liveness/readiness probes (including failures), Better Auth endpoints (OAuth redirects/callbacks and sessions), downloads, streams, and no-body responses retain their native protocols. Do not infer business endpoints from the `/api/*` prefix; declare exceptions explicitly at the adapter boundary. Unmatched routes use the shared error format for 404s.
 - Keep `X-Request-ID` in response headers and server logs for troubleshooting, outside the JSON envelope. Do not expose internal stacks, raw exceptions, credentials, or sensitive resume content in public messages.
 
