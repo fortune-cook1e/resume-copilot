@@ -1,3 +1,2 @@
-export * from './resume';
-export * from './modules';
+export * from '@resume-copilot/contracts';
 export * from './sample';

@@ -1,6 +1,6 @@
 import { FC, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import { URL } from '@/types/resume/common';
+import type { URL } from '@resume-copilot/contracts';
 
 interface Props {
   url: URL;

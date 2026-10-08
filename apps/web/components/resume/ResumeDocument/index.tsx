@@ -9,7 +9,7 @@ import Skills from './modules/Skills';
 import Custom from './modules/Custom';
 import Content from './modules/Content';
 import { getSectionOrder } from '../ResumeEditor/sections';
-import type { CustomModuleId } from '@/types/resume';
+import type { CustomModuleId } from '@resume-copilot/contracts';
 import type { EditorSelectionProps } from '@/types/resume/editor';
 import { PreviewSelectionContext } from './PreviewBlock';
 

@@ -1,4 +1,4 @@
-import { defaultItem, itemSchema } from '@/types/resume/common';
+import { defaultItem, itemSchema } from '../common';
 import z from 'zod';
 
 export const skillsSchema = itemSchema.extend({

@@ -1,29 +1,40 @@
 import { z } from 'zod';
+import { basicsSchema, defaultBasics, modulesSchema, defaultModules } from './resume/modules';
+
+export * from './resume/modules';
+export * from './resume/common';
 
 export const resumeVisibilitySchema = z.enum(['public', 'private']);
 
-// The legacy editor owns its field-level form schema. The HTTP contract only
-// requires the structured document envelope until that schema is redesigned.
 export const resumeDataSchema = z.object({
-  basics: z.record(z.string(), z.unknown()),
-  modules: z.record(z.string(), z.unknown()),
+  basics: basicsSchema,
+  modules: modulesSchema,
   // Optional so existing documents retain their original print order.
   sectionOrder: z.array(z.string()).optional(),
 });
 
 export const defaultResumeData = {
-  basics: {
-    name: '', email: '', phone: '', location: '',
-    website: { icon: '', label: '', link: '' },
-    headline: '', picture: { url: '', size: 64 }, customFields: [],
-  },
-  modules: {
-    education: { name: 'Education', id: 'education', visible: true, items: [] },
-    experience: { name: 'Experience', id: 'experience', visible: true, items: [] },
-    projects: { name: 'Projects', id: 'projects', visible: true, items: [] },
-    skills: { name: 'Skills', id: 'skills', visible: true, items: [] },
-  },
+  basics: defaultBasics,
+  modules: defaultModules,
 } satisfies z.infer<typeof resumeDataSchema>;
+
+export const resumeSchema = z.object({
+  id: z.string(),
+  title: z.string().min(1, 'Title is required').max(20, 'Title must be at most 20 characters'),
+  data: resumeDataSchema,
+  description: z.string(),
+  visibility: resumeVisibilitySchema,
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const resumeItemSchema = resumeSchema.omit({ data: true });
+export const deletedResumeSchema = z.object({ id: z.string() });
+
+export type ResumeVisibility = z.infer<typeof resumeVisibilitySchema>;
+export type ResumeData = z.infer<typeof resumeDataSchema>;
+export type Resume = z.infer<typeof resumeSchema>;
+export type ResumeItem = z.infer<typeof resumeItemSchema>;
 
 export const createResumeSchema = z.object({
   title: z.string().trim().max(20).optional(),

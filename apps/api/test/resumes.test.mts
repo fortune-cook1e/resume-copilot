@@ -85,6 +85,7 @@ describe('resume CRUD over authenticated HTTP', () => {
         ...(creation.data.data.modules as Record<string, unknown>),
         skills: { id: 'skills', name: 'Skills', visible: true, items: [{ id: 'skill', visible: true, name: 'Frontend', level: 'Advanced', keywords: ['TypeScript'] }] },
         languages: { id: 'languages', name: 'Languages', visible: true, items: [{ id: 'language', visible: true, language: 'Swedish', fluency: 'Professional' }] },
+        'custom-languages': { id: 'custom-languages', name: 'Other languages', visible: true, type: 'languages', items: [{ id: 'custom-language', visible: true, language: 'English', fluency: 'Professional', rating: 4 }] },
       },
       sectionOrder: ['languages', 'skills', 'education', 'experience', 'projects'],
     };
@@ -115,6 +116,13 @@ describe('resume CRUD over authenticated HTTP', () => {
     expect((await call('GET', '')).status).toBe(401);
     expect((await call('POST', '', undefined, { title: 'No session' })).status).toBe(401);
     expect((await call('POST', '', ownerCookie, { data: [] })).status).toBe(400);
+    const created = await call('POST', '', ownerCookie, { title: 'Validation draft' });
+    const { data: { id, data } } = await created.json() as { data: { id: string; data: { basics: object; modules: object } } };
+    const invalidData = { ...data, modules: { ...data.modules, languages: 123 } };
+    expect((await call('POST', '', ownerCookie, { data: invalidData })).status).toBe(400);
+    expect((await call('PATCH', `/${id}`, ownerCookie, { data: invalidData })).status).toBe(400);
+    const detail = await call('GET', `/${id}`, ownerCookie);
+    expect(await detail.json()).toMatchObject({ data: { data }, error: null });
     expect((await call('PATCH', '/missing', ownerCookie, { visibility: 'everyone' })).status).toBe(400);
     expect((await call('POST', '', ownerCookie, { title: 'Cross-origin' }, 'https://untrusted.invalid')).status).toBe(403);
     const noOrigin = await fetch(`${baseURL}/api/resumes`, {

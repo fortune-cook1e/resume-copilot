@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import type { Resume, ResumeData } from '@/types/resume';
+import type { Resume, ResumeData } from '@resume-copilot/contracts';
 import { updateResume as updateResumeAPI } from '@/services/resume';
 
 interface ResumeState {

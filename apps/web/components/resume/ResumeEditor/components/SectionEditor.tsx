@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Eye, EyeOff, GripVertical, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useResumeStore } from '@/stores/resume-store';
-import type { ResumeEntry } from '@/types/resume';
+import type { ResumeEntry } from '@resume-copilot/contracts';
 import type { EditorSelectionProps } from '@/types/resume/editor';
 import ModuleHeader from './ModuleHeader';
 import ModuleItemList from './ModuleItemList';

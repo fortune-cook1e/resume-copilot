@@ -3,7 +3,7 @@ import { educationSchema } from './education';
 import { projectsSchema } from './projects';
 import { skillsSchema } from './skills';
 import { customModuleSchema, type CustomModule } from './custom';
-import { contentModuleSchema, type ContentModule, type ContentSectionId } from './content';
+import { contentModuleSchemas } from './content';
 import z from 'zod';
 
 export const moduleSchema = z.object({
@@ -14,34 +14,41 @@ export const moduleSchema = z.object({
 export const builtInModulesSchema = z.object({
   education: moduleSchema.extend({
     id: z.literal('education'),
+    type: z.literal('education').optional(),
     items: z.array(educationSchema),
   }),
 
   experience: moduleSchema.extend({
     id: z.literal('experience'),
+    type: z.literal('experience').optional(),
     items: z.array(experienceSchema),
   }),
 
   projects: moduleSchema.extend({
     id: z.literal('projects'),
+    type: z.literal('projects').optional(),
     items: z.array(projectsSchema),
   }),
 
   skills: moduleSchema.extend({
     id: z.literal('skills'),
+    type: z.literal('skills').optional(),
     items: z.array(skillsSchema),
   }),
 });
 
 export type Module = z.infer<typeof moduleSchema>;
 export type BuiltInModules = z.infer<typeof builtInModulesSchema>;
-export type Modules = BuiltInModules & Partial<Record<ContentSectionId, ContentModule>> & Record<`custom-${string}`, CustomModule>;
+const optionalModulesSchema = z.object(contentModuleSchemas).partial();
+export type Modules = BuiltInModules & z.infer<typeof optionalModulesSchema> & Record<`custom-${string}`, CustomModule>;
 
-export const modulesSchema: z.ZodType<Modules> = builtInModulesSchema.extend({
-  summary: contentModuleSchema.optional(), profiles: contentModuleSchema.optional(), languages: contentModuleSchema.optional(),
-  interests: contentModuleSchema.optional(), awards: contentModuleSchema.optional(), certifications: contentModuleSchema.optional(),
-  publications: contentModuleSchema.optional(), volunteer: contentModuleSchema.optional(), references: contentModuleSchema.optional(),
-}).catchall(customModuleSchema) as z.ZodType<Modules>;
+export const modulesSchema: z.ZodType<Modules> = builtInModulesSchema.extend(optionalModulesSchema.shape)
+  .catchall(customModuleSchema)
+  .superRefine((modules, context) => {
+    for (const [key, module] of Object.entries(modules)) {
+      if (module !== undefined && key !== module.id) context.addIssue({ code: 'custom', path: [key, 'id'], message: 'Section ID must match its key' });
+    }
+  }) as z.ZodType<Modules>;
 
 export const defaultModule: Module = {
   name: '',

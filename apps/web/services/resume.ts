@@ -1,48 +1,37 @@
 import request from '@/lib/request';
-import type { Resume, ResumeData, ResumeVisibility, ResumeItem } from '@/types/resume';
-
-export interface CreateResumeParams {
-  title?: string;
-  description?: string;
-  visibility?: ResumeVisibility;
-  data?: ResumeData;
-}
-
-export interface UpdateResumeParams {
-  title?: string;
-  description?: string;
-  data?: ResumeData;
-  visibility?: ResumeVisibility;
-}
+import {
+  deletedResumeSchema, resumeItemSchema, resumeSchema,
+  type CreateResume, type UpdateResume, type Resume, type ResumeItem,
+} from '@resume-copilot/contracts';
 
 /** Get all resumes for the current user */
-export function getResumes(signal?: AbortSignal): Promise<ResumeItem[]> {
-  return request.get<ResumeItem[]>('/resumes', { signal });
+export async function getResumes(signal?: AbortSignal): Promise<ResumeItem[]> {
+  return resumeItemSchema.array().parse(await request.get('/resumes', { signal }));
 }
 
 /** Get a single resume by ID */
 export async function getResume(id: string): Promise<Resume> {
-  return (await request.get(`/resumes/${id}`)) as unknown as Resume;
+  return resumeSchema.parse(await request.get(`/resumes/${id}`));
 }
 
 /** Create a new resume */
-export async function createResume(params: CreateResumeParams): Promise<Resume> {
-  return (await request.post('/resumes', {
+export async function createResume(params: CreateResume): Promise<Resume> {
+  return resumeSchema.parse(await request.post('/resumes', {
     title: params.title || 'Untitled Resume',
     description: params.description ?? '',
     ...(params.visibility ? { visibility: params.visibility } : {}),
     ...(params.data ? { data: params.data } : {}),
-  })) as unknown as Resume;
+  }));
 }
 
 /** Update an existing resume */
-export async function updateResume(id: string, params: UpdateResumeParams): Promise<Resume> {
-  return (await request.patch(`/resumes/${id}`, params)) as unknown as Resume;
+export async function updateResume(id: string, params: UpdateResume): Promise<Resume> {
+  return resumeSchema.parse(await request.patch(`/resumes/${id}`, params));
 }
 
 /** Delete a resume by ID */
 export async function deleteResume(id: string): Promise<{ id: string }> {
-  return (await request.delete(`/resumes/${id}`)) as unknown as { id: string };
+  return deletedResumeSchema.parse(await request.delete(`/resumes/${id}`));
 }
 
 /** Export a resume as PDF (returns Blob) */

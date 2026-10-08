@@ -16,7 +16,7 @@ import {
 import { FileText, MoreVertical, Pencil, Trash2, Eye, Clock } from 'lucide-react';
 import { deleteResume } from '@/services/resume';
 import { ResumeDialog } from './ResumeDialog';
-import type { ResumeItem } from '@/types';
+import type { ResumeItem } from '@resume-copilot/contracts';
 import { useToggle } from '@/hooks';
 
 interface ResumeCardProps {

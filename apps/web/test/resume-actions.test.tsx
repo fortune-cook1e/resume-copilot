@@ -2,10 +2,11 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { defaultResumeData, updateResumeSchema } from '@resume-copilot/contracts';
+import { createResumeSchema, defaultResumeData, sectionTypes, updateResumeSchema } from '@resume-copilot/contracts';
+import { createEntry } from '@/components/resume/ResumeEditor/sections';
 import ModuleHeader from '@/components/resume/ResumeEditor/components/ModuleHeader';
 import { useResumeStore } from '@/stores/resume-store';
-import type { ResumeData } from '@/types/resume';
+import type { ResumeData } from '@resume-copilot/contracts';
 import { ResumeCard } from '@/components/dashboard/ResumeCard';
 import { ResumeDialog } from '@/components/dashboard/ResumeDialog';
 import ResumesPage from '@/app/dashboard/resumes/page';
@@ -13,7 +14,7 @@ import RichTextEditor from '@/components/resume/ResumeEditor/components/RichText
 import ResumeEditor from '@/components/resume/ResumeEditor';
 import ResumeDocument from '@/components/resume/ResumeDocument';
 import type { EditorSelection } from '@/types/resume/editor';
-import { resumeDataSchema as editorDataSchema } from '@/types/resume/resume';
+import { resumeDataSchema as editorDataSchema } from '@resume-copilot/contracts';
 
 const api = vi.hoisted(() => ({ update: vi.fn(), remove: vi.fn(), create: vi.fn(), list: vi.fn(), userId: 'resume-owner' }));
 vi.mock('@/services/resume', () => ({ updateResume: api.update, deleteResume: api.remove, createResume: api.create, getResumes: api.list }));
@@ -46,6 +47,54 @@ it('retains print order through the save contract while accepting documents with
   expect(updateResumeSchema.parse({ data: defaultResumeData }).data).toEqual(defaultResumeData);
   expect(editorDataSchema.parse(data)).toEqual(data);
   expect(editorDataSchema.parse(defaultResumeData)).toEqual(defaultResumeData);
+});
+
+it('rejects malformed module data at the shared save boundary', () => {
+  const invalidDocuments = [
+    { ...structuredClone(defaultResumeData), basics: { ...defaultResumeData.basics, name: 123 } },
+    { ...structuredClone(defaultResumeData), modules: { ...defaultResumeData.modules, languages: 123 } },
+    { ...structuredClone(defaultResumeData), modules: { ...defaultResumeData.modules, skills: { ...defaultResumeData.modules.skills, items: [{ id: 'skill', visible: true, name: 'Frontend', level: 'unknown', keywords: [] }] } } },
+  ];
+  for (const data of invalidDocuments) {
+    expect(updateResumeSchema.safeParse({ data }).success).toBe(false);
+  }
+});
+
+it('validates entries against their section type rather than any supported entry shape', () => {
+  const profile = { id: 'profile', visible: true, network: 'GitHub', username: 'ada', website: { icon: '', label: '', link: '' } };
+  const invalidModules = [
+    { languages: { id: 'languages', name: 'Languages', visible: true, items: [profile] } },
+    { 'custom-languages': { id: 'custom-languages', name: 'Languages', visible: true, type: 'languages', items: [profile] } },
+    { languages: { id: 'profiles', name: 'Languages', visible: true, items: [] } },
+    { languages: { id: 'languages', name: 'Languages', visible: true, type: 'profiles', items: [] } },
+    { unsupported: { id: 'unsupported', name: 'Unsupported', visible: true, items: [] } },
+  ];
+  for (const modules of invalidModules) {
+    const data = { ...structuredClone(defaultResumeData), modules: { ...defaultResumeData.modules, ...modules } };
+    expect(updateResumeSchema.safeParse({ data }).success).toBe(false);
+  }
+});
+
+it('retains every editor section, legacy custom fields and unfinished email/URL drafts', () => {
+  const data = structuredClone(defaultResumeData) as ResumeData;
+  data.basics.email = 'ada@';
+  data.basics.website.link = 'https://';
+  for (const type of sectionTypes) {
+    const items = [createEntry(type)];
+    Object.assign(data.modules, {
+      [type]: { id: type, name: type, visible: true, type, items, ...(type === 'summary' ? { content: '<p>Draft summary</p>' } : {}) },
+      [`custom-${type}`]: { id: `custom-${type}`, name: type, visible: true, type, items },
+    });
+  }
+  data.modules['custom-legacy'] = {
+    id: 'custom-legacy', name: 'Legacy', visible: true,
+    items: [{ id: 'legacy', visible: true, name: 'Original name', description: 'Original description', date: '2020', location: 'Stockholm', website: { icon: '', label: 'Link', link: 'example.' }, summary: 'Original summary' }],
+  };
+  data.modules.languages!.items = [{ id: 'language', visible: true, language: 'Swedish', fluency: 'Professional' }];
+  expect(createResumeSchema.parse({ data }).data).toEqual(data);
+  expect(updateResumeSchema.parse({ data }).data).toEqual(data);
+  const withoutLanguages = { ...data, modules: { ...data.modules, languages: undefined } };
+  expect(updateResumeSchema.parse({ data: withoutLanguages }).data?.modules.languages).toBeUndefined();
 });
 
 it('retains a custom section on cancel and removes it only after an accessible confirmation', async () => {

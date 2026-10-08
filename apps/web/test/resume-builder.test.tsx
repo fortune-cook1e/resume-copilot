@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useResumeStore } from '@/stores/resume-store';
 import { defaultResumeData } from '@resume-copilot/contracts';
-import type { ResumeData } from '@/types/resume';
+import type { ResumeData } from '@resume-copilot/contracts';
 import BuilderToolbar from '@/components/resume/BuilderToolbar';
 import Controls from '@/components/resume/ResumeBuilder/Controls';
 

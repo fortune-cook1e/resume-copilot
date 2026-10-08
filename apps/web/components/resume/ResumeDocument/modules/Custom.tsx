@@ -1,7 +1,7 @@
 'use client';
 
 import { useResumeStore } from '@/stores/resume-store';
-import type { Custom, CustomModuleId } from '@/types/resume';
+import type { Custom, CustomModuleId } from '@resume-copilot/contracts';
 import { renderMarkdown } from '@/lib/markdown';
 import Link from './Link';
 import PreviewBlock from '../PreviewBlock';

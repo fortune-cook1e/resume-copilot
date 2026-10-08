@@ -2,7 +2,7 @@
 
 ## Current stage
 
-**Manual resume CRUD — implemented, awaiting user acceptance.** The accumulated editor/cleanup work is committed as `64b0d02`. Create → list/read → edit/save/rename → delete now has API, Web behavior and controlled browser verification. Scope preserves Google login, owner checks and existing preview/PDF behavior; no MCP expansion, migrations, CI/CD or deployment work. Reactive Resume v6 remains the editor reference, not full parity. Real Google/PDF acceptance, experience-library CRUD and production work remain deferred. Only this handoff and existing designs are maintained; no additional license/development document was added.
+**Manual resume CRUD and shared document contract — implemented, awaiting user acceptance.** Editor/cleanup and CRUD work are committed as `64b0d02` / `8448b30`; the approved shared contract is implemented and verified. Create → list/read → edit/save/rename → delete has API, Web behavior and earlier controlled browser verification. Scope preserves Google login, owner checks and existing preview/PDF behavior; no MCP expansion, migrations, CI/CD or deployment work. Reactive Resume v6 remains the editor reference, not full parity. Real Google/PDF acceptance, experience-library CRUD and production work remain deferred. Only this handoff and existing designs are maintained.
 
 This is the only handoff file. [README](../README.md) is the product's usage/setup entry point. Necessary implementation and historical verification details are consolidated below, not split into handoff archives.
 
@@ -19,7 +19,13 @@ This is the only handoff file. [README](../README.md) is the product's usage/set
 - Minimal local Git marketplace plugin and loopback MCP trial exist. The user confirmed a Codex installation and `get_connection_status` call, not ordinary Chat interoperability. MCP is off by default and rejects production/non-loopback configuration.
 - Approved migrations 0002/0003 are present in local development and isolated test DBs: four migration records, nine new tables, 720-hour grant constraint. No production migration occurred. Baseline/hash/backup evidence is summarized below.
 
-## Latest executed verification — manual CRUD, 2026-10-08
+## Latest executed verification — shared resume contract, 2026-10-08
+
+- `packages/contracts` now owns Basics, all 13 section types, legacy/typed custom entries, document defaults, requests and response types. Web imports them rather than defining parallel schemas; services parse list/detail/mutation responses. Module IDs/types and entry shapes are checked; editor selection/sample content remain local. Empty/partial email and URL drafts, missing ordering metadata and Languages without `rating` remain valid. See [HTTP contract](designs/http-response.md#4-implementation-and-consumption-boundaries).
+- Root tests passed: API **59/59**, Web **59/59**. Schema regressions had observed red/green runs for malformed fields and mismatched section entries. HTTP checks reject malformed create/update data without overwriting stored content; Web checks all editor-generated sections/custom variants, legacy fields and response rejection. API tests used only the previously approved `resume_copilot_test`, with no migrations. Sandboxed DB access was blocked; the permitted rerun passed.
+- Root typecheck, API build, Web production build, root lint (**0 errors / 2 retained warnings**) and diff check passed. The first typecheck exposed optional legacy `rating`; preview now guards it. Sandboxed Google Fonts fetching blocked the first Web build; the network-enabled rerun passed. No dependencies, database schema, auth, CI/CD or deployment changes. Existing repository formatting changes were preserved. No browser/PDF or real Google flow was rerun; no committed browser E2E coverage exists.
+
+### Retained manual CRUD verification, 2026-10-08
 
 - Root `pnpm test` passed: API **59/59**, Web **54/54**. API tests used only the explicitly approved, already-migrated `resume_copilot_test`; no development/production data or migrations. Root typecheck, API build, Web production build, root lint (**0 errors / 2 retained warnings**) and diff check passed. A sandboxed Web build could not fetch Google Fonts; the network-enabled rerun passed.
 - Dashboard lists use account-scoped Query state with request cancellation and mutation invalidation; confirmed identity changes retain the existing cache cleanup. Load failures no longer resemble an empty list. Create/edit errors are visible and retryable without losing form values; pending submissions cannot be duplicated or dismissed. Observed red/green tests protect create failure, list failure and duplicate submission; existing behavior tests now cover dashboard create/rename/delete and account-list isolation. API HTTP CRUD checks now retain typed Languages/Skills and section order through real persistence.
@@ -52,7 +58,7 @@ This is the only handoff file. [README](../README.md) is the product's usage/set
 
 ## Next action
 
-1. **Manual CRUD — awaiting user acceptance:** in the normal local app, create a resume, edit metadata/content, reopen/reload, then cancel and confirm deletion of that disposable resume. Stop for feedback; do not silently start another editor slice.
+1. **Manual CRUD / shared contract — awaiting user acceptance:** restart the local API to load rebuilt contracts; in the normal local app, create a resume, edit/save/reload a new module and a typed custom section, reopen an old resume, then cancel and confirm deletion of a disposable resume. Stop for feedback; do not silently start another editor slice.
 2. **E2 remaining — not started:** agree the next bounded slice from the parity gaps above, bounded undo/redo or account-scoped recovery. Do not silently start all remaining features.
 3. **E3 — pending E2 acceptance:** persisted typography/color/spacing/layout controls and non-blocking basic checks. Extend optional shared presentation metadata so settings survive API save/load; verify old documents and preview/PDF consistency.
 

@@ -3,7 +3,8 @@ import { defaultUrl, urlSchema } from '../common';
 
 export const basicsSchema = z.object({
   name: z.string(),
-  email: z.literal('').or(z.string().email()),
+  // Autosaved drafts may contain a partially entered email address.
+  email: z.string(),
   phone: z.string(),
   location: z.string(),
   website: urlSchema,

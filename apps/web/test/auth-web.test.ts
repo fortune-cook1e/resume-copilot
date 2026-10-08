@@ -22,7 +22,7 @@ describe('authenticated resume access', () => {
       expect.objectContaining({ source: '/api/export-pdf', destination: expect.stringMatching(/\/api\/export-pdf$/) }),
     ]));
     const { defaultResumeData: apiDefault } = await import('@resume-copilot/contracts');
-    const { defaultResumeData: webDefault } = await import('../types/resume/resume');
+    const { defaultResumeData: webDefault } = await import('../types/resume');
     expect(apiDefault).toEqual(webDefault);
   });
 

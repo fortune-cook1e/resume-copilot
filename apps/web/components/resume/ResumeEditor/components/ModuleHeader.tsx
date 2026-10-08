@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { useResumeStore } from '@/stores/resume-store';
-import type { Modules } from '@/types/resume';
+import type { Modules } from '@resume-copilot/contracts';
 
 export default function ModuleHeader({ moduleId, onAdd, onMove, canMoveUp, canMoveDown }: { moduleId: keyof Modules; onAdd?: () => void; onMove?: (direction: -1 | 1) => void; canMoveUp?: boolean; canMoveDown?: boolean }) {
   const section = useResumeStore(state => state.resume?.modules[moduleId]);

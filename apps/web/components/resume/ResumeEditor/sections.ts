@@ -1,10 +1,8 @@
 import { createId } from '@paralleldrive/cuid2';
-import type { Modules, ResumeData, ResumeEntry, SectionType } from '@/types/resume';
-import { defaultEducation } from '@/types/resume/modules/education';
-import { defaultExperience } from '@/types/resume/modules/experience';
-import { defaultProjects } from '@/types/resume/modules/projects';
-import { defaultSkills } from '@/types/resume/modules/skills';
-import { defaultCustom } from '@/types/resume/modules/custom';
+import {
+  defaultEducation, defaultExperience, defaultProjects, defaultSkills, defaultCustom,
+  type Modules, type ResumeData, type ResumeEntry, type SectionType,
+} from '@resume-copilot/contracts';
 
 export const sectionCatalog: Record<SectionType, { title: string; singular: string; primary: string; fields: { key: string; label: string }[] }> = {
   summary: { title: 'Summary', singular: 'text', primary: 'summary', fields: [] },

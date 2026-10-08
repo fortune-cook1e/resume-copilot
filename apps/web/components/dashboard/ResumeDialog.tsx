@@ -24,7 +24,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { createResume, updateResume } from '@/services/resume';
 import { sampleResume } from '@/types/resume/sample';
-import { defaultResumeData, type ResumeItem, resumeSchema } from '@/types';
+import { defaultResumeData, type ResumeItem, resumeSchema } from '@resume-copilot/contracts';
 
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';

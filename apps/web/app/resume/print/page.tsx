@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useResumeStore } from '@/stores/resume-store';
 import ResumeDocument from '@/components/resume/ResumeDocument';
 import Page from '@/components/resume/Page';
-import { ResumeData } from '@/types';
+import type { ResumeData } from '@resume-copilot/contracts';
 import { getResume } from '@/services/resume';
 
 declare global {
