@@ -1,4 +1,5 @@
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { defaultResumeData, updateResumeSchema } from '@resume-copilot/contracts';
@@ -6,19 +7,28 @@ import ModuleHeader from '@/components/resume/ResumeEditor/components/ModuleHead
 import { useResumeStore } from '@/stores/resume-store';
 import type { ResumeData } from '@/types/resume';
 import { ResumeCard } from '@/components/dashboard/ResumeCard';
+import { ResumeDialog } from '@/components/dashboard/ResumeDialog';
+import ResumesPage from '@/app/dashboard/resumes/page';
 import RichTextEditor from '@/components/resume/ResumeEditor/components/RichTextEditor';
 import ResumeEditor from '@/components/resume/ResumeEditor';
 import ResumeDocument from '@/components/resume/ResumeDocument';
 import type { EditorSelection } from '@/types/resume/editor';
 import { resumeDataSchema as editorDataSchema } from '@/types/resume/resume';
 
-const api = vi.hoisted(() => ({ update: vi.fn(), remove: vi.fn(), create: vi.fn() }));
-vi.mock('@/services/resume', () => ({ updateResume: api.update, deleteResume: api.remove, createResume: api.create }));
+const api = vi.hoisted(() => ({ update: vi.fn(), remove: vi.fn(), create: vi.fn(), list: vi.fn(), userId: 'resume-owner' }));
+vi.mock('@/services/resume', () => ({ updateResume: api.update, deleteResume: api.remove, createResume: api.create, getResumes: api.list }));
+vi.mock('@/lib/auth-client', () => ({ useSession: () => ({ data: { user: { id: api.userId } } }) }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 beforeEach(() => {
   vi.useFakeTimers();
+  vi.stubGlobal('ResizeObserver', class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  });
   api.update.mockResolvedValue(undefined);
+  api.userId = 'resume-owner';
 });
 
 afterEach(() => {
@@ -76,6 +86,111 @@ it('cancels resume deletion without a request and retains the confirmation after
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Delete resume' })); });
   expect(api.remove).toHaveBeenCalledTimes(2);
   expect(onDeleted).toHaveBeenCalledTimes(1);
+});
+
+it('keeps a failed creation visible and lets the user retry without re-entering the draft', async () => {
+  api.create.mockRejectedValueOnce(new Error('private transport failure')).mockResolvedValueOnce({ id: 'created-resume' });
+  function CreateResume() {
+    const [open, setOpen] = useState(true);
+    return <ResumeDialog open={open} onOpenChange={setOpen} mode="create" />;
+  }
+  render(<CreateResume />);
+  const title = screen.getByPlaceholderText('e.g. Frontend Developer Resume');
+  fireEvent.change(title, { target: { value: 'Frontend resume' } });
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Create' })); });
+  expect(screen.getByRole('alert').textContent).toContain('Could not create');
+  expect((title as HTMLInputElement).value).toBe('Frontend resume');
+  expect(screen.queryByText('private transport failure')).toBeNull();
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Create' })); });
+  expect(screen.queryByRole('dialog')).toBeNull();
+});
+
+it('keeps a pending creation open and prevents duplicate submissions', async () => {
+  let finish!: (value: object) => void;
+  api.create.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+  function CreateResume() {
+    const [open, setOpen] = useState(true);
+    return <ResumeDialog open={open} onOpenChange={setOpen} mode="create" />;
+  }
+  render(<CreateResume />);
+  fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Pending resume' } });
+  const dialog = screen.getByRole('dialog');
+  const form = dialog.querySelector('form')!;
+  await act(async () => { fireEvent.submit(form); fireEvent.submit(form); });
+  expect(api.create).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+  fireEvent.keyDown(dialog, { key: 'Escape' });
+  expect(screen.getByRole('dialog')).toBeTruthy();
+  await act(async () => finish({ id: 'created-resume' }));
+  expect(screen.queryByRole('dialog')).toBeNull();
+});
+
+it('shows a retryable list failure instead of pretending the account has no resumes', async () => {
+  vi.useRealTimers();
+  api.list.mockRejectedValueOnce(new Error('private server error')).mockResolvedValueOnce([{
+    id: 'resume-one', title: 'Frontend resume', description: '', visibility: 'private', createdAt: '2026-10-08', updatedAt: '2026-10-08',
+  }]);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  render(<QueryClientProvider client={client}><ResumesPage /></QueryClientProvider>);
+  await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Could not load'));
+  expect(screen.queryByText('No resumes yet')).toBeNull();
+  expect(screen.queryByText('private server error')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+  await waitFor(() => expect(screen.getByText('Frontend resume')).toBeTruthy());
+  expect(screen.queryByRole('alert')).toBeNull();
+});
+
+it('refreshes the dashboard after creating, renaming and deleting a resume without replacing its content', async () => {
+  vi.useRealTimers();
+  let records = [{ id: 'existing', title: 'Existing resume', description: 'Original description', visibility: 'private' as const, createdAt: '2026-10-08', updatedAt: '2026-10-08' }];
+  api.list.mockImplementation(async () => structuredClone(records));
+  api.create.mockImplementation(async values => {
+    const created = { id: 'created', ...values, createdAt: '2026-10-08', updatedAt: '2026-10-08' };
+    records = [...records, created];
+    return created;
+  });
+  api.update.mockImplementation(async (id, values) => {
+    records = records.map(record => record.id === id ? { ...record, ...values } : record);
+    return records.find(record => record.id === id);
+  });
+  api.remove.mockImplementation(async id => { records = records.filter(record => record.id !== id); return { id }; });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  render(<QueryClientProvider client={client}><ResumesPage /></QueryClientProvider>);
+  await waitFor(() => expect(screen.getByText('Existing resume')).toBeTruthy());
+  fireEvent.click(screen.getByRole('button', { name: 'New Resume' }));
+  fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'New resume' } });
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Create' })); });
+  await waitFor(() => expect(screen.getByRole('heading', { name: 'New resume' })).toBeTruthy());
+
+  const card = screen.getByRole('heading', { name: 'New resume' }).closest('[data-slot="card"]') as HTMLElement;
+  fireEvent.keyDown(within(card).getByRole('button', { name: 'Resume actions' }), { key: 'Enter' });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
+  fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Renamed resume' } });
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save' })); });
+  await waitFor(() => expect(screen.getByRole('heading', { name: 'Renamed resume' })).toBeTruthy());
+  expect(api.update).toHaveBeenCalledWith('created', { title: 'Renamed resume', description: '', visibility: 'private' });
+
+  fireEvent.keyDown(within(card).getByRole('button', { name: 'Resume actions' }), { key: 'Enter' });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Delete resume' })); });
+  await waitFor(() => expect(screen.queryByRole('heading', { name: 'Renamed resume' })).toBeNull());
+  expect(screen.getByRole('heading', { name: 'Existing resume' })).toBeTruthy();
+});
+
+it('does not render the previous account’s cached resume list while a different account loads', async () => {
+  vi.useRealTimers();
+  const first = { id: 'first-resume', title: 'First account resume', description: '', visibility: 'private', createdAt: '2026-10-08', updatedAt: '2026-10-08' };
+  let finish!: (value: object[]) => void;
+  api.list.mockResolvedValueOnce([first]).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  const view = render(<QueryClientProvider client={client}><ResumesPage /></QueryClientProvider>);
+  await waitFor(() => expect(screen.getByRole('heading', { name: 'First account resume' })).toBeTruthy());
+  api.userId = 'another-owner';
+  view.rerender(<QueryClientProvider client={client}><ResumesPage /></QueryClientProvider>);
+  expect(screen.queryByRole('heading', { name: 'First account resume' })).toBeNull();
+  await act(async () => finish([{ ...first, id: 'second-resume', title: 'Second account resume' }]));
+  await waitFor(() => expect(screen.getByRole('heading', { name: 'Second account resume' })).toBeTruthy());
+  expect(screen.queryByRole('heading', { name: 'First account resume' })).toBeNull();
 });
 
 it('opens an accessible link editor and leaves the text unchanged when cancelled', () => {

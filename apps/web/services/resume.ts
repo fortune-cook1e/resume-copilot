@@ -16,8 +16,8 @@ export interface UpdateResumeParams {
 }
 
 /** Get all resumes for the current user */
-export async function getResumes(): Promise<ResumeItem[]> {
-  return (await request.get('/resumes')) as unknown as ResumeItem[];
+export function getResumes(signal?: AbortSignal): Promise<ResumeItem[]> {
+  return request.get<ResumeItem[]>('/resumes', { signal });
 }
 
 /** Get a single resume by ID */

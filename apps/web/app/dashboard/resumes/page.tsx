@@ -1,58 +1,59 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ResumeDialog } from '@/components/dashboard/ResumeDialog';
 import { ResumeCard } from '@/components/dashboard/ResumeCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FileText } from 'lucide-react';
 import { getResumes } from '@/services/resume';
 import { Button } from '@/components/ui/button';
-import type { ResumeItem } from '@/types';
-import { useToggle } from '@/hooks';
+import { useSession } from '@/lib/auth-client';
 
 export default function ResumesPage() {
-  const [resumes, setResumes] = useState<ResumeItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const { value: open, toggle: toggleDialog } = useToggle();
-
-  const fetchResumes = async () => {
-    try {
-      const data = await getResumes();
-      setResumes(data ?? []);
-    } catch (error) {
-      console.error('Failed to fetch resumes:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchResumes();
-  }, []);
+  const [open, setOpen] = useState(false);
+  const { data: session } = useSession();
+  const userId = session?.user.id;
+  const queryClient = useQueryClient();
+  const queryKey = ['resumes', userId] as const;
+  // Account-scoped server state; Authentication cancels/clears it on identity change.
+  const { data: resumes = [], isPending, isFetching, isError, refetch } = useQuery({
+    queryKey,
+    queryFn: ({ signal }) => getResumes(signal),
+    enabled: !!userId,
+    retry: false,
+  });
+  const refreshResumes = () => { void refetch(); };
+  const invalidateResumes = () => { void queryClient.invalidateQueries({ queryKey, exact: true }); };
 
   return (
     <div className="space-y-6">
       <ResumeDialog
         mode="create"
         open={open}
-        onOpenChange={toggleDialog}
-        onSuccess={fetchResumes}
+        onOpenChange={setOpen}
+        onSuccess={invalidateResumes}
       />
 
       {/* Page header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Resumes</h1>
           <p className="text-muted-foreground">Create and manage your resumes</p>
         </div>
-        <Button onClick={toggleDialog}>
-          <FileText className="h-4 w-4" />
-          New Resume
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" disabled={!userId || isFetching} onClick={refreshResumes}>
+            {isFetching && !isPending ? 'Refreshing…' : 'Refresh'}
+          </Button>
+          <Button onClick={() => setOpen(true)}>
+            <FileText className="h-4 w-4" />
+            New Resume
+          </Button>
+        </div>
       </div>
 
       {/* Loading state */}
-      {isLoading && (
+      {isPending && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="rounded-xl border p-6 space-y-3">
@@ -70,8 +71,15 @@ export default function ResumesPage() {
         </div>
       )}
 
-      {/* Empty state */}
-      {!isLoading && resumes.length === 0 && (
+      {isError ? (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4">
+          <p className="text-sm text-destructive">Could not load your resumes. Please try again.</p>
+          <Button variant="outline" disabled={isFetching} onClick={refreshResumes}>Try again</Button>
+        </div>
+      ) : null}
+
+      {/* Empty state only after a successful response. */}
+      {!isPending && !isError && resumes.length === 0 && (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-16 px-4">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
             <FileText className="h-7 w-7 text-muted-foreground" />
@@ -82,20 +90,20 @@ export default function ResumesPage() {
             education, and skills.
           </p>
           <div className="mt-6">
-            <Button onClick={toggleDialog}>Create Resume</Button>
+            <Button onClick={() => setOpen(true)}>Create Resume</Button>
           </div>
         </div>
       )}
 
       {/* Resume grid */}
-      {!isLoading && resumes.length > 0 && (
+      {!isPending && resumes.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {resumes.map(resume => (
             <ResumeCard
               key={resume.id}
               resume={resume}
-              onDeleted={fetchResumes}
-              onEdit={fetchResumes}
+              onDeleted={invalidateResumes}
+              onEdit={invalidateResumes}
             />
           ))}
         </div>

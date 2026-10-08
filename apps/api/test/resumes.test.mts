@@ -78,7 +78,16 @@ describe('resume CRUD over authenticated HTTP', () => {
     expect(list.data.find(item => item.id === id)).not.toHaveProperty('data');
     expect(list.data.find(item => item.id === id)).not.toHaveProperty('userId');
 
-    const editedData = { basics: { name: 'Ada' }, modules: { skills: { items: ['TypeScript'] } } };
+    const editedData = {
+      ...creation.data.data,
+      basics: { ...(creation.data.data.basics as Record<string, unknown>), name: 'Ada' },
+      modules: {
+        ...(creation.data.data.modules as Record<string, unknown>),
+        skills: { id: 'skills', name: 'Skills', visible: true, items: [{ id: 'skill', visible: true, name: 'Frontend', level: 'Advanced', keywords: ['TypeScript'] }] },
+        languages: { id: 'languages', name: 'Languages', visible: true, items: [{ id: 'language', visible: true, language: 'Swedish', fluency: 'Professional' }] },
+      },
+      sectionOrder: ['languages', 'skills', 'education', 'experience', 'projects'],
+    };
     const updated = await call('PATCH', `/${id}`, ownerCookie, { title: 'Updated resume', visibility: 'public', data: editedData });
     expect(updated.status).toBe(200);
     expect(await updated.json()).toMatchObject({ data: { id, title: 'Updated resume', visibility: 'public' }, error: null });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -9,7 +9,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -47,6 +46,8 @@ type ResumeDialogValues = z.infer<typeof resumeDialogSchema>;
 export function ResumeDialog({ open, onOpenChange, mode, onSuccess, resume }: ResumeDialogProps) {
   const [useTemplate, setUseTemplate] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const saving = useRef(false);
   const { handleSubmit, reset, control } = useForm<ResumeDialogValues>({
     resolver: zodResolver(resumeDialogSchema),
     defaultValues: {
@@ -67,12 +68,15 @@ export function ResumeDialog({ open, onOpenChange, mode, onSuccess, resume }: Re
         visibility: resume?.visibility || 'private',
       });
       setUseTemplate(false);
+      setSaveError(false);
     }
-  }, [open, resume]);
+  }, [open, resume, reset]);
 
   const onSubmit = async (values: ResumeDialogValues) => {
-    if (isSaving) return;
+    if (saving.current) return;
+    saving.current = true;
     setIsSaving(true);
+    setSaveError(false);
 
     try {
       const initialResumeData = useTemplate ? sampleResume : defaultResumeData;
@@ -89,15 +93,16 @@ export function ResumeDialog({ open, onOpenChange, mode, onSuccess, resume }: Re
       }
       onOpenChange(false);
       onSuccess?.();
-    } catch (error) {
-      console.error('Failed to save resume:', error);
+    } catch {
+      setSaveError(true);
     } finally {
+      saving.current = false;
       setIsSaving(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={nextOpen => { if (!saving.current) onOpenChange(nextOpen); }}>
       <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
           <DialogTitle>{isCreate ? 'Create new resume' : 'Edit resume'}</DialogTitle>
@@ -115,7 +120,7 @@ export function ResumeDialog({ open, onOpenChange, mode, onSuccess, resume }: Re
               control={control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel>Title</FieldLabel>
+                  <FieldLabel htmlFor="title">Title</FieldLabel>
                   <Input
                     {...field}
                     disabled={isSaving}
@@ -135,7 +140,7 @@ export function ResumeDialog({ open, onOpenChange, mode, onSuccess, resume }: Re
               control={control}
               render={({ field, fieldState }) => (
                 <Field aria-invalid={fieldState.invalid}>
-                  <FieldLabel>Description (optional)</FieldLabel>
+                  <FieldLabel htmlFor="description">Description (optional)</FieldLabel>
                   <Textarea
                     {...field}
                     disabled={isSaving}
@@ -155,13 +160,13 @@ export function ResumeDialog({ open, onOpenChange, mode, onSuccess, resume }: Re
               control={control}
               render={({ field }) => (
                 <Field>
-                  <FieldLabel>Visibility</FieldLabel>
+                  <FieldLabel htmlFor="visibility">Visibility</FieldLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                     disabled={isSaving}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger id="visibility" className="w-full">
                       <SelectValue placeholder="Select visibility" />
                     </SelectTrigger>
                     <SelectContent>
@@ -172,7 +177,7 @@ export function ResumeDialog({ open, onOpenChange, mode, onSuccess, resume }: Re
                     </SelectContent>
                   </Select>
                   <FieldDescription>
-                    Public resumes can be viewed by anyone with the link.
+                    This preference is saved with the resume. Public sharing is not available yet.
                   </FieldDescription>
                 </Field>
               )}
@@ -187,12 +192,19 @@ export function ResumeDialog({ open, onOpenChange, mode, onSuccess, resume }: Re
                   name="useTemplate"
                   aria-invalid={false}
                   checked={useTemplate}
+                  disabled={isSaving}
                   onCheckedChange={(state: boolean) => setUseTemplate(state)}
                 />
                 <FieldLabel htmlFor="useTemplate">Use sample template as starting point</FieldLabel>
               </Field>
             </FieldGroup>
           )}
+
+          {saveError ? (
+            <p role="alert" className="text-sm text-destructive">
+              {isCreate ? 'Could not create this resume.' : 'Could not save this resume.'} Your changes are still here. Please try again.
+            </p>
+          ) : null}
 
           <DialogFooter>
             <Button
