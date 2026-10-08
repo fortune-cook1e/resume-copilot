@@ -1,131 +1,88 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { ResizableHandle, ResizablePanel, ResizableGroup } from '@/components/ui/resizable';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { FileText, LoaderCircle, Pencil } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import ResumeEditor from '@/components/resume/ResumeEditor';
-import { useResumeStore } from '@/stores/resume-store';
-import { useDefaultLayout } from 'react-resizable-panels';
 import ResumeBuilder from '@/components/resume/ResumeBuilder';
+import BuilderToolbar from '@/components/resume/BuilderToolbar';
+import { useResumeStore } from '@/stores/resume-store';
 import { getResume } from '@/services/resume';
-import type { ResumeData } from '@/types/resume';
-import { Loading } from '@/components/ui/loading';
+import type { EditorSelection } from '@/types/resume/editor';
 
-// create a safe storage that works in SSR
-const createSafeStorage = () => {
-  if (typeof window === 'undefined') {
-    return {
-      getItem: () => null,
-      setItem: () => {},
-      removeItem: () => {},
-    };
-  }
-  return localStorage;
-};
-
-function ResumeInner() {
-  const searchParams = useSearchParams();
+export default function ResumeWorkspace({ resumeId }: { resumeId: string }) {
   const router = useRouter();
-  const resumeId = searchParams.get('id');
+  const loadedId = useResumeStore(state => state.resumeId);
+  const isReady = useResumeStore(state => state.isReady);
+  const [loadError, setLoadError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [mobileView, setMobileView] = useState<'write' | 'page'>('write');
+  const [actionBusy, setActionBusy] = useState(false);
+  const [selection, setSelection] = useState<EditorSelection | null>(null);
 
-  const { resume, setResume, setResumeId, reset } = useResumeStore();
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  const { defaultLayout, onLayoutChanged } = useDefaultLayout({
-    id: 'resume-editor-layout-manual',
-    storage: createSafeStorage(),
-  });
-
-  // Load resume data from API
   useEffect(() => {
-    if (!resumeId) {
-      router.replace('/dashboard/resumes');
-      return;
-    }
-
     let cancelled = false;
-
-    const load = async () => {
-      try {
-        const detail = await getResume(resumeId);
-        if (cancelled) return;
-        setResumeId(detail.id);
-        setResume(detail.data as ResumeData);
-      } catch (error) {
-        if (cancelled) return;
-        console.error('Failed to load resume:', error);
-        setLoadError('Failed to load resume');
-      }
-    };
-
-    reset();
-    load();
-
+    useResumeStore.getState().reset();
+    void getResume(resumeId).then(detail => {
+      if (!cancelled) useResumeStore.getState().initializeResume(detail);
+    }).catch(() => {
+      if (!cancelled) setLoadError(true);
+    });
     return () => {
       cancelled = true;
+      if (useResumeStore.getState().resumeId === resumeId) useResumeStore.getState().reset();
     };
-  }, [resumeId, router, setResume, setResumeId, reset]);
+  }, [resumeId, attempt]);
+
+  useEffect(() => {
+    const warnUnsaved = (event: BeforeUnloadEvent) => {
+      if (!useResumeStore.getState().isDirty) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warnUnsaved);
+    return () => window.removeEventListener('beforeunload', warnUnsaved);
+  }, []);
 
   if (loadError) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center space-y-4">
-          <p className="text-destructive">{loadError}</p>
-          <button
-            className="text-sm text-primary underline"
-            onClick={() => router.push('/dashboard/resumes')}
-          >
-            Back to resumes
-          </button>
+      <main className="flex h-svh flex-col items-center justify-center gap-4 p-6 text-center">
+        <p role="alert">Could not open this resume. It may be unavailable, or the connection failed.</p>
+        <div className="flex gap-2">
+          <Button onClick={() => { setLoadError(false); setAttempt(value => value + 1); }}>Try again</Button>
+          <Button variant="outline" onClick={() => router.push('/dashboard/resumes')}>Back to resumes</Button>
         </div>
-      </div>
+      </main>
     );
   }
-
-  if (!resume) {
-    return <Loading />;
+  if (!isReady || loadedId !== resumeId) {
+    return <main role="status" className="flex h-svh items-center justify-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="size-4 animate-spin" />Loading resume…</main>;
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      <main className="flex-1 overflow-hidden">
-        <ResizableGroup defaultLayout={defaultLayout} onLayoutChanged={onLayoutChanged}>
-          {/* Left Panel - Editor */}
-          <ResizablePanel
-            id="left"
-            minSize="25%"
-            maxSize="50%"
-            defaultSize="35%"
-            className="min-w-0"
-          >
-            <div className="h-full min-w-0 bg-white border-r border-gray-200">
-              <div className="h-full min-w-0 overflow-y-auto overflow-x-auto">
-                <div className="w-full min-w-0">
-                  <ResumeEditor />
-                </div>
-              </div>
-            </div>
-          </ResizablePanel>
-
-          <ResizableHandle withHandle />
-
-          {/* Middle Panel - Resume Preview */}
-          <ResizablePanel id="middle" minSize="50%" defaultSize="65%">
-            <div className="h-full w-full overflow-hidden">
-              <ResumeBuilder />
-            </div>
-          </ResizablePanel>
-
-        </ResizableGroup>
+    <div className="flex h-svh min-w-0 flex-col overflow-hidden bg-background">
+      <a href="#builder-content" className="sr-only z-50 rounded-md bg-background p-3 focus:not-sr-only focus:absolute">Skip to resume content</a>
+      <BuilderToolbar onBusyChange={setActionBusy} />
+      <main className="grid min-h-0 flex-1 lg:grid-cols-[400px_minmax(0,1fr)]">
+        <aside
+          id="builder-content" aria-label="Resume content" tabIndex={-1}
+          className={`min-h-0 overflow-y-auto border-r bg-stone-50/60 dark:bg-stone-950 ${mobileView === 'write' ? 'block' : 'hidden'} lg:block`}
+        >
+          <div inert={actionBusy || undefined} aria-busy={actionBusy}><ResumeEditor selection={selection} onSelect={setSelection} /></div>
+        </aside>
+        <section
+          aria-label="Resume preview"
+          className={`relative min-h-0 min-w-0 overflow-hidden bg-slate-100 ${mobileView === 'page' ? 'block' : 'hidden'} lg:block`}
+        >
+          <div className="pointer-events-none absolute inset-x-0 top-4 z-10 text-center text-xs font-medium text-slate-500">A4 · Live preview</div>
+          <ResumeBuilder selection={selection} onSelect={actionBusy ? undefined : next => { setSelection(next); if (next) setMobileView('write'); }} />
+        </section>
       </main>
+      <nav aria-label="Editor view" className="flex shrink-0 border-t bg-background pb-[env(safe-area-inset-bottom)] lg:hidden">
+        <button type="button" aria-pressed={mobileView === 'write'} className={`flex h-14 flex-1 items-center justify-center gap-2 text-sm ${mobileView === 'write' ? 'font-semibold text-blue-600' : 'text-muted-foreground'}`} onClick={() => setMobileView('write')}><Pencil className="size-4" />Write</button>
+        <button type="button" aria-pressed={mobileView === 'page'} className={`flex h-14 flex-1 items-center justify-center gap-2 text-sm ${mobileView === 'page' ? 'font-semibold text-blue-600' : 'text-muted-foreground'}`} onClick={() => setMobileView('page')}><FileText className="size-4" />Page</button>
+      </nav>
     </div>
-  );
-}
-
-export default function ResumeWorkspace() {
-  return (
-    <Suspense fallback={<Loading />}>
-      <ResumeInner />
-    </Suspense>
   );
 }

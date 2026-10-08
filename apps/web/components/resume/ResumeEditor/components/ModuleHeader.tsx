@@ -1,117 +1,48 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { ArrowDown, ArrowUp, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Eye, EyeOff, Pencil, Check, Trash2 } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { useResumeStore } from '@/stores/resume-store';
 import type { Modules } from '@/types/resume';
 
-interface ModuleHeaderProps {
-  moduleId: keyof Modules;
-  canEditName?: boolean;
-}
-
-export default function ModuleHeader({ moduleId, canEditName = true }: ModuleHeaderProps) {
-  const { resume, updateResume } = useResumeStore();
-  const [isEditing, setIsEditing] = useState(false);
-  const [draftName, setDraftName] = useState('');
-
-  if (!resume) return null;
-
-  const moduleData = resume.modules[moduleId];
-
-  const startEditing = () => {
-    if (!canEditName) return;
-    setDraftName(moduleData.name || '');
-    setIsEditing(true);
-  };
-
-  const finishEditing = () => {
-    const nextName = draftName.trim();
-    updateResume(draft => {
-      if (!nextName) return;
-      draft.modules[moduleId].name = nextName;
-    });
-    setIsEditing(false);
-  };
-
-  const toggleVisibility = () => {
-    updateResume(draft => {
-      draft.modules[moduleId].visible = !draft.modules[moduleId].visible;
-    });
-  };
-
-  const isCustomModule = typeof moduleId === 'string' && moduleId.startsWith('custom-');
-
-  const deleteModule = () => {
-    if (!isCustomModule) return;
-    if (!window.confirm('Delete this custom module? This cannot be undone.')) return;
-    updateResume(draft => {
-      delete draft.modules[moduleId];
-    });
-  };
-
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        {isEditing ? (
-          <Input
-            value={draftName}
-            onChange={event => setDraftName(event.target.value)}
-            onBlur={finishEditing}
-            onKeyDown={event => {
-              if (event.key === 'Enter') {
-                event.preventDefault();
-                finishEditing();
-              }
-              if (event.key === 'Escape') {
-                event.preventDefault();
-                setIsEditing(false);
-              }
-            }}
-            className="h-8 w-full max-w-full sm:w-48"
-            autoFocus
-          />
-        ) : (
-          <h3 className="truncate text-lg font-semibold text-gray-900">{moduleData.name}</h3>
-        )}
-
-        {canEditName && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={isEditing ? finishEditing : startEditing}
-            title={isEditing ? 'Save name' : 'Edit name'}
-          >
-            {isEditing ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-          </Button>
-        )}
-      </div>
-
-      <div className="flex shrink-0 items-center gap-1">
-        {isCustomModule && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={deleteModule}
-            title="Delete module"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        )}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={toggleVisibility}
-          title={moduleData.visible ? 'Hide module' : 'Show module'}
-        >
-          {moduleData.visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-        </Button>
-      </div>
-    </div>
-  );
+export default function ModuleHeader({ moduleId, onAdd, onMove, canMoveUp, canMoveDown }: { moduleId: keyof Modules; onAdd?: () => void; onMove?: (direction: -1 | 1) => void; canMoveUp?: boolean; canMoveDown?: boolean }) {
+  const section = useResumeStore(state => state.resume?.modules[moduleId]);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [name, setName] = useState('');
+  if (!section) return null;
+  const custom = moduleId.startsWith('custom-');
+  const update = useResumeStore.getState().updateResume;
+  return <>
+    <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="size-7 text-stone-400" aria-label={section.name + ' section actions'}><MoreHorizontal className="size-3.5" /></Button></DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48 rounded-xl">
+        {onAdd && <DropdownMenuItem onSelect={onAdd}><Plus />Add entry</DropdownMenuItem>}
+        <DropdownMenuItem disabled={!canMoveUp} onSelect={() => onMove?.(-1)}><ArrowUp />Move up</DropdownMenuItem>
+        <DropdownMenuItem disabled={!canMoveDown} onSelect={() => onMove?.(1)}><ArrowDown />Move down</DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => { setName(section.name); setRenameOpen(true); }}><Pencil />Rename…</DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}><Trash2 />{custom ? 'Delete section' : 'Clear section'}</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+    <Dialog open={renameOpen} onOpenChange={setRenameOpen}><DialogContent><DialogHeader><DialogTitle>Rename section</DialogTitle><DialogDescription>Change the heading shown on the page.</DialogDescription></DialogHeader>
+      <form onSubmit={event => { event.preventDefault(); if (!name.trim()) return; update(draft => { draft.modules[moduleId]!.name = name.trim(); }); setRenameOpen(false); }} className="space-y-4">
+        <Label htmlFor={moduleId + '-name'}>Section name</Label><Input id={moduleId + '-name'} value={name} onChange={event => setName(event.target.value)} />
+        <DialogFooter><Button type="button" variant="outline" onClick={() => setRenameOpen(false)}>Cancel</Button><Button type="submit" disabled={!name.trim()}>Save</Button></DialogFooter>
+      </form>
+    </DialogContent></Dialog>
+    <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}><AlertDialogContent><AlertDialogHeader>
+      <AlertDialogTitle>{custom ? 'Delete section?' : 'Clear section?'}</AlertDialogTitle>
+      <AlertDialogDescription>This removes {custom ? '“' + section.name + '” and ' : ''}all its content from this resume. This cannot be undone.</AlertDialogDescription>
+    </AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className={buttonVariants({ variant: 'destructive' })} onClick={() => update(draft => {
+      if (custom) { delete draft.modules[moduleId]; if (draft.sectionOrder) draft.sectionOrder = draft.sectionOrder.filter(id => id !== moduleId); }
+      else { const target = draft.modules[moduleId]!; target.items = []; if ('content' in target) target.content = ''; }
+    })}>{custom ? 'Delete section' : 'Clear section'}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+  </>;
 }

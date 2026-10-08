@@ -4,6 +4,8 @@ Status: NestJS owns Google-only Better Auth, and the confirmed local development
 
 This document separates agreed requirements, design guidance, and implementation prerequisites. Recording a design does not authorize dependency installation, data deletion, migrations, or deployment.
 
+Migration cleanup: Web's direct database layer, schema definitions, Drizzle configuration, and database commands are retired. NestJS owns all current database access and migrations; Web calls it through the API boundary. Historical Web SQL/snapshots are retained as reference only. CI/CD changes were reverted at the user's request; the unchanged legacy workflow is not validated for the API-owned deployment boundary.
+
 ## 1. Agreed scope
 
 - Google OAuth is the only sign-in method. The first successful sign-in creates a user; subsequent sign-ins reuse that user.

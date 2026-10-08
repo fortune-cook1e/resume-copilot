@@ -1,5 +1,6 @@
 import { useResumeStore } from '@/stores/resume-store';
 import Link from './Link';
+import PreviewBlock from '../PreviewBlock';
 import {
   Github,
   Linkedin,
@@ -36,7 +37,7 @@ const Basics = () => {
   };
 
   return (
-    <div className="flex items-start gap-4 border-b border-resume-theme pb-5">
+    <PreviewBlock sectionId="basics" label="basics" className="flex items-start gap-4 border-b border-resume-theme pb-5">
       {/* Todo: Add profile picture support (currently requires custom template with image URL in basics.picture.url) */}
       {/* {picture.url && (
         <img
@@ -98,7 +99,7 @@ const Basics = () => {
           })}
         </div>
       </div>
-    </div>
+    </PreviewBlock>
   );
 };
 

@@ -14,4 +14,4 @@
 2. 在 ChatGPT 桌面端 **Add plugin marketplace**，Source 选择**本仓库根目录的本地文件夹**。在 Plugins Directory 的 `Resume Copilot (local)` 来源中找 `resume-copilot`，点击安装。观察是否出现所声明的 MCP 连接。
 3. 若客户端发起授权，尝试浏览器登录、Allow/Cancel，然后调用 `get_connection_status`。记录失败的**步骤和错误文字**，不要分享令牌、Cookie、完整授权 URL 或数据库凭据。
 
-**待实测的边界**：OpenAI 的插件文档还描述了先在 ChatGPT developer mode 注册 MCP 应用并在插件中引用 `plugin_asdk_app...` ID 的路径；这份可移植 `mcp.json` 尚未证明桌面端会直接完成该注册。官方 [plugin OAuth 文档](https://developers.openai.com/plugins/build/auth)使用的 ChatGPT CIMD 客户端 URL（`/oauth/client.json` 或 `/oauth/{callback_id}/client.json`）也与当前 API 只允许 `/oauth/codex/...` 的本机测试规则不同。若安装后无法授权，先核对实际客户端/官方注册要求，**不要**靠放宽 OAuth 策略、编造 app ID 或跳过用户同意来使其通过。已知刷新重放竞态仍然存在；该插件不可对外发布或暴露网络服务。
+**待实测的边界**：OpenAI 的插件文档还描述了先在 ChatGPT developer mode 注册 MCP 应用并在插件中引用 `plugin_asdk_app...` ID 的路径；这份可移植 `mcp.json` 尚未证明桌面端会直接完成该注册。官方 [plugin OAuth 文档](https://developers.openai.com/plugins/build/auth)使用的 ChatGPT CIMD 客户端 URL（`/oauth/client.json` 或 `/oauth/{callback_id}/client.json`）也与当前 API 只允许 `/oauth/codex/...` 的本机测试规则不同。若安装后无法授权，先核对实际客户端/官方注册要求，**不要**靠放宽 OAuth 策略、编造 app ID 或跳过用户同意来使其通过。该插件不可对外发布或暴露网络服务。

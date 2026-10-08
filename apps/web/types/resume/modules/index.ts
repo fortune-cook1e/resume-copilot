@@ -1,11 +1,9 @@
-import {
-  experienceSchema,
-  educationSchema,
-  projectsSchema,
-  customModuleSchema,
-  skillsSchema,
-  type CustomModule,
-} from '@/types/resume/modules';
+import { experienceSchema } from './experience';
+import { educationSchema } from './education';
+import { projectsSchema } from './projects';
+import { skillsSchema } from './skills';
+import { customModuleSchema, type CustomModule } from './custom';
+import { contentModuleSchema, type ContentModule, type ContentSectionId } from './content';
 import z from 'zod';
 
 export const moduleSchema = z.object({
@@ -37,9 +35,13 @@ export const builtInModulesSchema = z.object({
 
 export type Module = z.infer<typeof moduleSchema>;
 export type BuiltInModules = z.infer<typeof builtInModulesSchema>;
-export type Modules = BuiltInModules & Record<`custom-${string}`, CustomModule>;
+export type Modules = BuiltInModules & Partial<Record<ContentSectionId, ContentModule>> & Record<`custom-${string}`, CustomModule>;
 
-export const modulesSchema: z.ZodType<Modules> = builtInModulesSchema.catchall(customModuleSchema);
+export const modulesSchema: z.ZodType<Modules> = builtInModulesSchema.extend({
+  summary: contentModuleSchema.optional(), profiles: contentModuleSchema.optional(), languages: contentModuleSchema.optional(),
+  interests: contentModuleSchema.optional(), awards: contentModuleSchema.optional(), certifications: contentModuleSchema.optional(),
+  publications: contentModuleSchema.optional(), volunteer: contentModuleSchema.optional(), references: contentModuleSchema.optional(),
+}).catchall(customModuleSchema) as z.ZodType<Modules>;
 
 export const defaultModule: Module = {
   name: '',
@@ -84,3 +86,4 @@ export * from './experience';
 export * from './projects';
 export * from './custom';
 export * from './skills';
+export * from './content';

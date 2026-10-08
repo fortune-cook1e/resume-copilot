@@ -1,5 +1,10 @@
 import { defaultItem, itemSchema, urlSchema } from './../common/';
 import { z } from 'zod';
+import { educationSchema } from './education';
+import { experienceSchema } from './experience';
+import { projectsSchema } from './projects';
+import { skillsSchema } from './skills';
+import { contentItemSchema, sectionTypeSchema, type ContentItem } from './content';
 
 export const customSchema = itemSchema.extend({
   name: z.string(),
@@ -30,9 +35,11 @@ export const customModuleSchema = z.object({
   id: z.string(),
   name: z.string(),
   visible: z.boolean().default(true),
-  items: z.array(customSchema),
+  type: sectionTypeSchema.optional(),
+  items: z.array(z.union([customSchema, educationSchema, experienceSchema, projectsSchema, skillsSchema, contentItemSchema])),
 });
 
-export type CustomModule = z.infer<typeof customModuleSchema>;
+export type ResumeEntry = Custom | z.infer<typeof educationSchema> | z.infer<typeof experienceSchema> | z.infer<typeof projectsSchema> | z.infer<typeof skillsSchema> | ContentItem;
+export type CustomModule = Omit<z.infer<typeof customModuleSchema>, 'items'> & { items: ResumeEntry[] };
 
 export type CustomModuleId = `custom-${string}`;

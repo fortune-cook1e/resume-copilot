@@ -1,10 +1,9 @@
 import {
   defaultModules,
-  defaultBasics,
   modulesSchema,
-  basicsSchema,
   type Modules,
-} from '@/types/resume';
+} from './modules';
+import { defaultBasics, basicsSchema } from './modules/basics';
 import { z } from 'zod';
 
 export const sectionSchema = z.object({
@@ -15,6 +14,7 @@ export const sectionSchema = z.object({
 export const resumeDataSchema = z.object({
   basics: basicsSchema,
   modules: modulesSchema,
+  sectionOrder: z.array(z.string()).optional(),
 });
 
 // default resume data

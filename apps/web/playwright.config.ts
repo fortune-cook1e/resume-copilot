@@ -24,8 +24,6 @@ export default defineConfig({
     env: {
       NEXT_PUBLIC_APP_URL: baseURL,
       BETTER_AUTH_URL: baseURL,
-      BETTER_AUTH_SECRET: 'local-playwright-only-secret-not-for-production',
-      DATABASE_URL: 'postgresql://test:test@127.0.0.1:5432/test',
     },
   },
 });

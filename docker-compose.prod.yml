@@ -25,17 +25,12 @@ services:
     image: ${ALIYUN_REGISTRY}/resume-copilot:latest
     container_name: resume-copilot-app
     restart: unless-stopped
-    env_file:
-      - .env
     ports:
       - '3005:3000'
     environment:
-      # Database
-      DATABASE_URL: postgresql://${DB_USER:-resume}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-resume_copilot}
-
-      # Better Auth
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      # Browser-facing origin; database access and auth secrets belong to NestJS.
       BETTER_AUTH_URL: ${BETTER_AUTH_URL}
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://127.0.0.1:3001}
 
       # Next.js
       NODE_ENV: production

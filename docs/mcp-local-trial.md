@@ -1,6 +1,6 @@
 # ChatGPT desktop local MCP URL diagnostic — preparation only
 
-**Development database prepared, MCP still disabled.** Migrations 0002/0003 were applied to the local `resume_copilot` development database after explicit approval; the isolated test database remains separate. No reset or production migration was performed. The local trial has a known refresh-replay race that can disconnect another grant by the same account/client. Use a test account where that availability limitation is acceptable. Production activation is disabled.
+**Development database prepared, MCP still disabled.** Migrations 0002/0003 were applied to the local `resume_copilot` development database after explicit approval; the isolated test database remains separate. No reset or production migration was performed. Use a test account. Production activation is disabled.
 
 This manual MCP URL setup diagnoses the underlying connection only; the intended Git marketplace plugin is now packaged and was user-confirmed in a local Codex task. Ordinary Chat and this raw-URL diagnostic remain separate, unverified paths. For a local desktop diagnostic:
 
@@ -9,4 +9,4 @@ This manual MCP URL setup diagnoses the underlying connection only; the intended
 3. Save/restart the desktop app and select the server's **Authenticate** action. Sign into Resume Copilot with Google, review the currently displayed account and permission and choose **Allow** (or **Cancel** to reject). The desktop's actual metadata URL, browser callback and end-to-end OAuth behavior have **not** been verified yet; report failures without sharing tokens, signed query strings or Cookies.
 4. Request `get_connection_status` in desktop chat. It should return only your platform account ID, display name and granted scopes—not email, resumes or experiences. For automatic refresh, leave the connection idle past 15 minutes and call again. Raw-URL authorization and automatic refresh remain **unverified manual acceptance steps**, despite the separate user-confirmed Codex plugin tool call. There is not yet a user-facing connection-management/revocation screen.
 
-The retained API suite intentionally has one failing cross-connection refresh-replay regression; see [MCP design](designs/mcp.md). Do not treat this local trial as a finished production integration.
+See [MCP design](designs/mcp.md) for the implementation boundaries. Do not treat this local trial as a finished production integration.

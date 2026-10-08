@@ -1,47 +1,88 @@
 # Resume Copilot
 
-Resume Copilot aims to help job seekers keep a reusable record of their experience and create tailored resumes. The planned workspace will support manual editing, preview, and PDF export, with optional collaboration through Codex. An in-product agent is planned for a later phase.
+A resume workspace for creating, editing, previewing, and exporting independent resumes for different roles. Built with Next.js, shadcn/ui, NestJS, and PostgreSQL. Optional MCP collaboration is under development; no Codex connection or OpenAI API key is needed for manual editing.
 
-> **Early development:** Web routes Google sign-in, resume CRUD, and PDF export to NestJS. The user reports local browser acceptance of the latest editor and export flow; production behavior remains unverified. The experience library, new resume editor, and Codex integration are not yet complete. The independent AI polish feature has been removed.
+## Use the product
+
+Sign in with Google → create a resume → edit with a live preview → download a PDF. Open an existing resume from the dashboard to continue editing. Changes save automatically; failed saves show a retry action. On smaller screens, switch between **Write** and **Page**.
+
+PDF export uses the same document layout as the preview. Click **Download PDF**, wait for generation, and the browser downloads the file. Chromium runs in the API process and can consume substantial CPU and memory on a small server.
 
 ## Run locally
 
-Requires Node.js 22 (>=22.12) and pnpm 9.15.9. From the repository root:
+Requires Node.js 22 (>=22.12), pnpm 9.15.9, PostgreSQL, a Google OAuth client, and Chrome/Chromium for PDF export.
+
+1. Create `apps/api/.env` from [the API example](apps/api/.env.example) and `apps/web/.env` from [the Web example](apps/web/.env.example), without overwriting existing local files. Never commit secrets.
+2. In API configuration, set `DATABASE_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, a unique `BETTER_AUTH_SECRET`, and `BETTER_AUTH_URL=http://localhost:3000`. Use `HOST=127.0.0.1` and `PORT=3001` locally. Set `PUPPETEER_EXECUTABLE_PATH` if Chromium is not found at a standard path.
+3. In Web configuration, use `BETTER_AUTH_URL=http://localhost:3000` and `API_INTERNAL_URL=http://127.0.0.1:3001`. Web proxies browser requests to NestJS; database credentials and auth secrets belong only in API configuration.
+4. Register `http://localhost:3000/api/auth/callback/google` as the Google OAuth redirect URI. Keep PostgreSQL running and apply API migrations to the explicitly selected development database; see [database commands](#database-commands). Do not reset an existing database.
 
 ```bash
-nvm use                       # If using nvm
+nvm use
 corepack enable
 pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open the Web app at <http://localhost:3000>. The NestJS API runs on port 3001 and provides a health check at <http://localhost:3001/api/health>.
+Web: <http://localhost:3000> · API health: <http://localhost:3001/api/health>
 
-To start only one application, use `pnpm dev:web` or `pnpm dev:api`.
+Start either application separately:
 
-## Google authentication (Auth C browser acceptance pending)
-
-NestJS owns the Google-only Better Auth handler at `/api/auth/*`, session-guarded `GET /api/me`, resume CRUD at `/api/resumes`, and PDF export at `/api/export-pdf`. `/api/me` returns `{ data: { id, name, email }, error: null }`; Better Auth redirects, Cookies and errors retain its native protocol. Web rewrites these same-origin paths to NestJS. The old Web password-auth, resume CRUD, PDF export, and AI polish handlers are removed. The dashboard server layout and resume editor page check `/api/me` before rendering; `/resume/print` stays public for Chromium rendering with server-injected resume data. Web's proxy and NestJS both check the Origin of unsafe resume requests and PDF export. Web's Google login redirects to `/dashboard/resumes`; the user accepted local CRUD browser behavior. Auth C adds sign-out failure handling, client-state cleanup, cross-tab revalidation, and session-renewal tests; real multi-tab sign-out and Cookie renewal through Web still require browser verification.
-
-For local API development, set `DATABASE_URL`, `BETTER_AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and browser-visible `BETTER_AUTH_URL` using `apps/api/.env.example` as a guide. Never commit real values. Database tables must be initialized on an **empty, confirmed** development database using `pnpm --filter @resume-copilot/api exec drizzle-kit migrate` with `DATABASE_URL` explicitly set to that target. The confirmed local `resume_copilot` development database was cleared, recreated, and migrated with the new schema; previous local data is gone. A later additive migration added nullable `user.image` because real Google profiles can include a picture; it was applied to both local development and the isolated test database without resetting either one. The ignored `apps/api/.env` now points `DATABASE_URL` at this development database; `.env.example` documents the URL shape without committing a working password. Keep the actual local database password private and never reuse it in production. Web's existing resume table can be used with the new user IDs through its server-side NestJS identity bridge; old user data is gone. Do not apply historical Web Drizzle migrations to the new database—NestJS owns schema migrations. Production requires HTTPS for `BETTER_AUTH_URL`. The Google redirect URI must be `http://localhost:3000/api/auth/callback/google` locally. Web uses `API_INTERNAL_URL` (defaults to `http://127.0.0.1:3001` for local development) for auth routing and server calls; set it to a trusted, reachable NestJS origin when building Web for another environment. The existing `docker-compose.prod.yml` still runs only Web and PostgreSQL, **not the API**, so it cannot serve this authentication flow until a separately approved deployment update. See the [Auth design](docs/designs/auth.md).
-
-## MCP status
-
-MCP's local Streamable HTTP trial is implemented but **disabled by default** (`MCP_ENABLED=false`). It uses Better Auth 1.7.5, `@better-auth/mcp` plus `@better-auth/cimd`, and the official SDK for browser consent, token refresh, and only `get_connection_status`. A minimal Git marketplace plugin and local catalog exist; the user confirmed installation and a successful tool call in a Codex task, but ordinary Chat interoperability and public hosting remain unverified. See [local plugin test steps](docs/plugin-local-trial.md). Migrations 0002/0003 were applied to the isolated test database and, after separate approval, the local development database. Current API tests have **57 passed / one known failed**: a refresh-replay interleaving can invalidate a second connection. This availability limitation is accepted only for a loopback normal-flow trial, not production. See the [MCP design](docs/designs/mcp.md) and [local trial preparation](docs/mcp-local-trial.md).
+```bash
+pnpm dev:web
+pnpm dev:api
+```
 
 ## Database commands
 
-NestJS is the sole owner of new schema migrations. Run from the repository root (or use `pnpm --filter @resume-copilot/api db:<command>`):
+NestJS owns the schema and migrations. Run these commands from the repository root:
 
 | Command | Purpose |
 | --- | --- |
-| `pnpm db:generate` | Generate a migration from `apps/api/src/database/schema/`; review the SQL before applying it. |
-| `pnpm db:migrate` | Apply pending API migrations to the **explicitly selected** database. |
-| `pnpm db:push` | Directly synchronize a disposable database; it bypasses migration history. Do not use on the migrated dev/test databases or production. |
-| `pnpm db:studio` | Open Drizzle Studio for a trusted local database; do not expose it publicly. |
+| `pnpm db:generate` | Generate a migration from the API schema; review the SQL before applying it. |
+| `pnpm db:migrate` | Apply pending API migrations to the selected database. |
+| `pnpm db:push` | Synchronize a disposable database directly, bypassing migration history. |
+| `pnpm db:studio` | Inspect a trusted local database with Drizzle Studio. |
 
-`migrate`, `push`, and `studio` read `DATABASE_URL` from the command's environment, **not automatically from** `apps/api/.env`. Confirm its host and database name before invoking them; these scripts do not run any operation by themselves. Web's historical migrations must not be applied to the new database.
+Drizzle reads `DATABASE_URL` from the shell environment, **not automatically from `apps/api/.env`**. Set it explicitly and verify the host/database before running `migrate`, `push`, or `studio`:
 
-The Python-dependent PDF import and job-match analysis, and the independent Ollama text-polish feature, have been retired. Manual resume creation and editing, rich-text formatting, and browser-based PDF export remain. Browser business requests still use Axios through `apps/web/lib/request.ts` and `services/`. Resume CRUD and PDF export now use NestJS and the shared API database. Export still renders Web's `/resume/print` page using Chromium, so the API runtime needs a Chrome/Chromium executable (`PUPPETEER_EXECUTABLE_PATH` can select it) and must reach the Web origin configured as `BETTER_AUTH_URL`. The user still clicks, waits, and downloads; this move does not reduce Chromium's CPU or memory demand on a shared host. The existing production Compose setup has no API service and is not ready for deployment.
+```bash
+DATABASE_URL='postgresql://USER:PASSWORD@127.0.0.1:5432/resume_copilot' pnpm db:migrate
+```
 
-API and Web auth tests share a separate, already-migrated local PostgreSQL database named `resume_copilot_test`; root tests run sequentially to avoid concurrent fixture resets. Set `AUTH_TEST_DATABASE_URL` to **that test database only** before running `pnpm test`; tests refuse other database names and clear test-only rows between runs. Never point the test variable at the development or production database. The controlled Google provider in automated tests does not establish real Google interoperability. Full lint remains blocked by pre-existing Web errors.
+Replace the placeholders with local credentials. Do not use `db:push` on databases maintained through migrations, including existing development/test databases or production. Do not expose Studio publicly or apply old Web migrations; API migrations are in `apps/api/drizzle`.
+
+## Local MCP / plugin trial
+
+The optional plugin currently exposes only `get_connection_status`: platform account ID, display name, and granted scopes. It does **not** read or edit resumes yet. The local Codex plugin installation and tool call were user-confirmed; ordinary Chat integration is not verified.
+
+1. In `apps/api/.env`, set `MCP_ENABLED=true`, `HOST=127.0.0.1`, and `BETTER_AUTH_URL=http://localhost:3000`. The trial rejects production and non-loopback API configuration. Apply any pending API migrations only after confirming the database target.
+2. Start API and Web in separate terminals. For this trial, stop any existing Web listener and bind the replacement to loopback:
+
+   ```bash
+   # Terminal 1: also builds shared contracts
+   pnpm dev:api
+   ```
+
+   ```bash
+   # Terminal 2
+   pnpm --filter @resume-copilot/web exec next dev --hostname 127.0.0.1
+   ```
+
+3. Add this repository's root folder as a local plugin marketplace in the desktop client. Select **Resume Copilot (local)** and install `resume-copilot`. The catalog is `.agents/plugins/marketplace.json`; the plugin bundles `http://localhost:3000/api/mcp`. Restart/refresh the client if it does not appear. This follows the [official local marketplace guidance](https://developers.openai.com/plugins/build/plugins#install-a-local-plugin-manually); availability can differ between client surfaces.
+4. Authenticate the connection, sign in with Google, review the account and permission, and allow access. No manual token or client secret is required. In a Codex chat, select the plugin and request `get_connection_status`.
+
+Keep the API and Web private: no tunnel or public listener. Use a test account. Production activation and public distribution are not supported by this trial. Report the failed step and error text, never tokens, Cookies, credentials, or complete authorization URLs.
+
+See [plugin troubleshooting](docs/plugin-local-trial.md) and [raw MCP URL diagnostics](docs/mcp-local-trial.md) if installation or authentication fails. Ordinary Chat setup remains a separate acceptance task, not a promised capability of this local plugin.
+
+## Checks
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm --filter @resume-copilot/web test
+pnpm --filter @resume-copilot/web build
+```
+
+API/root tests require `AUTH_TEST_DATABASE_URL` pointing to an already-migrated database named **`resume_copilot_test` only**. Run `pnpm test` after setting it; tests clear test-only rows. Never use development or production data. Real Google session renewal, ordinary Chat integration and production deployment remain unverified; the existing production Compose setup has no API service.

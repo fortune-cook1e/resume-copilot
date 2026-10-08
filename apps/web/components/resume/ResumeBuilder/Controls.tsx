@@ -1,113 +1,40 @@
-import { ZoomIn, ZoomOut, RotateCcw, Download, Home, Eye, Printer } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useControls } from 'react-zoom-pan-pinch';
-import { useState } from 'react';
-import { useResumeStore } from '@/stores/resume-store';
-import { exportResumePDF } from '@/services/resume';
+'use client';
 
-import { useRouter } from 'next/navigation';
+import { useEffect, useEffectEvent } from 'react';
+import { Minus, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useControls, useTransformComponent } from 'react-zoom-pan-pinch';
+import { MM_TO_PX, PAGE_SIZE_MAP } from '@/constants';
 
 export default function Controls() {
-  const { zoomIn, zoomOut, resetTransform } = useControls();
-  const { resume } = useResumeStore();
-  const [isExporting, setIsExporting] = useState(false);
-  const router = useRouter();
+  const { zoomIn, zoomOut, setTransform, instance } = useControls();
+  const percentage = useTransformComponent(({ state }) => Math.round(state.scale * 100));
 
-  const handlePrintPreview = () => {
-    if (!resume) return;
-    const { resumeId } = useResumeStore.getState();
-    if (resumeId) {
-      window.open(`/resume/print?id=${resumeId}`, '_blank');
-    }
+  const fitPage = () => {
+    const wrapper = instance.wrapperComponent;
+    if (!wrapper || !wrapper.clientWidth || !wrapper.clientHeight) return;
+    const width = PAGE_SIZE_MAP.a4.width * MM_TO_PX;
+    const height = PAGE_SIZE_MAP.a4.height * MM_TO_PX;
+    const scale = Math.max(0.2, Math.min(1, (wrapper.clientWidth - 40) / width, (wrapper.clientHeight - 100) / height));
+    setTransform((wrapper.clientWidth - width * scale) / 2, 40, scale, 0);
   };
 
-  const handleExportPDF = async () => {
-    if (isExporting || !resume) return;
-
-    const { resumeId } = useResumeStore.getState();
-    if (!resumeId) return;
-
-    setIsExporting(true);
-
-    try {
-      const blob = await exportResumePDF(resume.basics.name || 'Resume', resumeId);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${resume.basics.name || 'Resume'}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Failed to export PDF:', error);
-      alert('Failed to export PDF, please try again later');
-    } finally {
-      setIsExporting(false);
-    }
-  };
+  // SDK helpers change identity on every zoom update. Only resize should refit.
+  const fitAfterResize = useEffectEvent(() => fitPage());
+  useEffect(() => {
+    const wrapper = instance.wrapperComponent;
+    if (!wrapper) return;
+    const observer = new ResizeObserver(() => fitAfterResize());
+    observer.observe(wrapper);
+    return () => observer.disconnect();
+  }, [instance]);
 
   return (
-    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex gap-2 bg-white/95 backdrop-blur-sm rounded-lg p-2 shadow-lg border border-gray-200">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => router.push('/dashboard/resumes')}
-        title="Back to Resumes"
-        className="cursor-pointer"
-      >
-        <Home className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => zoomIn()}
-        title="Zoom In"
-        className="cursor-pointer"
-      >
-        <ZoomIn className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => zoomOut()}
-        title="Zoom Out"
-        className="cursor-pointer"
-      >
-        <ZoomOut className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => resetTransform()}
-        title="Reset"
-        className="cursor-pointer"
-      >
-        <RotateCcw className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={handlePrintPreview}
-        title="Preview"
-        className="cursor-pointer"
-      >
-        <Eye className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={handleExportPDF}
-        disabled={isExporting}
-        title="Export PDF"
-        className="cursor-pointer"
-      >
-        {isExporting ? (
-          <div className="h-4 w-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-        ) : (
-          <Printer className="h-4 w-4" />
-        )}
-      </Button>
+    <div className="absolute bottom-5 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-xl border bg-background/95 p-1.5 shadow-sm backdrop-blur-sm" role="group" aria-label="Preview zoom">
+      <Button variant="ghost" size="icon-sm" aria-label="Zoom out" onClick={() => zoomOut(0.1)}><Minus /></Button>
+      <Button variant="ghost" size="sm" aria-label="Fit page" onClick={fitPage}>Fit</Button>
+      <Button variant="ghost" size="icon-sm" aria-label="Zoom in" onClick={() => zoomIn(0.1)}><Plus /></Button>
+      <span className="min-w-12 border-l px-2 text-center text-xs tabular-nums text-muted-foreground">{percentage}%</span>
     </div>
   );
 }

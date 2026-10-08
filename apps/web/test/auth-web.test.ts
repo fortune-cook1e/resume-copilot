@@ -68,6 +68,20 @@ describe('authenticated resume access', () => {
     await expect(ResumePage()).rejects.toMatchObject({
       digest: expect.stringContaining('NEXT_REDIRECT;replace;/login;'),
     });
+    const { default: BuilderPage } = await import('../app/builder/[resumeId]/page');
+    await expect(BuilderPage({ params: Promise.resolve({ resumeId: 'private-resume' }) })).rejects.toMatchObject({
+      digest: expect.stringContaining('NEXT_REDIRECT;replace;/login;'),
+    });
+  });
+
+  it('keeps authenticated legacy editor links working through the new builder route', async () => {
+    const { default: ResumePage } = await import('../app/resume/page');
+    await expect(ResumePage({ searchParams: Promise.resolve({ id: 'resume-one' }) })).rejects.toMatchObject({
+      digest: expect.stringContaining('NEXT_REDIRECT;replace;/builder/resume-one;'),
+    });
+    await expect(ResumePage()).rejects.toMatchObject({
+      digest: expect.stringContaining('NEXT_REDIRECT;replace;/dashboard/resumes;'),
+    });
   });
 
 });

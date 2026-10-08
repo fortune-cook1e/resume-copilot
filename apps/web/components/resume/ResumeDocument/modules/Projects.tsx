@@ -3,6 +3,7 @@
 import { useResumeStore } from '@/stores/resume-store';
 import { renderMarkdown } from '@/lib/markdown';
 import Link from './Link';
+import PreviewBlock from '../PreviewBlock';
 
 const Projects = () => {
   const { resume } = useResumeStore();
@@ -13,7 +14,7 @@ const Projects = () => {
 
   if (!projects.visible || projects.items.length === 0) return null;
 
-  const visibleItems = projects.items.filter(item => item.visible);
+  const visibleItems = projects.items.filter(item => item.visible && item.name.trim());
 
   if (visibleItems.length === 0) return null;
 
@@ -23,7 +24,7 @@ const Projects = () => {
 
       <div className="space-y-3">
         {visibleItems.map(item => (
-          <div key={item.id} className="space-y-1">
+          <PreviewBlock key={item.id} sectionId="projects" itemId={item.id} label={item.name || 'project'} className="space-y-1">
             <div className="flex justify-between gap-4">
               <div className="font-semibold text-base">{item.name}</div>
               <div className="text-sm flex-shrink-0">{item.date}</div>
@@ -44,7 +45,7 @@ const Projects = () => {
                 dangerouslySetInnerHTML={{ __html: renderMarkdown(item.summary) }}
               />
             )}
-          </div>
+          </PreviewBlock>
         ))}
       </div>
     </div>

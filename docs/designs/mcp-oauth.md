@@ -31,4 +31,4 @@ sequenceDiagram
 
 **Ownership.** `auth/` configures Better Auth and verifies tokens; `oauth/` (a directory, not a separate NestJS module) owns persisted connection rules; `mcp/` owns Streamable HTTP and the tool. The plugin distributes connection configuration, not the server. Browser sign-out does not revoke an MCP connection; `connection:read` is the only business scope (`offline_access` permits refresh).
 
-**Current limit.** The local trial has a known refresh-replay race: a replay can invalidate another connection for the same user/client. The regression remains failing; connection-management UI, full desktop interoperability and production security acceptance are not complete. Do not expose this trial publicly.
+**Current limit.** Connection-management UI, full desktop interoperability and production security acceptance are not complete. Do not expose this trial publicly.

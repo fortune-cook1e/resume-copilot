@@ -1,7 +1,6 @@
 'use client';
 
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -30,11 +29,10 @@ import {
 } from 'lucide-react';
 
 export default function Basics() {
-  const { resume, updateResume } = useResumeStore();
+  const basics = useResumeStore(state => state.resume?.basics);
+  const updateResume = useResumeStore(state => state.updateResume);
 
-  if (!resume) return null;
-
-  const { basics } = resume;
+  if (!basics) return null;
 
   const addCustomField = () => {
     updateResume(draft => {
@@ -73,7 +71,7 @@ export default function Basics() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 [&_label]:text-xs [&_input]:h-9 [&_input]:bg-background">
       {/* Picture */}
       {/* <div className="space-y-2">
         <Label htmlFor="picture-url">Picture</Label>
@@ -118,7 +116,7 @@ export default function Basics() {
       {/* Headline */}
       <div className="space-y-2">
         <Label htmlFor="headline">Headline</Label>
-        <Textarea
+        <Input
           id="headline"
           value={basics.headline}
           onChange={e =>
@@ -127,12 +125,11 @@ export default function Basics() {
             })
           }
           placeholder="Brief description of your professional background..."
-          rows={3}
         />
       </div>
 
       {/* Email and Website */}
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input
@@ -193,7 +190,7 @@ export default function Basics() {
       </div>
 
       {/* Phone and Location */}
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
         <div className="space-y-2">
           <Label htmlFor="phone">Phone</Label>
           <Input

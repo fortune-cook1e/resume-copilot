@@ -7,6 +7,8 @@ export const resumeVisibilitySchema = z.enum(['public', 'private']);
 export const resumeDataSchema = z.object({
   basics: z.record(z.string(), z.unknown()),
   modules: z.record(z.string(), z.unknown()),
+  // Optional so existing documents retain their original print order.
+  sectionOrder: z.array(z.string()).optional(),
 });
 
 export const defaultResumeData = {

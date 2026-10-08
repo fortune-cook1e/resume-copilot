@@ -1,9 +1,10 @@
 'use client';
 
 import { useResumeStore } from '@/stores/resume-store';
-import type { CustomModule, CustomModuleId } from '@/types/resume';
+import type { Custom, CustomModuleId } from '@/types/resume';
 import { renderMarkdown } from '@/lib/markdown';
 import Link from './Link';
+import PreviewBlock from '../PreviewBlock';
 
 interface CustomProps {
   moduleId: CustomModuleId;
@@ -14,19 +15,19 @@ const Custom = ({ moduleId }: CustomProps) => {
 
   if (!resume) return null;
 
-  const module = resume.modules[moduleId] as CustomModule | undefined;
-  if (!module || !module.visible || module.items.length === 0) return null;
+  const customModule = resume.modules[moduleId];
+  if (!customModule || !customModule.visible || customModule.items.length === 0) return null;
 
-  const visibleItems = module.items.filter(item => item.visible);
+  const visibleItems = (customModule.items as Custom[]).filter(item => item.visible && item.name.trim());
   if (!visibleItems.length) return null;
 
   return (
     <div className="space-y-1">
-      <h2 className="text-xl font-semibold text-resume-theme">{module.name}</h2>
+      <h2 className="text-xl font-semibold text-resume-theme">{customModule.name}</h2>
 
       <div className="space-y-3">
         {visibleItems.map(item => (
-          <div key={item.id} className="space-y-1">
+          <PreviewBlock key={item.id} sectionId={moduleId} itemId={item.id} label={item.name || customModule.name} className="space-y-1">
             <div className="flex justify-between gap-4">
               <div className="font-semibold text-base">{item.name}</div>
               <div className="text-sm flex-shrink-0">{item.date}</div>
@@ -49,7 +50,7 @@ const Custom = ({ moduleId }: CustomProps) => {
                 dangerouslySetInnerHTML={{ __html: renderMarkdown(item.summary) }}
               />
             )}
-          </div>
+          </PreviewBlock>
         ))}
       </div>
     </div>

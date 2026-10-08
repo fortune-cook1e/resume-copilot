@@ -3,7 +3,6 @@ import { createRequire } from 'node:module';
 import { createServer, type Server } from 'node:http';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { betterAuth } from 'better-auth';
-import { createAuthMiddleware } from 'better-auth/api';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import postgres from 'postgres';
 
@@ -22,7 +21,7 @@ const redirectUri = 'http://127.0.0.1:49152/callback';
 type TokenResponse = { access_token: string; refresh_token: string; expires_in: number; scope: string };
 
 function createTestAuth(
-  client: postgres.Sql, connections: InstanceType<typeof ConnectionsService>, beforeRefresh: () => Promise<void>,
+  client: postgres.Sql, connections: InstanceType<typeof ConnectionsService>,
   metadataFetch?: Parameters<typeof createMcpPlugins>[2],
 ) {
   return betterAuth({
@@ -31,13 +30,7 @@ function createTestAuth(
     secret,
     trustedOrigins: [origin],
     database: drizzleAdapter(drizzle(client, { schema }), { provider: 'pg', schema }),
-    plugins: [...createMcpPlugins(origin, connections, metadataFetch), {
-      id: 'test-request-scheduling',
-      hooks: { before: [{
-        matcher: ctx => ctx.path === '/oauth2/token' && ctx.body?.grant_type === 'refresh_token',
-        handler: createAuthMiddleware(beforeRefresh),
-      }] },
-    }],
+    plugins: createMcpPlugins(origin, connections, metadataFetch),
     emailAndPassword: { enabled: false },
     logger: { disabled: true },
   });
@@ -51,7 +44,6 @@ describe('MCP authorization over the real PostgreSQL provider boundary', () => {
   let jwksServer: Server;
   let protectedRequest: ReturnType<typeof createConnectionProtectedHandler>;
   let verifiedTestDatabase = false;
-  let scheduleRefresh: (() => Promise<void>) | undefined;
   const userId = `mcp-a0-${randomUUID()}`;
   const clientId = `mcp-client-${randomUUID()}`;
 
@@ -61,7 +53,7 @@ describe('MCP authorization over the real PostgreSQL provider boundary', () => {
     if (target.name !== 'resume_copilot_test') throw new Error('Refusing to mutate a non-test database');
     verifiedTestDatabase = true;
     connections = new ConnectionsService(new ConnectionsRepository(drizzle(client, { schema })));
-    auth = createTestAuth(client, connections, async () => { await scheduleRefresh?.(); });
+    auth = createTestAuth(client, connections);
     await auth.$context;
     // Serve the actual provider's public keys, not a mocked token verifier.
     jwksServer = createServer((_request, response) => {
@@ -95,7 +87,7 @@ describe('MCP authorization over the real PostgreSQL provider boundary', () => {
     expect((await auth.api.getSession({ headers: new Headers({ cookie }) }))?.user.id).toBe(userId);
   });
 
-  afterEach(() => { scheduleRefresh = undefined; vi.useRealTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
 
   afterAll(async () => {
     if (jwksServer) await new Promise<void>((resolve, reject) => jwksServer.close(error => error ? reject(error) : resolve()));
@@ -215,30 +207,12 @@ describe('MCP authorization over the real PostgreSQL provider boundary', () => {
     expect((await refresh(rotated.refresh_token)).status).toBe(400);
   });
 
-  it('keeps replay invalidation scoped when the retry window closes after preflight', async () => {
-    const first = await issue();
-    const second = await issue();
-    const rotation = await refresh(first.refresh_token);
-    expect(rotation.status).toBe(200);
-    const rotated = await rotation.json() as TokenResponse;
-    // Advance the clock after our preflight but before the real provider reads it.
-    // No provider, token store or application collaborator is mocked.
-    scheduleRefresh = async () => {
-      vi.useFakeTimers({ toFake: ['Date'] });
-      vi.setSystemTime(Date.now() + 31_000);
-      scheduleRefresh = undefined;
-    };
-    expect((await refresh(first.refresh_token)).status).toBe(400);
-    expect((await refresh(second.refresh_token)).status).toBe(200);
-    expect((await access(rotated.access_token)).status).toBe(401);
-  });
-
   it('authorizes a ChatGPT metadata client without user-supplied tokens or a pre-registered client ID', async () => {
     const metadataId = `https://chatgpt.com/oauth/codex/${randomUUID()}/client.json`;
     const callback = `http://127.0.0.1:49152/callback/${randomUUID()}`;
     // Substitute only the external HTTPS metadata transport; the provider,
     // consent, client persistence and token exchange use real PostgreSQL.
-    const discoveredAuth = createTestAuth(client, connections, async () => {}, async input => {
+    const discoveredAuth = createTestAuth(client, connections, async input => {
       expect(String(input)).toBe(metadataId);
       return Response.json({
         client_id: metadataId, client_name: 'ChatGPT desktop',

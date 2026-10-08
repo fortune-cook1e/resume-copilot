@@ -2,6 +2,7 @@
 
 import { Badge } from '@/components/ui/badge';
 import { useResumeStore } from '@/stores/resume-store';
+import PreviewBlock from '../PreviewBlock';
 
 const Skills = () => {
   const { resume } = useResumeStore();
@@ -12,7 +13,7 @@ const Skills = () => {
 
   if (!skills.visible || skills.items.length === 0) return null;
 
-  const visibleItems = skills.items.filter(item => item.visible);
+  const visibleItems = skills.items.filter(item => item.visible && item.name.trim());
 
   if (visibleItems.length === 0) return null;
 
@@ -22,7 +23,7 @@ const Skills = () => {
 
       <div className="space-y-3">
         {visibleItems.map(item => (
-          <div key={item.id} className="space-y-2">
+          <PreviewBlock key={item.id} sectionId="skills" itemId={item.id} label={item.name || 'skill'} className="space-y-2">
             <div className="flex items-center justify-between gap-4">
               <div className="font-semibold text-base">{item.name}</div>
               <div className="text-sm text-gray-600 flex-shrink-0">{item.level}</div>
@@ -37,7 +38,7 @@ const Skills = () => {
                 ))}
               </div>
             )}
-          </div>
+          </PreviewBlock>
         ))}
       </div>
     </div>
