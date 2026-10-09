@@ -6,7 +6,7 @@
 
 **Manual resume CRUD and shared document contract — implemented, awaiting user acceptance.** Editor/cleanup and CRUD work are committed as `64b0d02` / `8448b30`; the approved shared contract is implemented and verified. Create → list/read → edit/save/rename → delete has API, Web behavior and earlier controlled browser verification. Scope preserves Google login, owner checks and existing preview/PDF behavior; no MCP expansion, migrations, CI/CD or deployment work. Reactive Resume v6 remains the editor reference, not full parity. Real Google/PDF acceptance, experience-library CRUD and production work remain deferred. Only this handoff and existing designs are maintained.
 
-This is the only handoff file. [README](../README.md) is the product's usage/setup entry point. Necessary implementation and historical verification details are consolidated below, not split into handoff archives.
+This is the only handoff file. [README](../README.md) is the stable developer entry point: product description, workspace/stack overview, prerequisites, setup and common commands. The approved README cleanup removed UI instructions and acceptance status, linked existing MCP/plugin guides, and recorded the update boundary in [repository rules](../AGENTS.md). Formatting, local links and documented commands were checked; no setup, migrations or runtime tests were executed for this documentation-only change. Necessary implementation and historical verification details are consolidated below, not split into handoff archives.
 
 ## Implemented baseline
 

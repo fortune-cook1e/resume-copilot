@@ -36,5 +36,6 @@
 - Run checks relevant to the change. Use `pnpm lint` to include workspace-specific rules; root `eslint .` alone does not load nested flat configs.
 - Review the final diff and report actual verification, existing failures, new regressions, and unverified areas. Never weaken rules or assertions to obtain a pass.
 - Update affected documentation when behavior or commands change. Core design changes require updating the corresponding design and affected Delivery Slices.
+- Keep `README.md` a stable developer entry point: a brief product description, project layout/stack, prerequisites, local setup and common commands. Update it only when this developer-facing information changes; do not append ordinary feature changes, UI instructions, acceptance results or progress logs. Keep product/design details and delivery status in their existing documents and handoff.
 - At delivery boundaries, blockers, or next-step changes, update the handoff with stage / slice, completed work and verification, blockers / open decisions, next action, and links. Keep it a current summary, not a session log or duplicate plan.
 - Do not install dependencies, run migrations, commit, push, publish, or deploy without explicit authorization.
