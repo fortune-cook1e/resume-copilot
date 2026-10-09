@@ -1,18 +1,8 @@
 import { useResumeStore } from '@/stores/resume-store'
 import Link from './Link'
 import PreviewBlock from '../PreviewBlock'
-import {
-  Github,
-  Linkedin,
-  Twitter,
-  Youtube,
-  Instagram,
-  Mail,
-  Phone as PhoneIcon,
-  MapPin,
-  Globe,
-  Link as LinkIcon,
-} from 'lucide-react'
+import { Mail, Phone as PhoneIcon, MapPin, Link as LinkIcon } from 'lucide-react'
+import { getContactIcon } from '@/components/resume/contact-icons'
 
 const Basics = () => {
   const { resume } = useResumeStore()
@@ -22,19 +12,6 @@ const Basics = () => {
   const {
     basics: { name, headline, location, phone, email, website, picture, customFields },
   } = resume
-
-  const iconMap: Record<string, React.FC<React.SVGProps<SVGSVGElement>>> = {
-    Link: LinkIcon,
-    Github,
-    Linkedin,
-    Twitter,
-    Youtube,
-    Instagram,
-    Mail,
-    Phone: PhoneIcon,
-    MapPin,
-    Globe,
-  }
 
   return (
     <PreviewBlock
@@ -89,16 +66,19 @@ const Basics = () => {
             </div>
           )}
           {customFields.map((field, index) => {
-            const IconComponent = iconMap[field.icon] || LinkIcon
+            const IconComponent = getContactIcon(field.icon)
+            if (!field.label.trim() && !field.link.trim()) return null
             return (
-              field.link && (
-                <div key={index} className="flex items-center gap-x-1.5">
-                  <IconComponent className="h-4 w-4 text-resume-theme" />
+              <div key={index} className="flex items-center gap-x-1.5">
+                <IconComponent className="h-4 w-4 text-resume-theme" />
+                {field.link.trim() ? (
                   <a href={field.link} target="_blank" rel="noreferrer">
                     {field.label || field.icon}
                   </a>
-                </div>
-              )
+                ) : (
+                  <span>{field.label}</span>
+                )}
+              </div>
             )
           })}
         </div>

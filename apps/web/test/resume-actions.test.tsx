@@ -465,6 +465,99 @@ function EditingWorkspace() {
   )
 }
 
+it('adds an immediately editable Basics field and saves plain text in the shared preview draft', async () => {
+  useResumeStore.getState().initializeResume({
+    id: 'draft',
+    title: 'Resume',
+    data: structuredClone(defaultResumeData) as ResumeData,
+  })
+  render(<EditingWorkspace />)
+  fireEvent.click(screen.getByRole('button', { name: 'Add field' }))
+  const text = screen.getByRole('textbox', { name: 'Field 1 text' })
+  expect(document.activeElement).toBe(text)
+  const preview = screen.getByTestId('preview')
+  expect(within(preview).queryByText('Link')).toBeNull()
+  fireEvent.change(text, { target: { value: 'Work authorization: EU' } })
+  expect(within(preview).getByText('Work authorization: EU')).toBeTruthy()
+  expect(within(preview).queryByRole('link', { name: 'Work authorization: EU' })).toBeNull()
+  await act(async () => vi.advanceTimersByTimeAsync(500))
+  expect(api.update).toHaveBeenLastCalledWith(
+    'draft',
+    expect.objectContaining({
+      data: expect.objectContaining({
+        basics: expect.objectContaining({
+          customFields: [{ icon: 'Link', label: 'Work authorization: EU', link: '' }],
+        }),
+      }),
+    }),
+  )
+})
+
+it('keeps Basics field icons, optional links and text together when moving and deleting fields', async () => {
+  const data = structuredClone(defaultResumeData) as ResumeData
+  data.basics.customFields = [
+    { icon: 'LegacyIcon', label: 'Legacy portfolio', link: 'https://legacy.example.com' },
+    { icon: 'Mail', label: 'Contact', link: '' },
+  ]
+  useResumeStore.getState().initializeResume({ id: 'draft', title: 'Resume', data })
+  const view = render(<EditingWorkspace />)
+  const preview = screen.getByTestId('preview')
+  expect(screen.getByRole('button', { name: 'Move field 1 up' }).hasAttribute('disabled')).toBe(
+    true,
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Choose icon for field 2' }))
+  const search = screen.getByRole('textbox', { name: 'Search for an icon' })
+  fireEvent.change(search, { target: { value: 'no-such-icon' } })
+  expect(screen.getByText('No icons found')).toBeTruthy()
+  expect(useResumeStore.getState().isDirty).toBe(false)
+  fireEvent.change(search, { target: { value: 'git' } })
+  expect(screen.queryByRole('button', { name: 'Mail icon' })).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Github icon' }))
+  expect(screen.queryByRole('textbox', { name: 'Search for an icon' })).toBeNull()
+  fireEvent.change(screen.getByRole('textbox', { name: 'Field 2 text' }), {
+    target: { value: 'GitHub profile' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Edit link for field 2' }))
+  fireEvent.change(screen.getByRole('textbox', { name: 'Field 2 URL' }), {
+    target: { value: 'https://github.com/ada' },
+  })
+  expect(within(preview).getByRole('link', { name: 'GitHub profile' }).getAttribute('href')).toBe(
+    'https://github.com/ada',
+  )
+  await act(async () => {
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Field 2 URL' }), { key: 'Escape' })
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Move field 2 up' }))
+  expect((screen.getByRole('textbox', { name: 'Field 1 text' }) as HTMLInputElement).value).toBe(
+    'GitHub profile',
+  )
+  expect(
+    within(preview)
+      .getAllByRole('link')
+      .map((link) => link.textContent),
+  ).toEqual(['GitHub profile', 'Legacy portfolio'])
+  fireEvent.click(screen.getByRole('button', { name: 'Edit link for field 1' }))
+  expect((screen.getByRole('textbox', { name: 'Field 1 URL' }) as HTMLInputElement).value).toBe(
+    'https://github.com/ada',
+  )
+  fireEvent.change(screen.getByRole('textbox', { name: 'Field 1 URL' }), { target: { value: '' } })
+  expect(within(preview).queryByRole('link', { name: 'GitHub profile' })).toBeNull()
+  expect(within(preview).getByText('GitHub profile')).toBeTruthy()
+  await act(async () => {
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Field 1 URL' }), { key: 'Escape' })
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Remove field 2' }))
+  expect(within(preview).queryByText('Legacy portfolio')).toBeNull()
+  await act(async () => vi.advanceTimersByTimeAsync(500))
+  const saved = updateResumeSchema.parse(api.update.mock.lastCall![1]).data!
+  expect(saved.basics.customFields).toEqual([{ icon: 'Github', label: 'GitHub profile', link: '' }])
+  view.unmount()
+  useResumeStore.getState().initializeResume({ id: 'draft', title: 'Resume', data: saved })
+  render(<ResumeDocument />)
+  expect(screen.getByText('GitHub profile')).toBeTruthy()
+  expect(screen.queryByRole('link', { name: 'GitHub profile' })).toBeNull()
+})
+
 it('offers the complete section catalog and saves a new language in the same draft used by preview and print', async () => {
   useResumeStore.getState().initializeResume({
     id: 'draft',
