@@ -1,15 +1,15 @@
-import { experienceSchema } from './experience';
-import { educationSchema } from './education';
-import { projectsSchema } from './projects';
-import { skillsSchema } from './skills';
-import { customModuleSchema, type CustomModule } from './custom';
-import { contentModuleSchemas } from './content';
-import z from 'zod';
+import { experienceSchema } from './experience'
+import { educationSchema } from './education'
+import { projectsSchema } from './projects'
+import { skillsSchema } from './skills'
+import { customModuleSchema, type CustomModule } from './custom'
+import { contentModuleSchemas } from './content'
+import z from 'zod'
 
 export const moduleSchema = z.object({
   name: z.string(),
   visible: z.boolean().default(true),
-});
+})
 
 export const builtInModulesSchema = z.object({
   education: moduleSchema.extend({
@@ -35,25 +35,33 @@ export const builtInModulesSchema = z.object({
     type: z.literal('skills').optional(),
     items: z.array(skillsSchema),
   }),
-});
+})
 
-export type Module = z.infer<typeof moduleSchema>;
-export type BuiltInModules = z.infer<typeof builtInModulesSchema>;
-const optionalModulesSchema = z.object(contentModuleSchemas).partial();
-export type Modules = BuiltInModules & z.infer<typeof optionalModulesSchema> & Record<`custom-${string}`, CustomModule>;
+export type Module = z.infer<typeof moduleSchema>
+export type BuiltInModules = z.infer<typeof builtInModulesSchema>
+const optionalModulesSchema = z.object(contentModuleSchemas).partial()
+export type Modules = BuiltInModules &
+  z.infer<typeof optionalModulesSchema> &
+  Record<`custom-${string}`, CustomModule>
 
-export const modulesSchema: z.ZodType<Modules> = builtInModulesSchema.extend(optionalModulesSchema.shape)
+export const modulesSchema: z.ZodType<Modules> = builtInModulesSchema
+  .extend(optionalModulesSchema.shape)
   .catchall(customModuleSchema)
   .superRefine((modules, context) => {
     for (const [key, module] of Object.entries(modules)) {
-      if (module !== undefined && key !== module.id) context.addIssue({ code: 'custom', path: [key, 'id'], message: 'Section ID must match its key' });
+      if (module !== undefined && key !== module.id)
+        context.addIssue({
+          code: 'custom',
+          path: [key, 'id'],
+          message: 'Section ID must match its key',
+        })
     }
-  }) as z.ZodType<Modules>;
+  }) as z.ZodType<Modules>
 
 export const defaultModule: Module = {
   name: '',
   visible: true,
-};
+}
 
 export const defaultModules: Modules = {
   education: {
@@ -85,12 +93,12 @@ export const defaultModules: Modules = {
     visible: true,
     items: [],
   },
-};
+}
 
-export * from './basics';
-export * from './education';
-export * from './experience';
-export * from './projects';
-export * from './custom';
-export * from './skills';
-export * from './content';
+export * from './basics'
+export * from './education'
+export * from './experience'
+export * from './projects'
+export * from './custom'
+export * from './skills'
+export * from './content'

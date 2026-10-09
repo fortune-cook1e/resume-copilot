@@ -1,9 +1,9 @@
-'use client';
+'use client'
 
-import { Suspense, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { signIn } from '@/lib/auth-client';
-import { Button } from '@/components/ui/button';
+import { Suspense, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { signIn } from '@/lib/auth-client'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -11,36 +11,36 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
+} from '@/components/ui/card'
+import { Loader2 } from 'lucide-react'
 
 function GoogleLogin() {
-  const searchParams = useSearchParams();
-  const [pending, setPending] = useState(false);
-  const consentQuery = searchParams.get('mcp_consent');
+  const searchParams = useSearchParams()
+  const [pending, setPending] = useState(false)
+  const consentQuery = searchParams.get('mcp_consent')
   const returnToConsent =
     consentQuery?.startsWith('?') && consentQuery.length < 4096
       ? `/oauth/consent${consentQuery}`
-      : '/dashboard/resumes';
-  const [error, setError] = useState<string | null>(null);
+      : '/dashboard/resumes'
+  const [error, setError] = useState<string | null>(null)
 
   const startLogin = async () => {
-    if (pending) return;
-    setPending(true);
-    setError(null);
+    if (pending) return
+    setPending(true)
+    setError(null)
     try {
       const result = await signIn.social({
         provider: 'google',
         callbackURL: returnToConsent,
         errorCallbackURL: '/login?error=google',
-      });
-      if (result.error) setError('Could not start Google sign-in. Please try again.');
+      })
+      if (result.error) setError('Could not start Google sign-in. Please try again.')
     } catch {
-      setError('Could not start Google sign-in. Please try again.');
+      setError('Could not start Google sign-in. Please try again.')
     } finally {
-      setPending(false);
+      setPending(false)
     }
-  };
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 px-4">
@@ -73,7 +73,7 @@ function GoogleLogin() {
         </CardFooter>
       </Card>
     </div>
-  );
+  )
 }
 
 export default function LoginPage() {
@@ -81,5 +81,5 @@ export default function LoginPage() {
     <Suspense>
       <GoogleLogin />
     </Suspense>
-  );
+  )
 }

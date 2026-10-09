@@ -1,7 +1,7 @@
-'use client';
+'use client'
 
-import { usePathname } from 'next/navigation';
-import Link from 'next/link';
+import { usePathname } from 'next/navigation'
+import Link from 'next/link'
 import {
   Sidebar,
   SidebarContent,
@@ -14,11 +14,11 @@ import {
   SidebarMenuItem,
   SidebarFooter,
   SidebarRail,
-} from '@/components/ui/sidebar';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { FileText, User } from 'lucide-react';
-import { useSession } from '@/lib/auth-client';
-import { SignOutButton } from '@/components/dashboard/SignOutButton';
+} from '@/components/ui/sidebar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { FileText, User } from 'lucide-react'
+import { useSession } from '@/lib/auth-client'
+import { SignOutButton } from '@/components/dashboard/SignOutButton'
 
 const navItems = [
   {
@@ -31,19 +31,19 @@ const navItems = [
     href: '/dashboard/profile',
     icon: User,
   },
-];
+]
 
 export function DashboardSidebar() {
-  const pathname = usePathname();
-  const { data: session } = useSession();
+  const pathname = usePathname()
+  const { data: session } = useSession()
   const userInitials = session?.user?.name
     ? session.user.name
         .split(' ')
-        .map(n => n[0])
+        .map((n) => n[0])
         .join('')
         .toUpperCase()
         .slice(0, 2)
-    : '?';
+    : '?'
 
   return (
     <Sidebar>
@@ -61,7 +61,7 @@ export function DashboardSidebar() {
           <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map(item => (
+              {navItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
                     <Link href={item.href}>
@@ -91,5 +91,5 @@ export function DashboardSidebar() {
 
       <SidebarRail />
     </Sidebar>
-  );
+  )
 }

@@ -1,17 +1,17 @@
-import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
-import { QueryProvider } from '@/components/query-provider';
-import './globals.css';
+import type { Metadata } from 'next'
+import { Geist, Geist_Mono } from 'next/font/google'
+import { QueryProvider } from '@/components/query-provider'
+import './globals.css'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
-});
+})
 
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
-});
+})
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://resume-copilot.fortuncookie.xyz'),
@@ -33,12 +33,12 @@ export const metadata: Metadata = {
     title: 'Resume Copilot',
     description: 'A workspace for writing and refining your resume for your next role.',
   },
-};
+}
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   return (
     <html lang="en">
@@ -46,5 +46,5 @@ export default function RootLayout({
         <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
-  );
+  )
 }

@@ -1,6 +1,6 @@
-import { useResumeStore } from '@/stores/resume-store';
-import Link from './Link';
-import PreviewBlock from '../PreviewBlock';
+import { useResumeStore } from '@/stores/resume-store'
+import Link from './Link'
+import PreviewBlock from '../PreviewBlock'
 import {
   Github,
   Linkedin,
@@ -12,16 +12,16 @@ import {
   MapPin,
   Globe,
   Link as LinkIcon,
-} from 'lucide-react';
+} from 'lucide-react'
 
 const Basics = () => {
-  const { resume } = useResumeStore();
+  const { resume } = useResumeStore()
 
-  if (!resume) return null;
+  if (!resume) return null
 
   const {
     basics: { name, headline, location, phone, email, website, picture, customFields },
-  } = resume;
+  } = resume
 
   const iconMap: Record<string, React.FC<React.SVGProps<SVGSVGElement>>> = {
     Link: LinkIcon,
@@ -34,10 +34,14 @@ const Basics = () => {
     Phone: PhoneIcon,
     MapPin,
     Globe,
-  };
+  }
 
   return (
-    <PreviewBlock sectionId="basics" label="basics" className="flex items-start gap-4 border-b border-resume-theme pb-5">
+    <PreviewBlock
+      sectionId="basics"
+      label="basics"
+      className="flex items-start gap-4 border-b border-resume-theme pb-5"
+    >
       {/* Todo: Add profile picture support (currently requires custom template with image URL in basics.picture.url) */}
       {/* {picture.url && (
         <img
@@ -85,7 +89,7 @@ const Basics = () => {
             </div>
           )}
           {customFields.map((field, index) => {
-            const IconComponent = iconMap[field.icon] || LinkIcon;
+            const IconComponent = iconMap[field.icon] || LinkIcon
             return (
               field.link && (
                 <div key={index} className="flex items-center gap-x-1.5">
@@ -95,12 +99,12 @@ const Basics = () => {
                   </a>
                 </div>
               )
-            );
+            )
           })}
         </div>
       </div>
     </PreviewBlock>
-  );
-};
+  )
+}
 
-export default Basics;
+export default Basics

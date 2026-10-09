@@ -1,7 +1,7 @@
-'use client';
+'use client'
 
-import { useState, useEffect, useRef } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect, useRef } from 'react'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -9,10 +9,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Field, FieldLabel, FieldDescription, FieldGroup, FieldError } from '@/components/ui/field';
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Field, FieldLabel, FieldDescription, FieldGroup, FieldError } from '@/components/ui/field'
 import {
   Select,
   SelectContent,
@@ -20,34 +20,34 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { createResume, updateResume } from '@/services/resume';
-import { sampleResume } from '@/types/resume/sample';
-import { defaultResumeData, type ResumeItem, resumeSchema } from '@resume-copilot/contracts';
+} from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
+import { createResume, updateResume } from '@/services/resume'
+import { sampleResume } from '@/types/resume/sample'
+import { defaultResumeData, type ResumeItem, resumeSchema } from '@resume-copilot/contracts'
 
-import { Controller, useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { Controller, useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 
 interface ResumeDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  mode: 'create' | 'edit';
-  onSuccess?: () => void;
-  resume?: ResumeItem;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  mode: 'create' | 'edit'
+  onSuccess?: () => void
+  resume?: ResumeItem
 }
 
 const resumeDialogSchema = resumeSchema
   .pick({ title: true, description: true, visibility: true })
-  .required();
-type ResumeDialogValues = z.infer<typeof resumeDialogSchema>;
+  .required()
+type ResumeDialogValues = z.infer<typeof resumeDialogSchema>
 
 export function ResumeDialog({ open, onOpenChange, mode, onSuccess, resume }: ResumeDialogProps) {
-  const [useTemplate, setUseTemplate] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState(false);
-  const saving = useRef(false);
+  const [useTemplate, setUseTemplate] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState(false)
+  const saving = useRef(false)
   const { handleSubmit, reset, control } = useForm<ResumeDialogValues>({
     resolver: zodResolver(resumeDialogSchema),
     defaultValues: {
@@ -55,9 +55,9 @@ export function ResumeDialog({ open, onOpenChange, mode, onSuccess, resume }: Re
       description: resume?.description || '',
       visibility: resume?.visibility || 'private',
     },
-  });
+  })
 
-  const isCreate = mode === 'create';
+  const isCreate = mode === 'create'
 
   // Reset form when dialog opens/closes or resume changes
   useEffect(() => {
@@ -66,43 +66,48 @@ export function ResumeDialog({ open, onOpenChange, mode, onSuccess, resume }: Re
         title: resume?.title || '',
         description: resume?.description || '',
         visibility: resume?.visibility || 'private',
-      });
-      setUseTemplate(false);
-      setSaveError(false);
+      })
+      setUseTemplate(false)
+      setSaveError(false)
     }
-  }, [open, resume, reset]);
+  }, [open, resume, reset])
 
   const onSubmit = async (values: ResumeDialogValues) => {
-    if (saving.current) return;
-    saving.current = true;
-    setIsSaving(true);
-    setSaveError(false);
+    if (saving.current) return
+    saving.current = true
+    setIsSaving(true)
+    setSaveError(false)
 
     try {
-      const initialResumeData = useTemplate ? sampleResume : defaultResumeData;
+      const initialResumeData = useTemplate ? sampleResume : defaultResumeData
 
       if (isCreate) {
         await createResume({
           ...values,
           data: initialResumeData,
-        });
+        })
       } else if (resume) {
         await updateResume(resume.id, {
           ...values,
-        });
+        })
       }
-      onOpenChange(false);
-      onSuccess?.();
+      onOpenChange(false)
+      onSuccess?.()
     } catch {
-      setSaveError(true);
+      setSaveError(true)
     } finally {
-      saving.current = false;
-      setIsSaving(false);
+      saving.current = false
+      setIsSaving(false)
     }
-  };
+  }
 
   return (
-    <Dialog open={open} onOpenChange={nextOpen => { if (!saving.current) onOpenChange(nextOpen); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!saving.current) onOpenChange(nextOpen)
+      }}
+    >
       <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
           <DialogTitle>{isCreate ? 'Create new resume' : 'Edit resume'}</DialogTitle>
@@ -161,11 +166,7 @@ export function ResumeDialog({ open, onOpenChange, mode, onSuccess, resume }: Re
               render={({ field }) => (
                 <Field>
                   <FieldLabel htmlFor="visibility">Visibility</FieldLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    disabled={isSaving}
-                  >
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isSaving}>
                     <SelectTrigger id="visibility" className="w-full">
                       <SelectValue placeholder="Select visibility" />
                     </SelectTrigger>
@@ -202,7 +203,8 @@ export function ResumeDialog({ open, onOpenChange, mode, onSuccess, resume }: Re
 
           {saveError ? (
             <p role="alert" className="text-sm text-destructive">
-              {isCreate ? 'Could not create this resume.' : 'Could not save this resume.'} Your changes are still here. Please try again.
+              {isCreate ? 'Could not create this resume.' : 'Could not save this resume.'} Your
+              changes are still here. Please try again.
             </p>
           ) : null}
 
@@ -222,5 +224,5 @@ export function ResumeDialog({ open, onOpenChange, mode, onSuccess, resume }: Re
         </form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

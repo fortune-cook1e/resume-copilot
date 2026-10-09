@@ -1,20 +1,20 @@
-'use client';
+'use client'
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Copy, Eye, EyeOff, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+} from '@/components/ui/dropdown-menu'
+import { Copy, Eye, EyeOff, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 
 interface ItemActionsProps {
-  isVisible: boolean;
-  onToggleVisibility: () => void;
-  onEdit: () => void;
-  onRemove: () => void;
-  onDuplicate: () => void;
+  isVisible: boolean
+  onToggleVisibility: () => void
+  onEdit: () => void
+  onRemove: () => void
+  onDuplicate: () => void
 }
 
 export default function ItemActions({
@@ -27,11 +27,7 @@ export default function ItemActions({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="size-7 shrink-0 text-muted-foreground"
-        >
+        <Button variant="ghost" size="sm" className="size-7 shrink-0 text-muted-foreground">
           <span className="sr-only">Open menu</span>
           <MoreHorizontal className="h-4 w-4" />
         </Button>
@@ -54,12 +50,15 @@ export default function ItemActions({
           <Pencil className="mr-2 h-4 w-4" />
           <span>Edit</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={onDuplicate}><Copy className="mr-2 h-4 w-4" />Duplicate</DropdownMenuItem>
+        <DropdownMenuItem onClick={onDuplicate}>
+          <Copy className="mr-2 h-4 w-4" />
+          Duplicate
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={onRemove} className="text-red-600 focus:text-red-600">
           <Trash2 className="mr-2 h-4 w-4" />
           <span>Remove</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  )
 }

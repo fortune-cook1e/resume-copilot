@@ -1,5 +1,5 @@
-import { defaultItem, itemSchema, urlSchema } from './../common/';
-import { z } from 'zod';
+import { defaultItem, itemSchema, urlSchema } from './../common/'
+import { z } from 'zod'
 
 export const projectsSchema = itemSchema.extend({
   name: z.string(),
@@ -7,9 +7,9 @@ export const projectsSchema = itemSchema.extend({
   date: z.string(),
   website: urlSchema,
   summary: z.string(),
-});
+})
 
-export type Projects = z.infer<typeof projectsSchema>;
+export type Projects = z.infer<typeof projectsSchema>
 export const defaultProjects: Projects = {
   ...defaultItem,
   name: '',
@@ -21,4 +21,4 @@ export const defaultProjects: Projects = {
     label: '',
   },
   summary: '',
-};
+}

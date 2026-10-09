@@ -1,33 +1,41 @@
-'use client';
+'use client'
 
-import { useResumeStore } from '@/stores/resume-store';
-import type { Custom, CustomModuleId } from '@resume-copilot/contracts';
-import { renderMarkdown } from '@/lib/markdown';
-import Link from './Link';
-import PreviewBlock from '../PreviewBlock';
+import { useResumeStore } from '@/stores/resume-store'
+import type { Custom, CustomModuleId } from '@resume-copilot/contracts'
+import { renderMarkdown } from '@/lib/markdown'
+import Link from './Link'
+import PreviewBlock from '../PreviewBlock'
 
 interface CustomProps {
-  moduleId: CustomModuleId;
+  moduleId: CustomModuleId
 }
 
 const Custom = ({ moduleId }: CustomProps) => {
-  const { resume } = useResumeStore();
+  const { resume } = useResumeStore()
 
-  if (!resume) return null;
+  if (!resume) return null
 
-  const customModule = resume.modules[moduleId];
-  if (!customModule || !customModule.visible || customModule.items.length === 0) return null;
+  const customModule = resume.modules[moduleId]
+  if (!customModule || !customModule.visible || customModule.items.length === 0) return null
 
-  const visibleItems = (customModule.items as Custom[]).filter(item => item.visible && item.name.trim());
-  if (!visibleItems.length) return null;
+  const visibleItems = (customModule.items as Custom[]).filter(
+    (item) => item.visible && item.name.trim(),
+  )
+  if (!visibleItems.length) return null
 
   return (
     <div className="space-y-1">
       <h2 className="text-xl font-semibold text-resume-theme">{customModule.name}</h2>
 
       <div className="space-y-3">
-        {visibleItems.map(item => (
-          <PreviewBlock key={item.id} sectionId={moduleId} itemId={item.id} label={item.name || customModule.name} className="space-y-1">
+        {visibleItems.map((item) => (
+          <PreviewBlock
+            key={item.id}
+            sectionId={moduleId}
+            itemId={item.id}
+            label={item.name || customModule.name}
+            className="space-y-1"
+          >
             <div className="flex justify-between gap-4">
               <div className="font-semibold text-base">{item.name}</div>
               <div className="text-sm flex-shrink-0">{item.date}</div>
@@ -54,7 +62,7 @@ const Custom = ({ moduleId }: CustomProps) => {
         ))}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Custom;
+export default Custom

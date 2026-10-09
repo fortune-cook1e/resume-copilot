@@ -1,10 +1,10 @@
-'use client';
+'use client'
 
-import * as React from 'react';
-import { GripVerticalIcon } from 'lucide-react';
-import { Group, Separator, Panel } from 'react-resizable-panels';
+import * as React from 'react'
+import { GripVerticalIcon } from 'lucide-react'
+import { Group, Separator, Panel } from 'react-resizable-panels'
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/utils'
 
 function ResizableGroup({ className, ...props }: React.ComponentProps<typeof Group>) {
   return (
@@ -13,11 +13,11 @@ function ResizableGroup({ className, ...props }: React.ComponentProps<typeof Gro
       className={cn('flex h-full w-full aria-[orientation=vertical]:flex-col', className)}
       {...props}
     />
-  );
+  )
 }
 
 function ResizablePanel({ ...props }: React.ComponentProps<typeof Panel>) {
-  return <Panel data-slot="resizable-panel" {...props} />;
+  return <Panel data-slot="resizable-panel" {...props} />
 }
 
 function ResizableHandle({
@@ -25,7 +25,7 @@ function ResizableHandle({
   className,
   ...props
 }: React.ComponentProps<typeof Separator> & {
-  withHandle?: boolean;
+  withHandle?: boolean
 }) {
   return (
     <Separator
@@ -53,7 +53,7 @@ function ResizableHandle({
         </div>
       )}
     </Separator>
-  );
+  )
 }
 
-export { ResizableGroup, ResizablePanel, ResizableHandle };
+export { ResizableGroup, ResizablePanel, ResizableHandle }

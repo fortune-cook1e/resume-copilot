@@ -49,15 +49,15 @@ Without connecting Codex, users can maintain their experience library and start 
 
 These are behaviors for future design and testing, not claims of implementation or verification.
 
-| Situation | Expected result |
-| --- | --- |
-| Codex is not connected | Users can still maintain experience, create and edit resumes, preview, and export PDFs |
-| Codex requests resume creation | It may read only the user's confirmed experience; it submits an independent draft without modifying other resumes or the library |
-| Codex requests an edit | It may read only the resume explicitly selected by the user; a proposed difference needs approval and rejection leaves content unchanged |
-| A user edits a resume after a proposal was created | The stale proposal cannot overwrite the newer version; a new proposal must use current content |
-| A JD mentions an unconfirmed skill or outcome | It must not become a claim about the user; missing facts must be checked |
-| A user edits one resume or the library | Neither automatically updates the other or previously generated resumes |
-| A user has no JD or only a role direction | A general role-specific resume can be created, without claiming to target a particular company |
+| Situation                                          | Expected result                                                                                                                          |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Codex is not connected                             | Users can still maintain experience, create and edit resumes, preview, and export PDFs                                                   |
+| Codex requests resume creation                     | It may read only the user's confirmed experience; it submits an independent draft without modifying other resumes or the library         |
+| Codex requests an edit                             | It may read only the resume explicitly selected by the user; a proposed difference needs approval and rejection leaves content unchanged |
+| A user edits a resume after a proposal was created | The stale proposal cannot overwrite the newer version; a new proposal must use current content                                           |
+| A JD mentions an unconfirmed skill or outcome      | It must not become a claim about the user; missing facts must be checked                                                                 |
+| A user edits one resume or the library             | Neither automatically updates the other or previously generated resumes                                                                  |
+| A user has no JD or only a role direction          | A general role-specific resume can be created, without claiming to target a particular company                                           |
 
 ## 7. Open Design Questions and Reference
 

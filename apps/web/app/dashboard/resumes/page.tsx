@@ -1,30 +1,40 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ResumeDialog } from '@/components/dashboard/ResumeDialog';
-import { ResumeCard } from '@/components/dashboard/ResumeCard';
-import { Skeleton } from '@/components/ui/skeleton';
-import { FileText } from 'lucide-react';
-import { getResumes } from '@/services/resume';
-import { Button } from '@/components/ui/button';
-import { useSession } from '@/lib/auth-client';
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { ResumeDialog } from '@/components/dashboard/ResumeDialog'
+import { ResumeCard } from '@/components/dashboard/ResumeCard'
+import { Skeleton } from '@/components/ui/skeleton'
+import { FileText } from 'lucide-react'
+import { getResumes } from '@/services/resume'
+import { Button } from '@/components/ui/button'
+import { useSession } from '@/lib/auth-client'
 
 export default function ResumesPage() {
-  const [open, setOpen] = useState(false);
-  const { data: session } = useSession();
-  const userId = session?.user.id;
-  const queryClient = useQueryClient();
-  const queryKey = ['resumes', userId] as const;
+  const [open, setOpen] = useState(false)
+  const { data: session } = useSession()
+  const userId = session?.user.id
+  const queryClient = useQueryClient()
+  const queryKey = ['resumes', userId] as const
   // Account-scoped server state; Authentication cancels/clears it on identity change.
-  const { data: resumes = [], isPending, isFetching, isError, refetch } = useQuery({
+  const {
+    data: resumes = [],
+    isPending,
+    isFetching,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey,
     queryFn: ({ signal }) => getResumes(signal),
     enabled: !!userId,
     retry: false,
-  });
-  const refreshResumes = () => { void refetch(); };
-  const invalidateResumes = () => { void queryClient.invalidateQueries({ queryKey, exact: true }); };
+  })
+  const refreshResumes = () => {
+    void refetch()
+  }
+  const invalidateResumes = () => {
+    void queryClient.invalidateQueries({ queryKey, exact: true })
+  }
 
   return (
     <div className="space-y-6">
@@ -72,9 +82,14 @@ export default function ResumesPage() {
       )}
 
       {isError ? (
-        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4">
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4"
+        >
           <p className="text-sm text-destructive">Could not load your resumes. Please try again.</p>
-          <Button variant="outline" disabled={isFetching} onClick={refreshResumes}>Try again</Button>
+          <Button variant="outline" disabled={isFetching} onClick={refreshResumes}>
+            Try again
+          </Button>
         </div>
       ) : null}
 
@@ -98,7 +113,7 @@ export default function ResumesPage() {
       {/* Resume grid */}
       {!isPending && resumes.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {resumes.map(resume => (
+          {resumes.map((resume) => (
             <ResumeCard
               key={resume.id}
               resume={resume}
@@ -109,5 +124,5 @@ export default function ResumesPage() {
         </div>
       )}
     </div>
-  );
+  )
 }

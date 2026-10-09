@@ -1,20 +1,20 @@
-'use client';
+'use client'
 
-import { useEffect } from 'react';
-import Link from 'next/link';
-import { AlertTriangle, Home, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useEffect } from 'react'
+import Link from 'next/link'
+import { AlertTriangle, Home, RefreshCw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 export default function Error({
   error,
   reset,
 }: {
-  error: Error & { digest?: string };
-  reset: () => void;
+  error: Error & { digest?: string }
+  reset: () => void
 }) {
   useEffect(() => {
-    console.error('[ErrorBoundary]', error);
-  }, [error]);
+    console.error('[ErrorBoundary]', error)
+  }, [error])
 
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center gap-6 p-6 text-center">
@@ -24,8 +24,8 @@ export default function Error({
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold text-foreground">We hit a snag</h1>
         <p className="max-w-md text-sm text-muted-foreground">
-          Something went wrong while loading this page. Give it another try or head back to a
-          safe place.
+          Something went wrong while loading this page. Give it another try or head back to a safe
+          place.
         </p>
         {error.digest && <p className="text-xs text-muted-foreground">Error ID: {error.digest}</p>}
       </div>
@@ -42,5 +42,5 @@ export default function Error({
         </Button>
       </div>
     </div>
-  );
+  )
 }

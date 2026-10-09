@@ -1,4 +1,4 @@
-import { useToggle } from '@/hooks/use-toggle';
+import { useToggle } from '@/hooks/use-toggle'
 
 export function useDialog() {
   const {
@@ -6,12 +6,12 @@ export function useDialog() {
     toggle: toggleDialog,
     setTrue: openDialog,
     setFalse: closeDialog,
-  } = useToggle(false);
+  } = useToggle(false)
 
   return {
     isOpen: isDialogOpen,
     openDialog,
     closeDialog,
     toggleDialog,
-  };
+  }
 }

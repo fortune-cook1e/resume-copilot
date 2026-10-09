@@ -1,17 +1,17 @@
-import { FC, ReactNode } from 'react';
-import { cn } from '@/lib/utils';
-import type { URL } from '@resume-copilot/contracts';
+import { FC, ReactNode } from 'react'
+import { cn } from '@/lib/utils'
+import type { URL } from '@resume-copilot/contracts'
 
 interface Props {
-  url: URL;
-  icon?: ReactNode;
-  label?: string;
-  classname?: string;
+  url: URL
+  icon?: ReactNode
+  label?: string
+  classname?: string
 }
 
 // Tip: // ph ph-bold classes come from https://github.com/phosphor-icons/web
 const Link: FC<Props> = ({ url, icon, label, classname }) => {
-  if (!url.link) return null;
+  if (!url.link) return null
 
   return (
     <div className="flex items-center gap-x-1.5">
@@ -25,7 +25,7 @@ const Link: FC<Props> = ({ url, icon, label, classname }) => {
         {label || url.label || url.link}
       </a>
     </div>
-  );
-};
+  )
+}
 
-export default Link;
+export default Link

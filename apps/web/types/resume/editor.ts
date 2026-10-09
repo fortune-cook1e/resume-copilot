@@ -1,8 +1,8 @@
-import type { Modules } from '@resume-copilot/contracts';
+import type { Modules } from '@resume-copilot/contracts'
 
 // Transient UI state, never part of the saved resume.
-export type EditorSelection = { sectionId: 'basics' | keyof Modules; itemId?: string };
+export type EditorSelection = { sectionId: 'basics' | keyof Modules; itemId?: string }
 export interface EditorSelectionProps {
-  selection?: EditorSelection | null;
-  onSelect?: (selection: EditorSelection | null) => void;
+  selection?: EditorSelection | null
+  onSelect?: (selection: EditorSelection | null) => void
 }

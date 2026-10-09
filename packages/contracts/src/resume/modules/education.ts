@@ -1,5 +1,5 @@
-import { defaultItem, itemSchema } from './../common';
-import { z } from 'zod';
+import { defaultItem, itemSchema } from './../common'
+import { z } from 'zod'
 
 export const educationSchema = itemSchema.extend({
   university: z.string(),
@@ -7,8 +7,8 @@ export const educationSchema = itemSchema.extend({
   location: z.string(),
   date: z.string(),
   summary: z.string(),
-});
-export type Education = z.infer<typeof educationSchema>;
+})
+export type Education = z.infer<typeof educationSchema>
 
 export const defaultEducation: Education = {
   ...defaultItem,
@@ -17,4 +17,4 @@ export const defaultEducation: Education = {
   location: '',
   date: '',
   summary: '',
-};
+}

@@ -1,28 +1,37 @@
-'use client';
+'use client'
 
-import { useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { Button, buttonVariants } from '@/components/ui/button';
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
+import { useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
+import { Button, buttonVariants } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { FileText, MoreVertical, Pencil, Trash2, Eye, Clock } from 'lucide-react';
-import { deleteResume } from '@/services/resume';
-import { ResumeDialog } from './ResumeDialog';
-import type { ResumeItem } from '@resume-copilot/contracts';
-import { useToggle } from '@/hooks';
+} from '@/components/ui/dropdown-menu'
+import { FileText, MoreVertical, Pencil, Trash2, Eye, Clock } from 'lucide-react'
+import { deleteResume } from '@/services/resume'
+import { ResumeDialog } from './ResumeDialog'
+import type { ResumeItem } from '@resume-copilot/contracts'
+import { useToggle } from '@/hooks'
 
 interface ResumeCardProps {
-  resume: ResumeItem;
-  onDeleted?: () => void;
-  onEdit?: () => void;
+  resume: ResumeItem
+  onDeleted?: () => void
+  onEdit?: () => void
 }
 
 function formatDate(dateStr: string | Date) {
@@ -30,35 +39,35 @@ function formatDate(dateStr: string | Date) {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-  });
+  })
 }
 
 export function ResumeCard({ resume, onDeleted, onEdit }: ResumeCardProps) {
-  const router = useRouter();
-  const { value: open, toggle: toggleDialog } = useToggle();
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState(false);
-  const actionsButton = useRef<HTMLButtonElement>(null);
+  const router = useRouter()
+  const { value: open, toggle: toggleDialog } = useToggle()
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState(false)
+  const actionsButton = useRef<HTMLButtonElement>(null)
 
   const handleDelete = async () => {
-    if (deleting) return;
-    setDeleting(true);
-    setDeleteError(false);
+    if (deleting) return
+    setDeleting(true)
+    setDeleteError(false)
     try {
-      await deleteResume(resume.id);
-      setDeleteOpen(false);
-      onDeleted?.();
+      await deleteResume(resume.id)
+      setDeleteOpen(false)
+      onDeleted?.()
     } catch {
-      setDeleteError(true);
+      setDeleteError(true)
     } finally {
-      setDeleting(false);
+      setDeleting(false)
     }
-  };
+  }
 
   const handlePreview = () => {
-    router.push(`/builder/${encodeURIComponent(resume.id)}`);
-  };
+    router.push(`/builder/${encodeURIComponent(resume.id)}`)
+  }
 
   return (
     <>
@@ -69,19 +78,41 @@ export function ResumeCard({ resume, onDeleted, onEdit }: ResumeCardProps) {
         mode="edit"
         onSuccess={onEdit}
       />
-      <AlertDialog open={deleteOpen} onOpenChange={nextOpen => { if (!deleting) setDeleteOpen(nextOpen); }}>
-        <AlertDialogContent onCloseAutoFocus={event => { event.preventDefault(); actionsButton.current?.focus(); }}>
+      <AlertDialog
+        open={deleteOpen}
+        onOpenChange={(nextOpen) => {
+          if (!deleting) setDeleteOpen(nextOpen)
+        }}
+      >
+        <AlertDialogContent
+          onCloseAutoFocus={(event) => {
+            event.preventDefault()
+            actionsButton.current?.focus()
+          }}
+        >
           <AlertDialogHeader>
             <AlertDialogTitle>Delete resume?</AlertDialogTitle>
-            <AlertDialogDescription>This permanently deletes “{resume.title}”. This cannot be undone.</AlertDialogDescription>
+            <AlertDialogDescription>
+              This permanently deletes “{resume.title}”. This cannot be undone.
+            </AlertDialogDescription>
           </AlertDialogHeader>
-          {deleteError ? <p role="alert" className="text-sm text-destructive">Could not delete this resume. Please try again.</p> : null}
+          {deleteError ? (
+            <p role="alert" className="text-sm text-destructive">
+              Could not delete this resume. Please try again.
+            </p>
+          ) : null}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className={buttonVariants({ variant: 'destructive' })} disabled={deleting}
-              onClick={event => { event.preventDefault(); void handleDelete(); }}
-            >{deleting ? 'Deleting…' : 'Delete resume'}</AlertDialogAction>
+              className={buttonVariants({ variant: 'destructive' })}
+              disabled={deleting}
+              onClick={(event) => {
+                event.preventDefault()
+                void handleDelete()
+              }}
+            >
+              {deleting ? 'Deleting…' : 'Delete resume'}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -127,7 +158,13 @@ export function ResumeCard({ resume, onDeleted, onEdit }: ResumeCardProps) {
                   Preview
                 </DropdownMenuItem> */}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onSelect={() => { setDeleteError(false); setDeleteOpen(true); }}>
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={() => {
+                    setDeleteError(false)
+                    setDeleteOpen(true)
+                  }}
+                >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete
                 </DropdownMenuItem>
@@ -150,9 +187,9 @@ export function ResumeCard({ resume, onDeleted, onEdit }: ResumeCardProps) {
           </div>
 
           {/* 右下角：新增的预览按钮 */}
-          <Button 
-            variant="outline" 
-            size="default" 
+          <Button
+            variant="outline"
+            size="default"
             className="h-8 gap-1.5 text-sm font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
             onClick={handlePreview}
           >
@@ -162,5 +199,5 @@ export function ResumeCard({ resume, onDeleted, onEdit }: ResumeCardProps) {
         </CardFooter>
       </Card>
     </>
-  );
+  )
 }

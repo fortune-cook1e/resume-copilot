@@ -1,29 +1,35 @@
-'use client';
+'use client'
 
-import { useResumeStore } from '@/stores/resume-store';
-import { renderMarkdown } from '@/lib/markdown';
-import PreviewBlock from '../PreviewBlock';
+import { useResumeStore } from '@/stores/resume-store'
+import { renderMarkdown } from '@/lib/markdown'
+import PreviewBlock from '../PreviewBlock'
 
 const Education = () => {
-  const { resume } = useResumeStore();
+  const { resume } = useResumeStore()
 
-  if (!resume) return null;
+  if (!resume) return null
 
-  const { education } = resume.modules;
+  const { education } = resume.modules
 
-  if (!education.visible || education.items.length === 0) return null;
+  if (!education.visible || education.items.length === 0) return null
 
-  const visibleItems = education.items.filter(item => item.visible && item.university.trim());
+  const visibleItems = education.items.filter((item) => item.visible && item.university.trim())
 
-  if (visibleItems.length === 0) return null;
+  if (visibleItems.length === 0) return null
 
   return (
     <div className="space-y-1">
       <h2 className="text-xl font-semibold text-resume-theme">{education.name}</h2>
 
       <div className="space-y-3">
-        {visibleItems.map(item => (
-          <PreviewBlock key={item.id} sectionId="education" itemId={item.id} label={item.university || 'education'} className="flex justify-between gap-4">
+        {visibleItems.map((item) => (
+          <PreviewBlock
+            key={item.id}
+            sectionId="education"
+            itemId={item.id}
+            label={item.university || 'education'}
+            className="flex justify-between gap-4"
+          >
             <div className="flex-1 space-y-1">
               <div className="font-semibold text-base">{item.university}</div>
               <div className="text-sm">{item.major}</div>
@@ -43,7 +49,7 @@ const Education = () => {
         ))}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Education;
+export default Education

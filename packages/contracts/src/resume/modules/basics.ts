@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import { defaultUrl, urlSchema } from '../common';
+import { z } from 'zod'
+import { defaultUrl, urlSchema } from '../common'
 
 export const basicsSchema = z.object({
   name: z.string(),
@@ -14,9 +14,9 @@ export const basicsSchema = z.object({
     size: z.number().default(64),
   }),
   customFields: z.array(urlSchema).default([]),
-});
+})
 
-export type Basics = z.infer<typeof basicsSchema>;
+export type Basics = z.infer<typeof basicsSchema>
 
 export const defaultBasics: Basics = {
   name: '',
@@ -30,4 +30,4 @@ export const defaultBasics: Basics = {
     size: 64,
   },
   customFields: [],
-};
+}

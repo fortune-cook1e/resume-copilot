@@ -1,22 +1,22 @@
-import { Injectable, type OnApplicationBootstrap, type OnModuleDestroy } from '@nestjs/common';
+import { Injectable, type OnApplicationBootstrap, type OnModuleDestroy } from '@nestjs/common'
 
 @Injectable()
 export class ApplicationState implements OnApplicationBootstrap, OnModuleDestroy {
-  private ready = false;
+  private ready = false
 
   get isReady(): boolean {
-    return this.ready;
+    return this.ready
   }
 
   onApplicationBootstrap(): void {
-    this.ready = true;
+    this.ready = true
   }
 
   onModuleDestroy(): void {
-    this.beginShutdown();
+    this.beginShutdown()
   }
 
   beginShutdown(): void {
-    this.ready = false;
+    this.ready = false
   }
 }

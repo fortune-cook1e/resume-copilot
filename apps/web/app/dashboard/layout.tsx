@@ -1,15 +1,18 @@
-import { redirect } from 'next/navigation';
-import { getCurrentUser } from '@/lib/current-user';
-import { Authentication } from '@/components/authentication';
-import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
-import { Separator } from '@/components/ui/separator';
+import { redirect } from 'next/navigation'
+import { getCurrentUser } from '@/lib/current-user'
+import { Authentication } from '@/components/authentication'
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
+import { Separator } from '@/components/ui/separator'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, failure } = await getCurrentUser();
-  if (failure?.status === 401) redirect('/login');
-  if (failure) return <main role="alert">Authentication temporarily unavailable. Refresh the page to retry.</main>;
+  const { user, failure } = await getCurrentUser()
+  if (failure?.status === 401) redirect('/login')
+  if (failure)
+    return (
+      <main role="alert">Authentication temporarily unavailable. Refresh the page to retry.</main>
+    )
 
   return (
     <Authentication key={user.id} expectedUserId={user.id}>
@@ -27,5 +30,5 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </SidebarProvider>
       </TooltipProvider>
     </Authentication>
-  );
+  )
 }

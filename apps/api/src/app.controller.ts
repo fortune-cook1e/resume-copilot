@@ -1,6 +1,6 @@
-import { Controller, Get, Header, ServiceUnavailableException } from '@nestjs/common';
-import { ApplicationState } from './lifecycle/application-state';
-import { RawResponse } from './common/responses/raw-response';
+import { Controller, Get, Header, ServiceUnavailableException } from '@nestjs/common'
+import { ApplicationState } from './lifecycle/application-state'
+import { RawResponse } from './common/responses/raw-response'
 
 @RawResponse()
 @Controller('health')
@@ -10,13 +10,13 @@ export class AppController {
   @Get()
   @Header('Cache-Control', 'no-store')
   getHealth() {
-    return { status: 'ok' };
+    return { status: 'ok' }
   }
 
   @Get('ready')
   @Header('Cache-Control', 'no-store')
   getReadiness() {
-    if (!this.state.isReady) throw new ServiceUnavailableException();
-    return { status: 'ready' };
+    if (!this.state.isReady) throw new ServiceUnavailableException()
+    return { status: 'ready' }
   }
 }

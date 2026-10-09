@@ -1,23 +1,23 @@
-'use client';
+'use client'
 
-import { useSession } from '@/lib/auth-client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Mail, Calendar, Shield } from 'lucide-react';
+import { useSession } from '@/lib/auth-client'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Mail, Calendar, Shield } from 'lucide-react'
 
 function formatDate(date: string | Date) {
   return new Date(date).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-  });
+  })
 }
 
 export default function ProfilePage() {
-  const { data: session, isPending } = useSession();
+  const { data: session, isPending } = useSession()
 
   if (isPending) {
     return (
@@ -33,20 +33,20 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
-    );
+    )
   }
 
-  const user = session?.user;
-  if (!user) return null;
+  const user = session?.user
+  if (!user) return null
 
   const initials = user.name
     ? user.name
         .split(' ')
-        .map(n => n[0])
+        .map((n) => n[0])
         .join('')
         .toUpperCase()
         .slice(0, 2)
-    : '?';
+    : '?'
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -103,5 +103,5 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

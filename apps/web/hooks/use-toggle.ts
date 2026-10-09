@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from 'react'
 
 /**
  * useToggle - a simple hook to manage boolean state (open/close, true/false)
@@ -6,11 +6,11 @@ import { useState } from 'react';
  * @returns { value, setTrue, setFalse, toggle, setValue }
  */
 export function useToggle(initial = false) {
-  const [value, setValue] = useState(initial);
+  const [value, setValue] = useState(initial)
 
-  const setTrue = () => setValue(true);
-  const setFalse = () => setValue(false);
-  const toggle = () => setValue(v => !v);
+  const setTrue = () => setValue(true)
+  const setFalse = () => setValue(false)
+  const toggle = () => setValue((v) => !v)
 
   return {
     value,
@@ -18,5 +18,5 @@ export function useToggle(initial = false) {
     setFalse,
     toggle,
     setValue,
-  };
+  }
 }

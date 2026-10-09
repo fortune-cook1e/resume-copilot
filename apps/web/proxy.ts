@@ -1,23 +1,27 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { error } from '@/lib/api-response';
+import { NextRequest, NextResponse } from 'next/server'
+import { error } from '@/lib/api-response'
 
 const inPath = (pathname: string, prefix: string) =>
-  pathname === prefix || pathname.startsWith(`${prefix}/`);
+  pathname === prefix || pathname.startsWith(`${prefix}/`)
 
 export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname } = request.nextUrl
   // NestJS owns native auth/MCP protocols. Web business writes require a trusted Origin.
-  if (inPath(pathname, '/api') && !inPath(pathname, '/api/auth') && !inPath(pathname, '/api/mcp') &&
-    !['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
+  if (
+    inPath(pathname, '/api') &&
+    !inPath(pathname, '/api/auth') &&
+    !inPath(pathname, '/api/mcp') &&
+    !['GET', 'HEAD', 'OPTIONS'].includes(request.method)
+  ) {
     const publicOrigin = new URL(
       process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
-    ).origin;
-    if (request.headers.get('origin') !== publicOrigin) return error('Forbidden', 403);
+    ).origin
+    if (request.headers.get('origin') !== publicOrigin) return error('Forbidden', 403)
   }
 
-  return NextResponse.next();
+  return NextResponse.next()
 }
 
 export const config = {
   matcher: ['/api/:path*'],
-};
+}

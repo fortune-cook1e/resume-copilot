@@ -1,6 +1,6 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test'
 
-const baseURL = 'http://127.0.0.1:3100';
+const baseURL = 'http://127.0.0.1:3100'
 
 export default defineConfig({
   testDir: './test/e2e',
@@ -13,9 +13,7 @@ export default defineConfig({
     baseURL,
     trace: 'on-first-retry',
   },
-  projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-  ],
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
     command: 'pnpm exec next dev --hostname 127.0.0.1 --port 3100',
     url: baseURL,
@@ -26,4 +24,4 @@ export default defineConfig({
       BETTER_AUTH_URL: baseURL,
     },
   },
-});
+})

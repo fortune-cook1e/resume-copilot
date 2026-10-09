@@ -1,2 +1,2 @@
-export * from '@resume-copilot/contracts';
-export * from './sample';
+export * from '@resume-copilot/contracts'
+export * from './sample'

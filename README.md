@@ -37,12 +37,12 @@ pnpm dev:api
 
 NestJS owns the schema and migrations. Run these commands from the repository root:
 
-| Command | Purpose |
-| --- | --- |
+| Command            | Purpose                                                                      |
+| ------------------ | ---------------------------------------------------------------------------- |
 | `pnpm db:generate` | Generate a migration from the API schema; review the SQL before applying it. |
-| `pnpm db:migrate` | Apply pending API migrations to the selected database. |
-| `pnpm db:push` | Synchronize a disposable database directly, bypassing migration history. |
-| `pnpm db:studio` | Inspect a trusted local database with Drizzle Studio. |
+| `pnpm db:migrate`  | Apply pending API migrations to the selected database.                       |
+| `pnpm db:push`     | Synchronize a disposable database directly, bypassing migration history.     |
+| `pnpm db:studio`   | Inspect a trusted local database with Drizzle Studio.                        |
 
 Drizzle reads `DATABASE_URL` from the shell environment, **not automatically from `apps/api/.env`**. Set it explicitly and verify the host/database before running `migrate`, `push`, or `studio`:
 
@@ -79,10 +79,14 @@ See [plugin troubleshooting](docs/plugin-local-trial.md) and [raw MCP URL diagno
 ## Checks
 
 ```bash
+pnpm format        # Format source and documentation
+pnpm format:check  # Check formatting without changing files
 pnpm lint
 pnpm typecheck
 pnpm --filter @resume-copilot/web test
 pnpm --filter @resume-copilot/web build
 ```
+
+Formatting and ESLint run separately. Editor integration is optional; the formatting commands do not require a VS Code extension.
 
 API/root tests require `AUTH_TEST_DATABASE_URL` pointing to an already-migrated database named **`resume_copilot_test` only**. Run `pnpm test` after setting it; tests clear test-only rows. Never use development or production data. Real Google session renewal, ordinary Chat integration and production deployment remain unverified; the existing production Compose setup has no API service.

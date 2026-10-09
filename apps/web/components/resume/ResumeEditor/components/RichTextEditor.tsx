@@ -1,31 +1,39 @@
-'use client';
+'use client'
 
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Link from '@tiptap/extension-link';
-import TurndownService from 'turndown';
-import { marked } from 'marked';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useEditor, EditorContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import Link from '@tiptap/extension-link'
+import TurndownService from 'turndown'
+import { marked } from 'marked'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 interface RichTextEditorProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
 }
 
-const markdownToHtml = (markdown: string) => (marked.parse(markdown || '') as string) || '';
+const markdownToHtml = (markdown: string) => (marked.parse(markdown || '') as string) || ''
 
 export default function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
-  const lastValueRef = useRef(value);
-  const [linkOpen, setLinkOpen] = useState(false);
-  const [linkUrl, setLinkUrl] = useState('');
-  const [linkError, setLinkError] = useState(false);
-  const linkInputId = useId();
-  const turndownService = useMemo(() => new TurndownService({ bulletListMarker: '-' }), []);
+  const lastValueRef = useRef(value)
+  const [linkOpen, setLinkOpen] = useState(false)
+  const [linkUrl, setLinkUrl] = useState('')
+  const [linkError, setLinkError] = useState(false)
+  const linkInputId = useId()
+  const turndownService = useMemo(() => new TurndownService({ bulletListMarker: '-' }), [])
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -48,26 +56,26 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
       },
     },
     onUpdate: ({ editor }) => {
-      const html = editor.getHTML();
-      const markdown = turndownService.turndown(html).trim();
-      lastValueRef.current = markdown;
-      onChange(markdown);
+      const html = editor.getHTML()
+      const markdown = turndownService.turndown(html).trim()
+      lastValueRef.current = markdown
+      onChange(markdown)
     },
-  });
+  })
 
   useEffect(() => {
-    if (!editor) return;
-    if (value === lastValueRef.current) return;
-    editor.commands.setContent(markdownToHtml(value), false);
-    lastValueRef.current = value;
-  }, [editor, value]);
+    if (!editor) return
+    if (value === lastValueRef.current) return
+    editor.commands.setContent(markdownToHtml(value), false)
+    lastValueRef.current = value
+  }, [editor, value])
 
   const openLink = () => {
-    if (!editor) return;
-    const previousUrl = editor.getAttributes('link').href as string | undefined;
-    setLinkUrl(previousUrl || '');
-    setLinkError(false);
-  };
+    if (!editor) return
+    const previousUrl = editor.getAttributes('link').href as string | undefined
+    setLinkUrl(previousUrl || '')
+    setLinkError(false)
+  }
 
   return (
     <Dialog open={linkOpen} onOpenChange={setLinkOpen}>
@@ -114,16 +122,18 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
           >
             Numbered
           </Button>
-          <DialogTrigger asChild><Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-xs"
-            onClick={openLink}
-            disabled={!editor}
-          >
-            Link
-          </Button></DialogTrigger>
+          <DialogTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={openLink}
+              disabled={!editor}
+            >
+              Link
+            </Button>
+          </DialogTrigger>
         </div>
 
         {placeholder && !editor?.getText() && (
@@ -135,28 +145,53 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit link</DialogTitle>
-          <DialogDescription>Apply a URL to the selected text. Leave it empty to remove an existing link.</DialogDescription>
+          <DialogDescription>
+            Apply a URL to the selected text. Leave it empty to remove an existing link.
+          </DialogDescription>
         </DialogHeader>
-        <form className="space-y-4" onSubmit={event => {
-          event.preventDefault();
-          if (!editor) return;
-          const href = linkUrl.trim();
-          const chain = editor.chain().focus().extendMarkRange('link');
-          const applied = href ? chain.setLink({ href }).run() : chain.unsetLink().run();
-          if (!applied) { setLinkError(true); return; }
-          setLinkOpen(false);
-        }}>
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault()
+            if (!editor) return
+            const href = linkUrl.trim()
+            const chain = editor.chain().focus().extendMarkRange('link')
+            const applied = href ? chain.setLink({ href }).run() : chain.unsetLink().run()
+            if (!applied) {
+              setLinkError(true)
+              return
+            }
+            setLinkOpen(false)
+          }}
+        >
           <div className="space-y-2">
             <Label htmlFor={linkInputId}>URL</Label>
-            <Input id={linkInputId} inputMode="url" autoComplete="off" value={linkUrl} onChange={event => { setLinkUrl(event.target.value); setLinkError(false); }} placeholder="https://example.com" autoFocus />
-            {linkError ? <p role="alert" className="text-sm text-destructive">Could not apply this link. Check the URL and try again.</p> : null}
+            <Input
+              id={linkInputId}
+              inputMode="url"
+              autoComplete="off"
+              value={linkUrl}
+              onChange={(event) => {
+                setLinkUrl(event.target.value)
+                setLinkError(false)
+              }}
+              placeholder="https://example.com"
+              autoFocus
+            />
+            {linkError ? (
+              <p role="alert" className="text-sm text-destructive">
+                Could not apply this link. Check the URL and try again.
+              </p>
+            ) : null}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setLinkOpen(false)}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => setLinkOpen(false)}>
+              Cancel
+            </Button>
             <Button type="submit">{linkUrl.trim() ? 'Apply link' : 'Remove link'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

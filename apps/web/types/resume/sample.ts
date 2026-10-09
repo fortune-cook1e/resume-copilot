@@ -1,4 +1,4 @@
-import type { ResumeData } from '@resume-copilot/contracts';
+import type { ResumeData } from '@resume-copilot/contracts'
 
 export const sampleResume: ResumeData = {
   basics: {
@@ -141,4 +141,4 @@ export const sampleResume: ResumeData = {
       ],
     },
   },
-};
+}

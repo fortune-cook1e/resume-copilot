@@ -1,10 +1,10 @@
-'use client';
+'use client'
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/utils'
 
 interface LoadingProps {
-  className?: string;
-  text?: string;
+  className?: string
+  text?: string
 }
 
 export function Loading({ className, text = 'loading...' }: LoadingProps) {
@@ -15,5 +15,5 @@ export function Loading({ className, text = 'loading...' }: LoadingProps) {
         <p className="mt-4 text-gray-600">{text}</p>
       </div>
     </div>
-  );
+  )
 }
