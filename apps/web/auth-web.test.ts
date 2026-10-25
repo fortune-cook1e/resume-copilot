@@ -19,7 +19,7 @@ describe('authenticated resume access', () => {
   })
 
   it('routes resume CRUD and PDF export to Nest', async () => {
-    const { default: config } = await import('../next.config')
+    const { default: config } = await import('./next.config')
     const rewrites = await config.rewrites?.()
     expect(rewrites).toHaveProperty('beforeFiles')
     if (!rewrites || !('beforeFiles' in rewrites)) throw new Error('Missing beforeFiles rewrites')
@@ -40,23 +40,26 @@ describe('authenticated resume access', () => {
       ]),
     )
     const { defaultResumeData: apiDefault } = await import('@resume-copilot/contracts')
-    const { defaultResumeData: webDefault } = await import('../types/resume')
+    const { defaultResumeData: webDefault } = await import('./types/resume')
     expect(apiDefault).toEqual(webDefault)
   })
 
-  it('rejects cross-origin writes to new Web business APIs by default', async () => {
-    const { proxy } = await import('../proxy')
-    const response = await proxy(
-      new NextRequest('http://localhost:3000/api/new-business-route', {
-        method: 'POST',
-        headers: { cookie: 'test-session=owner', origin: 'https://untrusted.invalid' },
-      }),
-    )
-    expect(response.status).toBe(403)
-  })
+  it.each(['/api/new-business-route', '/api/mcp'])(
+    'rejects cross-origin writes to %s by default',
+    async (pathname) => {
+      const { proxy } = await import('./proxy')
+      const response = await proxy(
+        new NextRequest(`http://localhost:3000${pathname}`, {
+          method: 'POST',
+          headers: { cookie: 'test-session=owner', origin: 'https://untrusted.invalid' },
+        }),
+      )
+      expect(response.status).toBe(403)
+    },
+  )
 
   it('leaves Nest auth writes to Nest and permits same-origin Web writes', async () => {
-    const { proxy } = await import('../proxy')
+    const { proxy } = await import('./proxy')
     const authResponse = await proxy(
       new NextRequest('http://localhost:3000/api/auth/sign-in/social', {
         method: 'POST',
@@ -77,7 +80,7 @@ describe('authenticated resume access', () => {
     vi.stubGlobal('fetch', async () =>
       Response.json({ error: { code: 'UNAUTHORIZED' } }, { status: 401 }),
     )
-    const { default: DashboardLayout } = await import('../app/dashboard/layout')
+    const { default: DashboardLayout } = await import('./app/dashboard/layout')
     await expect(DashboardLayout({ children: 'protected content' })).rejects.toMatchObject({
       digest: expect.stringContaining('NEXT_REDIRECT;replace;/login;'),
     })
@@ -87,7 +90,7 @@ describe('authenticated resume access', () => {
     vi.stubGlobal('fetch', async () => {
       throw new Error('internal network failure')
     })
-    const { default: DashboardLayout } = await import('../app/dashboard/layout')
+    const { default: DashboardLayout } = await import('./app/dashboard/layout')
     const view = await DashboardLayout({ children: 'protected content' })
     expect(view.props.role).toBe('alert')
     expect(JSON.stringify(view)).not.toContain('protected content')
@@ -95,11 +98,11 @@ describe('authenticated resume access', () => {
 
   it('requires a session for the editor independently of the public print page', async () => {
     vi.stubGlobal('fetch', async () => new Response(null, { status: 401 }))
-    const { default: ResumePage } = await import('../app/resume/page')
+    const { default: ResumePage } = await import('./app/resume/page')
     await expect(ResumePage()).rejects.toMatchObject({
       digest: expect.stringContaining('NEXT_REDIRECT;replace;/login;'),
     })
-    const { default: BuilderPage } = await import('../app/builder/[resumeId]/page')
+    const { default: BuilderPage } = await import('./app/builder/[resumeId]/page')
     await expect(
       BuilderPage({ params: Promise.resolve({ resumeId: 'private-resume' }) }),
     ).rejects.toMatchObject({
@@ -108,7 +111,7 @@ describe('authenticated resume access', () => {
   })
 
   it('keeps authenticated legacy editor links working through the new builder route', async () => {
-    const { default: ResumePage } = await import('../app/resume/page')
+    const { default: ResumePage } = await import('./app/resume/page')
     await expect(
       ResumePage({ searchParams: Promise.resolve({ id: 'resume-one' }) }),
     ).rejects.toMatchObject({

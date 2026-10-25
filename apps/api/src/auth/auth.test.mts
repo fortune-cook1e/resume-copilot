@@ -5,9 +5,9 @@ import postgres from 'postgres'
 import { currentUserSchema, httpResponseSchema } from '@resume-copilot/contracts'
 
 const require = createRequire(import.meta.url)
-const { createApplication } = require('../dist/main.js') as typeof import('../dist/main.js')
+const { createApplication } = require('../../dist/main.js') as typeof import('../../dist/main.js')
 const { ApplicationState } =
-  require('../dist/lifecycle/application-state.js') as typeof import('../dist/lifecycle/application-state.js')
+  require('../../dist/lifecycle/application-state.js') as typeof import('../../dist/lifecycle/application-state.js')
 
 describe('trusted identity over HTTP', () => {
   let app: INestApplication

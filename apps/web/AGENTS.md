@@ -30,10 +30,10 @@
 
 ## UI and verification
 
+- Avoid unnecessary secondary labels and descriptions. Let the layout do the explaining
 - Reuse existing UI components and styling conventions before introducing alternatives.
 - Keep reusable UI primitives independent of business APIs and stores; compose business behavior in feature-specific components or hooks without forcing every component to be generic.
 - Handle relevant loading, empty, and error states; preserve semantic controls, keyboard access, and responsive layouts.
-- Keep Web tests under `test/`, separate from implementation; group Vitest tests by behavior without mirroring every component or utility. Reserve `test/e2e/` for the few critical cross-boundary user journeys requiring a browser, not homepage smoke or per-page E2E tests. Do not create an empty E2E directory before there is a qualifying journey.
-- Use Vitest for component / state behavior and Playwright for critical browser flows. Run E2E separately from regular tests when a covered journey changes; report when there is no E2E coverage.
+- Use Vitest for component / state behavior and Playwright for browser journeys. Follow the [root testing conventions](../../AGENTS.md#testing) for colocation, repository-root `tests/e2e/`, discovery configuration and separate E2E execution.
 - Run Web commands from the repository root with `pnpm --filter @resume-copilot/web <command>`.
 - Include a production build when changing routing, dependencies, server/client boundaries, or build configuration.

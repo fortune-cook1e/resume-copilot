@@ -75,7 +75,7 @@ Independent API build/test/dev/typecheck build contracts first where required. K
 ## 5. Delivery Slice: API Foundation
 
 - **Outcome:** The API rejects invalid config, reports failures safely, emits correlatable logs without sensitive information, distinguishes liveness from readiness, and shuts down within a deadline.
-- **Scope:** Section 3. Extend `apps/api/test/app.test.mts` first; add configuration/log/filter/health files by responsibility, not file length.
+- **Scope:** Section 3. Extend `apps/api/src/app.test.mts` first; add configuration/log/filter/health files by responsibility, not file length.
 - **Dependencies:** Section 4 dependencies were authorized and installed; no database or Google configuration was required.
 - **Acceptance:** API test, typecheck, build, lint, related contracts checks, and root `pnpm lint` with existing Web failures reported separately; update README, sample configuration, and handoff.
 - **Status:** Completed. Existing Web lint failures remained outside this slice.

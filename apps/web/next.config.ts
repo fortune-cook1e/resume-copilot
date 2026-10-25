@@ -12,8 +12,6 @@ const nextConfig: NextConfig = {
         { source: '/api/resumes', destination: `${apiOrigin}/api/resumes` },
         { source: '/api/resumes/:path*', destination: `${apiOrigin}/api/resumes/:path*` },
         { source: '/api/export-pdf', destination: `${apiOrigin}/api/export-pdf` },
-        { source: '/api/mcp', destination: `${apiOrigin}/api/mcp` },
-        { source: '/.well-known/:path*', destination: `${apiOrigin}/.well-known/:path*` },
       ],
     }
   },

@@ -5,7 +5,7 @@ export default defineConfig({
     environment: 'node',
     // Auth suites mutate fixtures in the same isolated database.
     fileParallelism: false,
-    include: ['test/**/*.test.mts'],
-    setupFiles: ['./test/setup.mts'],
+    include: ['src/**/*.test.{ts,mts}'],
+    setupFiles: ['./vitest.setup.mts'],
   },
 })

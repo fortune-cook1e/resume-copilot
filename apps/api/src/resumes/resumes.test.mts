@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import postgres from 'postgres'
 
 const require = createRequire(import.meta.url)
-const { createApplication } = require('../dist/main.js') as typeof import('../dist/main.js')
+const { createApplication } = require('../../dist/main.js') as typeof import('../../dist/main.js')
 const publicOrigin = 'http://localhost:3000'
 const ownerId = `resume-owner-${randomUUID()}`
 const otherId = `resume-other-${randomUUID()}`
@@ -227,7 +227,7 @@ describe('resume CRUD over authenticated HTTP', () => {
 
   it('returns the owned resume as a raw PDF response without leaking renderer failures', async () => {
     const { PdfRenderer } =
-      require('../dist/resumes/pdf.renderer.js') as typeof import('../dist/resumes/pdf.renderer.js')
+      require('../../dist/resumes/pdf.renderer.js') as typeof import('../../dist/resumes/pdf.renderer.js')
     const pdf = Buffer.from('%PDF-1.4\nmock PDF')
     const render = vi.spyOn(app.get(PdfRenderer), 'render').mockResolvedValue(pdf)
     try {

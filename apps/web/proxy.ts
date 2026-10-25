@@ -6,11 +6,10 @@ const inPath = (pathname: string, prefix: string) =>
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
-  // NestJS owns native auth/MCP protocols. Web business writes require a trusted Origin.
+  // NestJS owns native auth. Web business writes require a trusted Origin.
   if (
     inPath(pathname, '/api') &&
     !inPath(pathname, '/api/auth') &&
-    !inPath(pathname, '/api/mcp') &&
     !['GET', 'HEAD', 'OPTIONS'].includes(request.method)
   ) {
     const publicOrigin = new URL(

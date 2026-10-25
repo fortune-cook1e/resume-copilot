@@ -17,11 +17,6 @@ import { Loader2 } from 'lucide-react'
 function GoogleLogin() {
   const searchParams = useSearchParams()
   const [pending, setPending] = useState(false)
-  const consentQuery = searchParams.get('mcp_consent')
-  const returnToConsent =
-    consentQuery?.startsWith('?') && consentQuery.length < 4096
-      ? `/oauth/consent${consentQuery}`
-      : '/dashboard/resumes'
   const [error, setError] = useState<string | null>(null)
 
   const startLogin = async () => {
@@ -31,7 +26,7 @@ function GoogleLogin() {
     try {
       const result = await signIn.social({
         provider: 'google',
-        callbackURL: returnToConsent,
+        callbackURL: '/dashboard/resumes',
         errorCallbackURL: '/login?error=google',
       })
       if (result.error) setError('Could not start Google sign-in. Please try again.')

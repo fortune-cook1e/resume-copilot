@@ -13,29 +13,40 @@
 - Share Zod schemas and inferred types through `packages/contracts`. Do not import another application's internals; keep database entities and UI-specific types local.
 - Never track credentials, local environment files, `node_modules`, `.next`, or `dist` in Git.
 
-## Delivery
+## Ownership
 
-- Clarify uncertain or high-risk requirements, using `grill-me` when available. Small, clear tasks need no interview; stop once scope, boundaries, and acceptance are understood.
-- For large requirements, confirm a design with Delivery Slices before implementation. Each slice states its outcome, scope, dependencies, acceptance checks, and status.
-- Confirm the current slice and test boundaries once, then execute within them. Ask again only when scope, constraints, or material risks change; do not automatically start another slice.
-- Use `improve-codebase-architecture` for scoped reviews; implement approved refactors separately, without mixing broad architecture changes into feature work.
-- Skills support these principles, not replace them. Report unavailable skills or tools rather than claiming they ran.
+| Concern                                                                | Owner                                            |
+| ---------------------------------------------------------------------- | ------------------------------------------------ |
+| Routes, editor state, UI, shared preview / print document              | `apps/web`; see [Web rules](apps/web/AGENTS.md). |
+| Authentication, business rules, persistence, Chromium PDF rendering    | `apps/api`; see [API rules](apps/api/AGENTS.md). |
+| Public request / response schemas, shared resume document and defaults | `packages/contracts`.                            |
 
-## Testing strategy
+- When shared schemas change, check API validation / persistence and affected Web services, editing and preview / PDF consumers. Preserve compatibility with stored resumes.
+- When environment requirements change, check the owning application's loading / validation, `.env.example`, and applicable Docker / Compose configuration; update developer setup instructions when needed.
 
-- Keep tests in each owning workspace's `test/` directory, separate from implementation files. Group by business behavior, not by mirroring source files or precreating unit/integration/E2E directory trees. `packages/contracts` needs no dedicated test directory unless a distinct contract risk warrants one.
-- Organize tests around business behavior and risk, not production files or coverage targets. Before adding a test, state the concrete invariant or regression it protects and why existing coverage is insufficient; this does not require separate approval for every test.
-- Extend an existing relevant test file by default. Create a new one only for a distinct set of business behaviors or a necessary test-environment boundary, not merely because a production file was added.
-- Simple mappings, filters, pass-through wrappers, standard framework wiring, and behavior-preserving structural changes do not automatically need dedicated unit tests. Test them when they carry meaningful business, security, or reliability risk, regardless of code size.
-- Use TDD for important business rules, state transitions, transaction behavior, security constraints, and bug regressions, one failing test and minimal implementation at a time; do not force TDD on every change.
-- Choose the lowest-cost public boundary that provides sufficient confidence. Avoid testing the same behavior repeatedly at unit, integration, and HTTP levels without a distinct risk to cover.
-- Reserve browser E2E tests for a small number of critical user journeys crossing boundaries that lower-cost tests cannot adequately verify. Do not add E2E just because a feature has UI; do not scaffold E2E for unimplemented journeys. Run `pnpm test:e2e` separately when changing a covered core journey, not as part of `pnpm test`. If it cannot run or no such tests exist, report that explicitly rather than claiming E2E coverage.
+## Workflow
+
+- For substantial features, use `grill-me` → `to-spec` → `to-tickets` → implementation with `tdd` where appropriate → review and acceptance. Small, clear changes can proceed directly with relevant verification; keep interviews and specs proportional to the task.
+- Keep specs at `docs/plans/<feature-slug>/spec.md` and one file per ticket under its `issues/` directory. Each ticket delivers one independently verifiable behavior, with dependencies and acceptance checks; it is the unit of delivery, without a separate duplicate slice plan. See [tracker conventions](docs/agents/issue-tracker.md).
+- Implement only the selected, approved ticket. Confirm its scope and test boundaries once, reuse settled decisions, and ask again only when constraints or material risks change. Review and verify the result before proceeding to another ticket.
+- Use `vercel-react-best-practices` for React / Next.js work. Skills support the agreed task and repository rules; report unavailable skills or tools rather than claiming they ran.
+- Keep project documents under `docs/`. Read workflow configuration in `docs/agents/` directly and use the [domain documentation](docs/agents/domain.md) to find existing product and design context; do not scaffold extra documents merely because a skill mentions them.
+
+## Testing
+
+- Colocate Vitest unit, component and integration tests with the source behavior they cover, using `*.test.ts`, `*.test.tsx` or `*.test.mts`. Extend relevant suites; colocation does not require one test file per production file.
+- Keep Playwright browser journeys together under repository-root `tests/e2e/`. Cover implemented user journeys that need cross-boundary verification; do not create empty suites for future features. Run `pnpm test:e2e` separately from regular workspace tests when a covered journey changes.
+- Use TDD for important business rules, state transitions, security / transaction behavior and bug regressions. Test observable behavior through the lowest-cost public interface that gives sufficient confidence; ordinary wiring and behavior-preserving changes do not automatically need new tests.
+- Prefer affected-workspace and focused-file checks. Pass test paths relative to that workspace; include dependent workspaces when contracts, exports, dependencies or runtime / build configuration change. See the README for commands.
+- Database suites require an explicitly selected, isolated test database; never use development or production data. Preserve sequential execution where fixtures share mutable state.
+- When adding or moving tests, update runner discovery, setup paths and TypeScript build boundaries together. Existing suites need not be moved as incidental cleanup. A successful command with no relevant tests does not verify the changed behavior; report actual results and missing coverage.
 
 ## Verification and handoff
 
 - Run checks relevant to the change. Use `pnpm lint` to include workspace-specific rules.
+- `pnpm lint` and `pnpm format:check` inspect files; `pnpm format` rewrites the repository. For scoped formatting, use `pnpm exec oxfmt --write <changed paths>` and review the resulting diff.
 - Review the final diff and report actual verification, existing failures, new regressions, and unverified areas. Never weaken rules or assertions to obtain a pass.
-- Update affected documentation when behavior or commands change. Core design changes require updating the corresponding design and affected Delivery Slices.
+- Update affected documentation when behavior or commands change. Core design changes require updating the corresponding design and affected specs / tickets.
 - Keep `README.md` a stable developer entry point: a brief product description, project layout/stack, prerequisites, local setup and common commands. Update it only when this developer-facing information changes; do not append ordinary feature changes, UI instructions, acceptance results or progress logs. Keep product/design details and delivery status in their existing documents and handoff.
-- At delivery boundaries, blockers, or next-step changes, update the handoff with stage / slice, completed work and verification, blockers / open decisions, next action, and links. Keep it a current summary, not a session log or duplicate plan.
+- Update the handoff only when active development status, verification, blockers or the next development action materially change. Keep what is needed to resume development and link relevant specs / tickets; omit skill administration, instruction edits and documentation-maintenance logs.
 - Do not install dependencies, run migrations, commit, push, publish, or deploy without explicit authorization.

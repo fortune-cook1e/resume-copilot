@@ -1,8 +1,8 @@
 # Transitional image for the preserved web application only.
 # The new NestJS application's production deployment is not part of this scaffold.
-FROM node:22-alpine AS deps
+FROM node:24.21.0-alpine AS deps
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
+RUN npm install --global pnpm@12.15.0
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json ./apps/web/package.json
@@ -17,9 +17,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
 RUN pnpm --filter @resume-copilot/web build
 
-FROM node:22-alpine AS runner
+FROM node:24.21.0-alpine AS runner
 WORKDIR /app/apps/web
-RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
+RUN npm install --global pnpm@12.15.0
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 
 ENV NODE_ENV=production

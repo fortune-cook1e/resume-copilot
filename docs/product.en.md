@@ -4,6 +4,8 @@
 
 Status: The first-release direction is agreed; technical designs, Delivery Slices, and full acceptance criteria remain to be defined. This document describes goals, not implemented functionality. The legacy Web application is a reference, not a source of new requirements.
 
+The previous MCP implementation has been removed. Its replacement requires a new design; the collaboration workflows below remain product goals.
+
 ## 1. Product Positioning
 
 Help job seekers manage their real experience and create, edit, and export independent resumes for different roles. The platform works as a resume workspace on its own; Codex is an optional collaboration entry point. Users need neither an OpenAI API key nor a Codex connection to create a resume manually.

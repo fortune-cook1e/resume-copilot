@@ -17,7 +17,7 @@ These are target responsibilities, not existing infrastructure; create directori
 - `src/auth/`: authentication, session guards, and trusted user-context decorators; resource authorization remains with the owning business operation.
 - `src/common/pipes/` and `src/common/filters/`: reusable input validation and HTTP error handling, not shared business logic or a miscellaneous utility collection.
 - Repository-root `packages/contracts/`: public request / response schemas and inferred types, not internal business or database models.
-- `test/`: API tests grouped by module and behavior; it is separate from `src/`.
+- Colocate API tests with the source behavior they cover; follow the root testing conventions and preserve the compiled-application test boundary.
 
 ### Target structure example
 
@@ -28,6 +28,7 @@ apps/api/
   src/
     main.ts
     app.module.ts
+    app.test.mts
     config/
       env.schema.ts
     database/
@@ -49,12 +50,9 @@ apps/api/
       resumes.service.ts
       resumes.repository.ts
       resumes.types.ts
+      resumes.test.mts
     experiences/
       ...
-  test/
-    app.test.mts
-    resumes/
-      save-resume.test.mts
 ```
 
 ## Contracts and types
@@ -79,8 +77,7 @@ apps/api/
 
 ## Tests and verification
 
-- Keep tests in `test/`, grouped by business module and behavior rather than mirroring every production file. Do not precreate separate test-layer directory trees.
-- Follow the root risk-based testing strategy rather than requiring all business tests at the service layer. Use database integration tests for transactions / constraints and HTTP tests where request wiring or authorization behavior requires them.
+- Follow the [root testing conventions](../../AGENTS.md#testing) for test placement and scope. Use database integration tests for transactions / constraints and HTTP tests where request wiring or authorization behavior requires them.
 - Database integration tests require an isolated test database; never use development or production data. Release application and database resources after tests.
 - Run commands from the repository root with `pnpm --filter @resume-copilot/api <command>`. Validate relevant changes with `typecheck`, `lint`, `build`, and tests.
 - The API test command builds first, checks test types, and runs Vitest against compiled application code. Preserve NestJS decorator metadata; do not replace this with a transform that drops it.

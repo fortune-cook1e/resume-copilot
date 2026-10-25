@@ -1,6 +1,6 @@
 # Resume Copilot
 
-A workspace for creating and managing independent resumes for different roles, with structured editing, live preview, and PDF export. Manual editing works without a Codex connection or OpenAI API key; optional MCP collaboration is under development.
+A workspace for creating and managing independent resumes for different roles, with structured editing, live preview, and PDF export. Manual editing works without a Codex connection or OpenAI API key; Codex collaboration is planned.
 
 ## Project layout and stack
 
@@ -14,7 +14,7 @@ This pnpm monorepo uses TypeScript across three workspaces:
 
 ## Run locally
 
-Requires Node.js **22 (>=22.12)**, pnpm **9.15.9**, PostgreSQL, a Google OAuth client, and Chrome/Chromium for PDF export.
+Requires Node.js **24 (>=24.21.0)**, pnpm **12.15.0**, PostgreSQL, a Google OAuth client, and Chrome/Chromium for PDF export. `.nvmrc` selects Node.js **24.21.0**.
 
 1. Create `apps/api/.env` from [the API example](apps/api/.env.example) and `apps/web/.env` from [the Web example](apps/web/.env.example). Do not overwrite existing local files or commit secrets.
 2. Configure API `DATABASE_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, a unique `BETTER_AUTH_SECRET` of at least 32 characters, and `BETTER_AUTH_URL=http://localhost:3000`. Set `HOST=127.0.0.1`, `PORT=3001`, and `PUPPETEER_EXECUTABLE_PATH` if Chromium is not found at a standard path.
@@ -23,7 +23,7 @@ Requires Node.js **22 (>=22.12)**, pnpm **9.15.9**, PostgreSQL, a Google OAuth c
 
 ```bash
 nvm use
-corepack enable
+npm install --global pnpm@12.15.0
 pnpm install --frozen-lockfile
 pnpm dev
 ```
@@ -64,11 +64,19 @@ pnpm --filter @resume-copilot/web test
 
 `pnpm test` runs all workspace tests. API tests require `AUTH_TEST_DATABASE_URL` pointing to an already-migrated database named **`resume_copilot_test` only**; tests clear test-only rows. Never use development or production data.
 
+Vitest suites live beside the source behavior they cover. Run a focused suite with a workspace-relative path, for example:
+
+```bash
+pnpm --filter @resume-copilot/web exec vitest run lib/request.test.ts
+pnpm --filter @resume-copilot/api test src/resumes/resumes.test.mts
+```
+
+Playwright discovers browser journeys under repository-root `tests/e2e/`; run them separately with `pnpm test:e2e`. No browser E2E suites are currently committed.
+
 Oxlint and Oxfmt run separately; editor integration is optional.
 
 ## Further reading
 
 - [Product definition](docs/product.en.md)
 - [Architecture and designs](docs/designs/)
-- [Local MCP setup](docs/mcp-local-trial.md) and [plugin installation](docs/plugin-local-trial.md)
 - [Current development handoff](docs/handoff.md)

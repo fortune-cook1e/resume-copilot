@@ -12,6 +12,6 @@
     "types": ["node"],
     "outDir": "./dist"
   },
-  "include": ["src/**/*.ts", "test/**/*.mts", "vitest.config.mts"],
+  "include": ["src/**/*.ts", "src/**/*.mts", "vitest.config.mts", "vitest.setup.mts"],
   "exclude": ["node_modules", "dist"]
 }

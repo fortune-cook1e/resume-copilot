@@ -497,3 +497,29 @@ describe('API bootstrap', () => {
     expect(live.status).toBe(200)
   })
 })
+
+it('does not expose retired MCP protocols even when the legacy switch is present', async () => {
+  vi.stubEnv('HOST', '127.0.0.1')
+  vi.stubEnv('MCP_ENABLED', 'true')
+  let retiredApp: Awaited<ReturnType<typeof createApplication>> | undefined
+  try {
+    retiredApp = await createApplication()
+    await retiredApp.listen(0, '127.0.0.1')
+    const origin = await retiredApp.getUrl()
+    for (const [method, path] of [
+      ['GET', '/api/mcp'],
+      ['GET', '/.well-known/oauth-authorization-server'],
+      ['GET', '/.well-known/oauth-protected-resource/api/mcp'],
+      ['POST', '/api/auth/oauth2/token'],
+    ]) {
+      const response = await fetch(`${origin}${path}`, {
+        method,
+        headers: { origin: 'http://localhost:3000' },
+      })
+      expect(response.status, `${method} ${path}`).toBe(404)
+    }
+  } finally {
+    await retiredApp?.close()
+    vi.unstubAllEnvs()
+  }
+})

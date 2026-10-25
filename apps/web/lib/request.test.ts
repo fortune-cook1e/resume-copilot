@@ -66,32 +66,6 @@ describe('new business response client', () => {
     ).rejects.toThrow('Invalid server response')
   })
 
-  it('accepts raw auth-provider JSON without weakening the business response envelope', async () => {
-    const session = { user: { id: 'account-1' } }
-    expect(await request.getRaw('/auth/get-session', { adapter: reply(200, session) })).toEqual(
-      session,
-    )
-    expect(
-      await request.postRaw(
-        '/auth/oauth2/consent',
-        { accept: true, oauth_query: 'signed' },
-        {
-          adapter: reply(200, { url: 'http://127.0.0.1/callback?code=example' }),
-        },
-      ),
-    ).toEqual({ url: 'http://127.0.0.1/callback?code=example' })
-    await expect(
-      request.get('/auth/get-session', { adapter: reply(200, session) }),
-    ).rejects.toThrow('Invalid server response')
-    await expect(
-      request.postRaw(
-        '/auth/oauth2/consent',
-        {},
-        { adapter: reply(403, { message: 'internal detail' }) },
-      ),
-    ).rejects.toMatchObject({ status: 403, message: 'Invalid server response' })
-  })
-
   it('returns binary downloads unchanged', async () => {
     const blob = new Blob(['pdf'], { type: 'application/pdf' })
     expect(
