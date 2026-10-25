@@ -8,8 +8,8 @@
 
 ## Workspace conventions
 
-- Use pnpm with one root lockfile. Shared ESLint / TypeScript tools belong at root; application and package dependencies belong in their owning workspace.
-- Applications and packages extend root `eslint.config.mjs` and `tsconfig.json`; keep framework-specific options local, without separate configuration packages.
+- Use pnpm with one root lockfile. Application and package dependencies belong in their owning workspace.
+- Applications and packages use the root Oxc lint/format configuration and `tsconfig.json`; keep framework-specific options local, without separate configuration packages.
 - Share Zod schemas and inferred types through `packages/contracts`. Do not import another application's internals; keep database entities and UI-specific types local.
 - Never track credentials, local environment files, `node_modules`, `.next`, or `dist` in Git.
 
@@ -33,7 +33,7 @@
 
 ## Verification and handoff
 
-- Run checks relevant to the change. Use `pnpm lint` to include workspace-specific rules; root `eslint .` alone does not load nested flat configs.
+- Run checks relevant to the change. Use `pnpm lint` to include workspace-specific rules.
 - Review the final diff and report actual verification, existing failures, new regressions, and unverified areas. Never weaken rules or assertions to obtain a pass.
 - Update affected documentation when behavior or commands change. Core design changes require updating the corresponding design and affected Delivery Slices.
 - Keep `README.md` a stable developer entry point: a brief product description, project layout/stack, prerequisites, local setup and common commands. Update it only when this developer-facing information changes; do not append ordinary feature changes, UI instructions, acceptance results or progress logs. Keep product/design details and delivery status in their existing documents and handoff.

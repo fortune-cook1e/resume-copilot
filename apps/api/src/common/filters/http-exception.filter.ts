@@ -16,7 +16,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const message = STATUS_CODES[statusCode] ?? 'Request Failed'
     const code = message.toUpperCase().replace(/[^A-Z0-9]+/g, '_')
     const body:
-      HttpErrorResponse | { statusCode: number; code: string; message: string; requestId: string } =
+      | HttpErrorResponse
+      | { statusCode: number; code: string; message: string; requestId: string } =
       Reflect.getMetadata(RAW_RESPONSE, request) === true
         ? { statusCode, code, message, requestId: String(request.id) }
         : { data: null, error: { code, message } }

@@ -15,20 +15,16 @@
     "db:push": "pnpm --filter @resume-copilot/api run db:push",
     "db:studio": "pnpm --filter @resume-copilot/api run db:studio",
     "build": "pnpm -r --if-present run build",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "lint": "pnpm lint:root && pnpm -r --if-present run lint",
-    "lint:root": "eslint eslint.config.mjs",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint . && pnpm -r --if-present run lint",
     "typecheck": "pnpm -r --if-present run typecheck",
     "test": "pnpm -r --workspace-concurrency=1 --if-present run test",
     "test:e2e": "pnpm --filter @resume-copilot/web test:e2e"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.4",
-    "eslint": "^9.39.4",
-    "globals": "^16.5.0",
-    "prettier": "3.9.9",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.57.0"
+    "oxfmt": "0.74.0",
+    "oxlint": "^1.89.0",
+    "typescript": "^5.9.3"
   }
 }

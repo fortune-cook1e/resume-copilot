@@ -64,7 +64,7 @@ pnpm --filter @resume-copilot/web test
 
 `pnpm test` runs all workspace tests. API tests require `AUTH_TEST_DATABASE_URL` pointing to an already-migrated database named **`resume_copilot_test` only**; tests clear test-only rows. Never use development or production data.
 
-Prettier and ESLint run separately; editor integration is optional.
+Oxlint and Oxfmt run separately; editor integration is optional.
 
 ## Further reading
 

@@ -11,7 +11,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "lint": "eslint .",
+    "lint": "oxlint .",
     "typecheck": "pnpm --filter @resume-copilot/contracts build && tsc --noEmit -p tsconfig.build.json",
     "test": "pnpm build && tsc --noEmit && vitest run"
   },
