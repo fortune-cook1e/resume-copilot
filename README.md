@@ -79,5 +79,4 @@ Oxlint and Oxfmt run separately; editor integration is optional.
 ## Further reading
 
 - [Product definition](docs/product.en.md)
-- [Architecture and designs](docs/designs/)
 - [Current development handoff](docs/handoff.md)

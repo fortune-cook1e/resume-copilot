@@ -37,4 +37,4 @@
 
 ## References
 
-[Product](product.en.md) · [HTTP / resume contract](designs/http-response.md) · [Authentication](designs/auth.md) · [Setup and commands](../README.md)
+[Product](product.en.md) · [Setup and commands](../README.md)

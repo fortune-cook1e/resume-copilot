@@ -2,7 +2,7 @@
 
 Use a single shared domain context for Web, API, and contracts. Separate workspaces do not imply separate domain models.
 
-Start with `docs/handoff.md` and the applicable `AGENTS.md`. For behavior changes, read `docs/product.en.md` and the relevant documents in `docs/designs/`; verify implementation facts against the current code.
+Start with `docs/handoff.md` and the applicable `AGENTS.md`. For behavior changes, read `docs/product.en.md` and any existing design documents relevant to the change; verify implementation facts against the current code.
 
 Read `docs/glossary.md` and relevant decisions in `docs/adr/` if they exist. Their absence is not a blocker; do not create empty glossary files, ADR directories, or additional domain documentation as part of ordinary skill use. Keep any newly requested domain documents under `docs/`.
 
