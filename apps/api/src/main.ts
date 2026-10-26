@@ -1,12 +1,7 @@
 import 'reflect-metadata'
 import { NestFactory } from '@nestjs/core'
 import type { ConfigType } from '@nestjs/config'
-import {
-  ConsoleLogger,
-  Logger as NestLogger,
-  ServiceUnavailableException,
-  type Type,
-} from '@nestjs/common'
+import { Logger as NestLogger, ServiceUnavailableException, type Type } from '@nestjs/common'
 import { text, type NextFunction, type Request, type Response } from 'express'
 import type { Server } from 'node:http'
 import type { NestExpressApplication } from '@nestjs/platform-express'
@@ -17,7 +12,6 @@ import { pino } from 'pino'
 import { requestLogging } from './common/logging'
 import { AppModule } from './app.module'
 import { appConfig, ConfigurationError } from './config/app.config'
-import { installShutdownHandlers } from './lifecycle/shutdown'
 import { ApplicationState } from './lifecycle/application-state'
 import { AuthService } from './auth/auth.service'
 
@@ -39,25 +33,7 @@ export async function createApplication(rootModule: Type = AppModule) {
     throw error
   }
   const config = app.get<ConfigType<typeof appConfig>>(appConfig.KEY)
-  if (config.NODE_ENV === 'development') {
-    const levels = ['fatal', 'error', 'warn', 'log', 'debug', 'verbose'] as const
-    const threshold = {
-      fatal: 0,
-      error: 1,
-      warn: 2,
-      info: 3,
-      debug: 4,
-      trace: 5,
-      silent: -1,
-    } as const
-    app.useLogger(
-      new ConsoleLogger({
-        logLevels: levels.slice(0, threshold[config.LOG_LEVEL] + 1),
-      }),
-    )
-  } else {
-    app.useLogger(app.get(Logger))
-  }
+  app.useLogger(app.get(Logger))
   app.flushLogs()
   app.use(requestLogging((await app.resolve(PinoLogger)).logger))
   app.use(helmet())
@@ -112,6 +88,13 @@ export async function createApplication(rootModule: Type = AppModule) {
   server.requestTimeout = 30000
   server.headersTimeout = 10000
   server.keepAliveTimeout = 5000
+  // Active requests can become idle after Nest starts closing the listener.
+  // Reap those keep-alive sockets once their response completes, without cutting off work.
+  server.on('request', (_request, response) => {
+    response.once('finish', () => {
+      if (!server.listening) setImmediate(() => server.closeIdleConnections())
+    })
+  })
   return app
 }
 
@@ -119,8 +102,9 @@ export async function bootstrap(rootModule: Type = AppModule) {
   const app = await createApplication(rootModule)
   const config = app.get<ConfigType<typeof appConfig>>(appConfig.KEY)
   try {
+    // Nest initializes routes and lifecycle hooks before opening the listener.
     await app.listen(config.PORT, config.HOST)
-    installShutdownHandlers(app)
+    app.enableShutdownHooks(['SIGTERM', 'SIGINT'], { useProcessExit: true })
     return app
   } catch (error) {
     // Failed startup must not hang indefinitely while disposing partial resources.

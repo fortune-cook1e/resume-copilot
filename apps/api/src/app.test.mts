@@ -86,13 +86,16 @@ const childFixture = `
   const { Controller, Get, Injectable, Module } = require('@nestjs/common');
   const { bootstrap } = require('./dist/main.js');
   const { AppModule } = require('./dist/app.module.js');
-  const { ApplicationState } = require('./dist/lifecycle/application-state.js');
+  const { DatabaseService } = require('./dist/database/database.module.js');
+  const { sql } = require('drizzle-orm');
   let app;
   class SlowController {
     slow() {
       process.send({ event: 'inflight' });
-      return new Promise(resolve => process.once('message', () => {
-        resolve({ ready: app.get(ApplicationState).isReady });
+      return new Promise((resolve, reject) => process.once('message', () => {
+        app.get(DatabaseService).db.execute(sql.raw('SELECT 1 AS value'))
+          .then(rows => resolve({ databaseAvailable: rows[0].value === 1 }))
+          .catch(reject);
       }));
     }
   }
@@ -100,6 +103,9 @@ const childFixture = `
   Get()(SlowController.prototype, 'slow', Object.getOwnPropertyDescriptor(SlowController.prototype, 'slow'));
   class ClosingResource {
     onModuleDestroy() {
+      process.send({ event: 'shutdown-started' });
+    }
+    onApplicationShutdown() {
       process.send({ event: 'destroying' });
       if (process.env.STALL_CLOSE === '1') return new Promise(() => {});
     }
@@ -109,9 +115,6 @@ const childFixture = `
   Module({ imports: [AppModule], controllers: [SlowController], providers: [ClosingResource] })(TestModule);
   bootstrap(TestModule).then(async instance => {
     app = instance;
-    for (const signal of ['SIGTERM', 'SIGINT']) {
-      process.on(signal, () => setImmediate(() => process.send({ event: 'signal' })));
-    }
     process.send({ event: 'ready', url: await app.getUrl() });
   }).catch(() => process.exit(1));
 `
@@ -383,18 +386,28 @@ describe('API bootstrap', () => {
     },
   )
 
-  it('keeps native Nest startup logs in development without losing early initialization logs', async () => {
+  it('emits JSON startup and request logs in development without losing early logs', async () => {
     const runtime = await startChild({
       NODE_ENV: 'development',
       LOG_LEVEL: 'info',
-      FORCE_COLOR: '1',
     })
-    await vi.waitFor(() => expect(runtime.output.join('')).toContain('[NestFactory]'))
+    await vi.waitFor(() => expect(runtime.output.join('')).toContain('Starting Nest application'))
     const output = runtime.output.join('')
-    expect(output).toContain('[Nest]')
-    expect(output).toContain('Starting Nest application')
-    expect(output).toContain('AppModule dependencies initialized')
-    expect(output).toContain('[RoutesResolver]')
+    const records = output
+      .trim()
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => JSON.parse(line) as Record<string, unknown>)
+    expect(records).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ context: 'NestFactory', msg: 'Starting Nest application...' }),
+        expect.objectContaining({
+          context: 'InstanceLoader',
+          msg: 'AppModule dependencies initialized',
+        }),
+        expect.objectContaining({ context: 'RoutesResolver' }),
+      ]),
+    )
     expect(output.match(/Starting Nest application/g)).toHaveLength(1)
     const response = await fetch(`${runtime.url}/api/health?token=private-dev-query`, {
       headers: { authorization: 'Bearer private-dev-token' },
@@ -434,7 +447,7 @@ describe('API bootstrap', () => {
   })
 
   it.each(['SIGTERM', 'SIGINT'] as const)(
-    'drains an in-flight request on %s before destroying resources',
+    'keeps an in-flight database request usable through native shutdown on %s',
     async (signal) => {
       const runtime = await startChild()
       const inflight = fetch(`${runtime.url}/api/slow`)
@@ -445,13 +458,13 @@ describe('API bootstrap', () => {
       )
       runtime.child.kill(signal)
       await vi.waitFor(() =>
-        expect(runtime.messages.some((message) => message.event === 'signal')).toBe(true),
+        expect(runtime.messages.some((message) => message.event === 'shutdown-started')).toBe(true),
       )
       expect(runtime.messages.some((message) => message.event === 'destroying')).toBe(false)
       runtime.child.send('complete')
       const response = await inflight
       expect(response.status).toBe(200)
-      expect(await response.json()).toEqual({ data: { ready: false }, error: null })
+      expect(await response.json()).toEqual({ data: { databaseAvailable: true }, error: null })
       expect(await runtime.exited).toEqual([0, null])
       expect(runtime.messages.some((message) => message.event === 'destroying')).toBe(true)
     },
@@ -462,6 +475,19 @@ describe('API bootstrap', () => {
     runtime.child.kill('SIGINT')
     await vi.waitFor(() => expect(runtime.child.exitCode).toBe(1), { timeout: 2000 })
     expect(await runtime.exited).toEqual([1, null])
+    expect(runtime.output.join('')).toContain('API shutdown timed out')
+  })
+
+  it('bounds shutdown when an in-flight request never completes', async () => {
+    const runtime = await startChild({ SHUTDOWN_TIMEOUT_MS: '150' })
+    const inflight = fetch(`${runtime.url}/api/slow`)
+    void inflight.catch(() => {})
+    await vi.waitFor(() =>
+      expect(runtime.messages.some((message) => message.event === 'inflight')).toBe(true),
+    )
+    runtime.child.kill('SIGTERM')
+    expect(await runtime.exited).toEqual([1, null])
+    expect(runtime.messages.some((message) => message.event === 'destroying')).toBe(false)
     expect(runtime.output.join('')).toContain('API shutdown timed out')
   })
 
