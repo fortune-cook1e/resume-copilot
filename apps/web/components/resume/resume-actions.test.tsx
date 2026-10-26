@@ -72,7 +72,7 @@ it('retains print order through the save contract while accepting documents with
 })
 
 it.each(['projects', 'languages', 'custom-typed', 'custom-legacy'] as const)(
-  'saves the fresh-page menu setting for %s without losing its section shape',
+  'saves independent pagination settings for %s without losing its section shape',
   async (id) => {
     const data = structuredClone(defaultResumeData) as ResumeData
     data.modules.languages = { id: 'languages', name: 'Languages', visible: true, items: [] }
@@ -95,6 +95,18 @@ it.each(['projects', 'languages', 'custom-typed', 'custom-legacy'] as const)(
       screen.getByRole('button', { name: data.modules[id]!.name + ' section actions' }),
       { key: 'Enter' },
     )
+    const keep = screen.getByRole('menuitemcheckbox', { name: 'Keep on one page' })
+    expect(keep.getAttribute('aria-checked')).toBe('false')
+    fireEvent.click(keep)
+    fireEvent.keyDown(
+      screen.getByRole('button', { name: data.modules[id]!.name + ' section actions' }),
+      { key: 'Enter' },
+    )
+    expect(
+      screen
+        .getByRole('menuitemcheckbox', { name: 'Keep on one page' })
+        .getAttribute('aria-checked'),
+    ).toBe('true')
     const option = screen.getByRole('menuitemcheckbox', { name: 'Start on a new page' })
     expect(option.getAttribute('aria-checked')).toBe('false')
     fireEvent.click(option)
@@ -105,8 +117,9 @@ it.each(['projects', 'languages', 'custom-typed', 'custom-legacy'] as const)(
     expect(saved.modules[id]).toEqual({
       ...data.modules[id],
       startOnNewPage: true,
+      keepTogether: true,
     })
-    for (const setting of ['startOnNewPage']) {
+    for (const setting of ['startOnNewPage', 'keepTogether']) {
       expect(
         updateResumeSchema.safeParse({
           data: {
@@ -119,6 +132,16 @@ it.each(['projects', 'languages', 'custom-typed', 'custom-legacy'] as const)(
         }).success,
       ).toBe(false)
     }
+    fireEvent.keyDown(
+      screen.getByRole('button', { name: data.modules[id]!.name + ' section actions' }),
+      { key: 'Enter' },
+    )
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Keep on one page' }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(600)
+    })
+    const changed = updateResumeSchema.parse(api.update.mock.lastCall![1]).data!
+    expect(changed.modules[id]).toMatchObject({ startOnNewPage: true, keepTogether: false })
   },
 )
 

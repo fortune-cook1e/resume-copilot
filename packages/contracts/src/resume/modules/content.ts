@@ -80,6 +80,7 @@ const contentModuleBase = z.object({
   name: z.string(),
   visible: z.boolean(),
   startOnNewPage: z.boolean().optional(),
+  keepTogether: z.boolean().optional(),
   content: z.string().optional(),
 })
 export const contentModuleSchemas = {

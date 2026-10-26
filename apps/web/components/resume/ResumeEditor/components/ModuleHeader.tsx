@@ -84,6 +84,16 @@ export default function ModuleHeader({
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuCheckboxItem
+            checked={section.keepTogether ?? false}
+            onCheckedChange={(checked) =>
+              update((draft) => {
+                draft.modules[moduleId]!.keepTogether = checked
+              })
+            }
+          >
+            Keep on one page
+          </DropdownMenuCheckboxItem>
+          <DropdownMenuCheckboxItem
             checked={section.startOnNewPage ?? false}
             onCheckedChange={(checked) =>
               update((draft) => {

@@ -471,6 +471,116 @@ test('starts a section on a fresh page and retains it through reorder, reopen an
   expect(cleanup.status()).toBe(200)
 })
 
+test('keeps a fitting section together, combines page rules, and lets oversized content continue', async ({
+  page,
+  context,
+}, testInfo) => {
+  test.skip(
+    !process.env.AUTH_TEST_DATABASE_URL,
+    'Requires an explicitly selected isolated test database and API build',
+  )
+  await context.addCookies([
+    { name: 'better-auth.session_token', value: cookie, url: 'http://127.0.0.1:3100' },
+  ])
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  const data = structuredClone(defaultResumeData)
+  data.basics.name = 'Keep Together Author'
+  data.modules.education.items = [
+    {
+      id: 'school',
+      visible: true,
+      university: 'PriorUniversity',
+      major: '',
+      date: '',
+      location: '',
+      summary: Array.from({ length: 36 }, (_, i) => `BeforeLine${i} A prior achievement.`).join(
+        '\n\n',
+      ),
+    },
+  ]
+  data.modules.projects.items = [
+    {
+      id: 'project',
+      visible: true,
+      name: 'KeptProject',
+      date: '',
+      description: '',
+      summary: Array.from({ length: 10 }, (_, i) => `ProjectLine${i} A project achievement.`).join(
+        '\n\n',
+      ),
+      website: { icon: '', link: '', label: '' },
+    },
+  ]
+  const created = await page.request.post('/api/resumes', {
+    headers: { origin: 'http://127.0.0.1:3100' },
+    data: { title: 'Keep journey', data: { ...data, sectionOrder: ['education', 'projects'] } },
+  })
+  expect(created.status()).toBe(201)
+  const { data: resume } = await created.json()
+  await page.goto(`/builder/${resume.id}`)
+  await expect(page.locator('#resume-document')).toHaveAttribute('data-ready', 'true')
+  const pages = page.getByRole('region', { name: /^Page \d+$/ })
+  await expect(pages).toHaveCount(2)
+  await expect(pages.nth(0)).toContainText('KeptProject')
+  await page.getByRole('button', { name: 'Projects section actions' }).click()
+  const keep = page.getByRole('menuitemcheckbox', { name: 'Keep on one page' })
+  const start = page.getByRole('menuitemcheckbox', { name: 'Start on a new page' })
+  await expect(keep).not.toBeChecked()
+  await keep.click()
+  await expect(pages.nth(0)).not.toContainText('KeptProject')
+  await expect(pages.nth(1)).toContainText('KeptProject')
+  await expect(pages.nth(1)).toContainText('ProjectLine9')
+  await expect(page.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible()
+  await page.reload()
+  await expect(page.locator('#resume-document')).toHaveAttribute('data-ready', 'true')
+  await expect(pages.nth(1)).toContainText('KeptProject')
+  await page.getByRole('button', { name: 'Projects section actions' }).click()
+  await expect(keep).toBeChecked()
+  await expect(start).not.toBeChecked()
+  await start.click()
+  await expect(pages).toHaveCount(2)
+  const combinedDownload = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download PDF' }).click()
+  const combinedPath = testInfo.outputPath('combined-rules.pdf')
+  await (await combinedDownload).saveAs(combinedPath)
+  const combinedPages = readPdfPages(combinedPath)
+  expect(combinedPages).toHaveLength(2)
+  expect(combinedPages[0]).not.toContain('KeptProject')
+  expect(combinedPages[1]).toContain('KeptProject')
+  expect(combinedPages[1]).toContain('ProjectLine9')
+  await page.screenshot({ path: testInfo.outputPath('kept-section-editor.png') })
+  await page.getByRole('button', { name: 'Projects section actions' }).click()
+  await start.click()
+  await page.getByRole('button', { name: 'Hide Education', exact: true }).click()
+  await expect(pages).toHaveCount(1)
+  await expect(pages.nth(0)).toContainText('KeptProject')
+  await page.getByRole('button', { name: 'Edit KeptProject', exact: true }).press('Enter')
+  const tokens = Array.from({ length: 900 }, (_, i) => `Overflow${String(i).padStart(3, '0')}`)
+  await page.getByRole('textbox', { name: 'Summary', exact: true }).fill(tokens.join(' '))
+  await expect(page.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible()
+  await expect(page.locator('#resume-document')).toHaveAttribute('data-ready', 'true')
+  await expect.poll(() => pages.count()).toBeGreaterThan(1)
+  const screenPages = await pages.allInnerTexts()
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download PDF' }).click()
+  const file = testInfo.outputPath('oversized-kept-section.pdf')
+  await (await downloadPromise).saveAs(file)
+  const pdfPages = readPdfPages(file)
+  expect(pdfPages).toHaveLength(screenPages.length)
+  for (const token of tokens) {
+    const pattern = new RegExp(`\\b${token}\\b`)
+    expect(pdfPages.join(' ').match(new RegExp(`\\b${token}\\b`, 'g')), token).toHaveLength(1)
+    expect(
+      pdfPages.findIndex((text) => pattern.test(text)),
+      token,
+    ).toBe(screenPages.findIndex((text) => pattern.test(text)))
+  }
+  const cleanup = await page.request.delete(`/api/resumes/${resume.id}`, {
+    headers: { origin: 'http://127.0.0.1:3100' },
+  })
+  expect(cleanup.status()).toBe(200)
+})
+
 test('does not split a Unicode grapheme at a page boundary', async ({ page }) => {
   const data = structuredClone(defaultResumeData)
   const glyph = '👩‍💻'

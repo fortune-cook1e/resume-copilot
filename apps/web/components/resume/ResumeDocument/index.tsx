@@ -46,6 +46,7 @@ export default function ResumeDocument({ selection, onSelect }: EditorSelectionP
               key={sectionId}
               data-pagination-section={sectionId}
               data-start-on-new-page={section.startOnNewPage || undefined}
+              data-keep-together={section.keepTogether || undefined}
             >
               {content}
             </div>

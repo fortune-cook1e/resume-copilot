@@ -60,6 +60,10 @@ export function paginate(documentElement: HTMLElement, target: HTMLElement) {
   const breaks = Array.from(source.querySelectorAll('[data-start-on-new-page="true"]'))
     .map((section) => texts.find((text) => section.contains(text.node))?.start)
     .filter((position): position is number => position !== undefined)
+  const kept = Array.from(source.querySelectorAll('[data-keep-together="true"]')).map((section) => {
+    const content = texts.filter((text) => section.contains(text.node))
+    return { start: content[0].start, end: content.at(-1)!.end }
+  })
   let start = 0
   do {
     const page = document.createElement('section')
@@ -100,6 +104,15 @@ export function paginate(documentElement: HTMLElement, target: HTMLElement) {
           .containing(end - text.start)
         if (cluster) end = text.start + cluster.index
       }
+    }
+    const crossing = kept.find(
+      (section) => section.start > start && section.start < end && section.end > end,
+    )
+    if (crossing) {
+      content.replaceChildren(fragment(crossing.start, crossing.end))
+      // Move only sections that fit on a fresh page. An oversized section
+      // continues through the same text-splitting path, without blank retries.
+      if (content.scrollHeight <= content.clientHeight) end = crossing.start
     }
     if (end <= start) throw new Error('Resume content cannot fit within a page')
     fits(end)
