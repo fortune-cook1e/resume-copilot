@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitest/config'
 
-const httpTests = ['src/health/health.test.mts']
+const httpTests = ['src/common/middleware/origin.middleware.test.mts', 'src/health/health.test.mts']
 
 export default defineConfig({
   test: {

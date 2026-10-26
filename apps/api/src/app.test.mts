@@ -25,6 +25,7 @@ const { appConfig } =
   require('../dist/config/app.config.js') as typeof import('../dist/config/app.config.js')
 const { RawResponse } =
   require('../dist/common/responses/raw-response.js') as typeof import('../dist/common/responses/raw-response.js')
+const publicOrigin = 'http://localhost:3000'
 
 @Controller('test-errors')
 class ErrorController {
@@ -247,7 +248,10 @@ describe('API bootstrap', () => {
   })
 
   it('preserves 201 and wraps an empty successful result as null', async () => {
-    const created = await fetch(`${baseURL}/api/test-errors`, { method: 'POST' })
+    const created = await fetch(`${baseURL}/api/test-errors`, {
+      method: 'POST',
+      headers: { origin: publicOrigin },
+    })
     expect(created.status).toBe(201)
     expect(await created.json()).toEqual({ data: { accepted: true }, error: null })
     const empty = await fetch(`${baseURL}/api/test-errors/empty`)
@@ -346,13 +350,27 @@ describe('API bootstrap', () => {
   it('sanitizes malformed JSON errors before controller execution', async () => {
     const response = await fetch(`${baseURL}/api/test-errors`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', origin: publicOrigin },
       body: '{"private-json":',
     })
     expect(response.status).toBe(400)
     const body = httpErrorSchema.parse(await response.json())
     expect(body.error.message).toBe('Bad Request')
     const requestId = response.headers.get('x-request-id')
+    await vi.waitFor(() => expect(logs.join('')).toContain(requestId!))
+    expect(logs.join('')).not.toContain('private-')
+  })
+
+  it('protects newly added Nest routes before parsing their bodies and retains request IDs', async () => {
+    const response = await fetch(`${baseURL}/api/test-errors`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: 'https://untrusted.invalid' },
+      body: '{"private-json":',
+    })
+    expect(response.status).toBe(403)
+    expect(response.headers.get('cache-control')).toBe('no-store')
+    const requestId = response.headers.get('x-request-id')
+    expect(requestId).toMatch(/^[0-9a-f-]{36}$/)
     await vi.waitFor(() => expect(logs.join('')).toContain(requestId!))
     expect(logs.join('')).not.toContain('private-')
   })
@@ -364,6 +382,7 @@ describe('API bootstrap', () => {
         method: 'POST',
         headers: {
           'content-type': contentType,
+          origin: publicOrigin,
           authorization: 'Bearer private-auth',
           cookie: 'session=private-cookie',
           'x-request-id': 'private-forged-id',
