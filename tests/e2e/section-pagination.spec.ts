@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import { createHmac, randomUUID } from 'node:crypto'
 import { createRequire } from 'node:module'
+import { createServer } from 'node:http'
 import { test, expect } from '../../apps/web/node_modules/@playwright/test'
 import { defaultResumeData } from '../../packages/contracts/src/resume'
 
@@ -607,4 +608,174 @@ test('does not split a Unicode grapheme at a page boundary', async ({ page }) =>
   expect(paragraphs.length).toBeGreaterThan(1)
   for (const paragraph of paragraphs) expect(paragraph).toMatch(/^(?:👩‍💻)+$/u)
   expect(paragraphs.join('')).toBe(glyph.repeat(3500))
+})
+
+test('scrolls the preview with the wheel and changes zoom only through its controls', async ({
+  page,
+  context,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  const data = structuredClone(defaultResumeData)
+  data.basics.name = 'Scroll Preview Author'
+  data.modules.projects.items = [
+    {
+      id: 'project',
+      name: 'Scrollable project',
+      visible: true,
+      date: '',
+      description: '',
+      website: { icon: '', label: '', link: '' },
+      summary: Array.from(
+        { length: 90 },
+        (_, i) => `Achievement${i} A project result worth reading.`,
+      ).join('\n\n'),
+    },
+  ]
+  let resumeId = 'viewport-fixture'
+  const user = {
+    id: 'viewport-user',
+    name: 'Preview Author',
+    email: 'preview@example.test',
+    emailVerified: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }
+  // The viewport test needs only read access. In rendering-only runs, provide
+  // public API responses at the transport boundary without a database/service.
+  const fixture = app
+    ? undefined
+    : createServer((request, response) => {
+        response.setHeader('Content-Type', 'application/json')
+        if (request.method !== 'GET') {
+          response.writeHead(405).end()
+          return
+        }
+        const now = new Date().toISOString()
+        if (request.url?.startsWith('/api/auth/get-session')) {
+          response.end(
+            JSON.stringify({
+              user,
+              session: {
+                id: 'viewport-session',
+                userId: user.id,
+                token: 'test-only-token',
+                expiresAt: new Date(Date.now() + 3600000).toISOString(),
+                createdAt: now,
+                updatedAt: now,
+              },
+            }),
+          )
+        } else if (request.url === '/api/me') {
+          response.end(
+            JSON.stringify({
+              data: { id: user.id, name: user.name, email: user.email },
+              error: null,
+            }),
+          )
+        } else if (request.url === '/api/resumes/viewport-fixture') {
+          response.end(
+            JSON.stringify({
+              data: {
+                id: resumeId,
+                title: 'Viewport journey',
+                data,
+                description: '',
+                visibility: 'private',
+                createdAt: now,
+                updatedAt: now,
+              },
+              error: null,
+            }),
+          )
+        } else {
+          response.writeHead(404).end()
+        }
+      })
+  if (fixture)
+    await new Promise<void>((resolve, reject) => {
+      fixture.once('error', reject)
+      fixture.listen(3101, '127.0.0.1', resolve)
+    })
+  try {
+    await context.addCookies([
+      {
+        name: 'better-auth.session_token',
+        value: cookie || 'viewport-test-session',
+        url: 'http://127.0.0.1:3100',
+      },
+    ])
+    if (app) {
+      const created = await page.request.post('/api/resumes', {
+        headers: { origin: 'http://127.0.0.1:3100' },
+        data: { title: 'Viewport journey', data },
+      })
+      expect(created.status()).toBe(201)
+      resumeId = (await created.json()).data.id
+    }
+    await page.goto(`/builder/${resumeId}`)
+    await expect(page.locator('#resume-document')).toHaveAttribute('data-ready', 'true')
+    const preview = page.getByRole('region', { name: 'Resume preview', exact: true })
+    const paper = preview.getByRole('region', { name: 'Page 1', exact: true })
+    const before = (await paper.boundingBox())!
+    let area = (await preview.boundingBox())!
+    await page.mouse.move(area.x + area.width / 2, area.y + area.height / 2)
+    await page.mouse.wheel(0, 400)
+    await expect.poll(async () => (await paper.boundingBox())!.y).toBeLessThan(before.y - 100)
+    expect((await paper.boundingBox())?.width ?? 0).toBeCloseTo(before.width, 1)
+    expect(
+      await page
+        .getByRole('complementary', { name: 'Resume content' })
+        .evaluate((node) => node.scrollTop),
+    ).toBe(0)
+    const zoom = page.getByRole('group', { name: 'Preview zoom' })
+    await expect(zoom.getByRole('button')).toHaveCount(3)
+    const percentage = zoom.getByText(/^\d+%$/)
+    const initialPercentage = await percentage.innerText()
+    await expect(page.getByText('A4 · Live preview', { exact: true })).toHaveCount(0)
+    await zoom.getByRole('button', { name: 'Zoom in' }).click()
+    await expect
+      .poll(async () => (await paper.boundingBox())?.width ?? 0)
+      .toBeGreaterThan(before.width + 20)
+    await zoom.getByRole('button', { name: 'Zoom out' }).click()
+    await expect
+      .poll(async () => (await paper.boundingBox())?.width ?? 0)
+      .toBeCloseTo(before.width, 1)
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await expect
+      .poll(async () => (await paper.boundingBox())?.width ?? 0)
+      .toBeCloseTo(before.width, 1)
+    area = (await preview.boundingBox())!
+    const priorDrag = (await paper.boundingBox())!
+    await page.mouse.move(area.x + 12, area.y + 150)
+    await page.mouse.down()
+    await page.mouse.move(area.x + 112, area.y + 250, { steps: 10 })
+    await page.mouse.up()
+    const afterDrag = (await paper.boundingBox())!
+    expect(afterDrag.x).toBeCloseTo(priorDrag.x, 1)
+    expect(afterDrag.y).toBeCloseTo(priorDrag.y, 1)
+    await page.mouse.move(area.x + area.width / 2, area.y + area.height / 2)
+    await page.mouse.wheel(0, -1000)
+    await expect.poll(async () => (await paper.boundingBox())!.y).toBeGreaterThan(priorDrag.y + 100)
+    await zoom.getByRole('button', { name: 'Zoom in' }).click()
+    await expect(percentage).not.toHaveText(initialPercentage)
+    await zoom.getByRole('button', { name: 'Fit page' }).click()
+    await expect(percentage).toHaveText(initialPercentage)
+    await expect
+      .poll(async () => (await paper.boundingBox())?.width ?? 0)
+      .toBeCloseTo(before.width, 1)
+    await page.mouse.move(area.x + 12, area.y + 12)
+    await page.screenshot({ path: testInfo.outputPath('fixed-scroll-preview.png') })
+  } finally {
+    if (fixture)
+      await new Promise<void>((resolve, reject) => {
+        fixture.close((error) => (error ? reject(error) : resolve()))
+        fixture.closeAllConnections()
+      })
+    else if (resumeId !== 'viewport-fixture') {
+      const cleanup = await page.request.delete(`/api/resumes/${resumeId}`, {
+        headers: { origin: 'http://127.0.0.1:3100' },
+      })
+      expect(cleanup.status()).toBe(200)
+    }
+  }
 })

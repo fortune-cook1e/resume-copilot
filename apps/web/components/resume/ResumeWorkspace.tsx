@@ -105,9 +105,6 @@ export default function ResumeWorkspace({ resumeId }: { resumeId: string }) {
           aria-label="Resume preview"
           className={`relative min-h-0 min-w-0 overflow-hidden bg-slate-100 ${mobileView === 'page' ? 'block' : 'hidden'} lg:block`}
         >
-          <div className="pointer-events-none absolute inset-x-0 top-4 z-10 text-center text-xs font-medium text-slate-500">
-            A4 · Live preview
-          </div>
           <ResumeBuilder
             selection={selection}
             onSelect={

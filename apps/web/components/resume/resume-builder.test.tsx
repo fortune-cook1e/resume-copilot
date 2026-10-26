@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { useState } from 'react'
 import { useResumeStore } from '@/stores/resume-store'
 import { defaultResumeData } from '@resume-copilot/contracts'
 import type { ResumeData } from '@resume-copilot/contracts'
@@ -7,43 +8,8 @@ import BuilderToolbar from '@/components/resume/BuilderToolbar'
 import Controls from '@/components/resume/ResumeBuilder/Controls'
 
 const api = vi.hoisted(() => ({ update: vi.fn(), export: vi.fn(), push: vi.fn() }))
-const camera = vi.hoisted(() => ({
-  scale: 0.74,
-  listeners: new Set<() => void>(),
-  transform: vi.fn(),
-  instance: { wrapperComponent: null as HTMLElement | null },
-}))
 vi.mock('@/services/resume', () => ({ updateResume: api.update, exportResumePDF: api.export }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: api.push }) }))
-// The third-party zoom SDK returns new helper functions on each render.
-vi.mock('react-zoom-pan-pinch', async () => {
-  const { useSyncExternalStore } = await import('react')
-  return {
-    useControls: () => ({
-      instance: camera.instance,
-      setTransform: (...args: number[]) => camera.transform(...args),
-      zoomIn: () => {
-        camera.scale += 0.1
-        camera.listeners.forEach((listener) => listener())
-      },
-      zoomOut: () => {
-        camera.scale -= 0.1
-        camera.listeners.forEach((listener) => listener())
-      },
-    }),
-    useTransformComponent: (selector: (context: { state: { scale: number } }) => number) =>
-      useSyncExternalStore(
-        (listener) => {
-          camera.listeners.add(listener)
-          return () => {
-            camera.listeners.delete(listener)
-          }
-        },
-        () => selector({ state: { scale: camera.scale } }),
-      ),
-  }
-})
-
 beforeEach(() => {
   vi.useFakeTimers()
   const store = useResumeStore.getState()
@@ -61,33 +27,19 @@ afterEach(() => {
   api.push.mockReset()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
-  camera.listeners.clear()
-  camera.transform.mockReset()
-  camera.instance.wrapperComponent = null
-  camera.scale = 0.74
 })
 
-it('keeps a user-selected preview zoom when the zoom SDK rerenders its controls', () => {
-  const wrapper = document.createElement('div')
-  Object.defineProperties(wrapper, { clientWidth: { value: 1040 }, clientHeight: { value: 936 } })
-  camera.instance.wrapperComponent = wrapper
-  camera.transform.mockImplementation((_x: number, _y: number, scale: number) => {
-    camera.scale = scale
-    camera.listeners.forEach((listener) => listener())
-  })
-  vi.stubGlobal(
-    'ResizeObserver',
-    class {
-      constructor(private callback: () => void) {}
-      observe() {
-        this.callback()
-      }
-      disconnect() {}
-    },
-  )
-  render(<Controls />)
+it('shows the current zoom percentage and restores the fitted scale with Fit', () => {
+  function PreviewControls() {
+    const [scale, setScale] = useState(0.75)
+    return <Controls scale={scale} onChange={setScale} onFit={() => setScale(0.5)} />
+  }
+  render(<PreviewControls />)
+  expect(screen.getByText('75%')).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }))
-  expect(screen.getByText('84%')).toBeTruthy()
+  expect(screen.getByText('85%')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Fit page' }))
+  expect(screen.getByText('50%')).toBeTruthy()
 })
 
 describe('leaving and exporting the builder draft', () => {
