@@ -15,10 +15,21 @@ export default function PreviewBlock({
   children,
 }: EditorSelection & { label: string; className: string; children: ReactNode }) {
   const context = useContext(PreviewSelectionContext)
-  if (!context?.onSelect) return <div className={className}>{children}</div>
+  const identity = {
+    'data-preview-section': sectionId,
+    'data-preview-item': itemId,
+    'data-preview-label': label,
+  }
+  if (!context?.onSelect)
+    return (
+      <div {...identity} className={className}>
+        {children}
+      </div>
+    )
   const selected = context.selection?.sectionId === sectionId && context.selection.itemId === itemId
   return (
     <div
+      {...identity}
       role="button"
       tabIndex={0}
       aria-label={`Edit ${label}`}

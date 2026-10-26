@@ -22,6 +22,7 @@ export default defineConfig({
     env: {
       NEXT_PUBLIC_APP_URL: baseURL,
       BETTER_AUTH_URL: baseURL,
+      API_INTERNAL_URL: 'http://127.0.0.1:3101',
     },
   },
 })

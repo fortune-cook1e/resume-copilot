@@ -28,17 +28,24 @@ export default function ResumeDocument({ selection, onSelect }: EditorSelectionP
 
   return (
     <PreviewSelectionContext.Provider value={onSelect ? { selection, onSelect } : null}>
-      <div id="resume-document" data-ready="true" className="p-custom space-y-4">
+      <div id="resume-document" data-ready="false" className="p-custom space-y-4">
         <Basics />
         {getSectionOrder(resume).map((sectionId) => {
+          const section = resume.modules[sectionId]!
+          let content
           if (sectionId in builtins) {
             const Component = builtins[sectionId as keyof typeof builtins]
-            return <Component key={sectionId} />
+            content = <Component />
+          } else if (sectionId.startsWith('custom-') && !('type' in section && section.type)) {
+            content = <Custom moduleId={sectionId as CustomModuleId} />
+          } else {
+            content = <Content sectionId={sectionId} />
           }
-          const section = resume.modules[sectionId]
-          if (sectionId.startsWith('custom-') && section && !('type' in section && section.type))
-            return <Custom key={sectionId} moduleId={sectionId as CustomModuleId} />
-          return <Content key={sectionId} sectionId={sectionId} />
+          return (
+            <div key={sectionId} data-pagination-section={sectionId}>
+              {content}
+            </div>
+          )
         })}
       </div>
     </PreviewSelectionContext.Provider>

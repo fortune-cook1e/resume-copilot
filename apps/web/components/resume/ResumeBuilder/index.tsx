@@ -26,8 +26,8 @@ export default function ResumeBuilder({ selection, onSelect }: EditorSelectionPr
         wrapperClass="!w-full !h-full"
         contentClass={onSelect ? '' : 'pointer-events-none'}
       >
-        <Page mode="builder">
-          <ResumeDocument selection={selection} onSelect={onSelect} />
+        <Page mode="builder" selection={selection} onSelect={onSelect}>
+          <ResumeDocument />
         </Page>
       </TransformComponent>
       <Controls />

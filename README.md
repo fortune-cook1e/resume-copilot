@@ -72,7 +72,9 @@ pnpm --filter @resume-copilot/api test src/resumes/resumes.test.mts
 pnpm --filter @resume-copilot/api test --project http
 ```
 
-Playwright discovers browser journeys under repository-root `tests/e2e/`; run them separately with `pnpm test:e2e`. No browser E2E suites are currently committed.
+Playwright discovers browser journeys under repository-root `tests/e2e/`; run them separately with `pnpm test:e2e`. Web uses port 3100; API test listeners use port 3101. Build API first with `pnpm --filter @resume-copilot/api build`. Authenticated journeys require `AUTH_TEST_DATABASE_URL` targeting the existing, migrated `resume_copilot_test` database; they create and remove only their synthetic user's fixtures. Without this variable, authenticated journeys are reported as skipped and independent rendering checks still run. Tests do not start containers or run migrations.
+
+PDF assertions use an existing Python interpreter with `pypdf`; select it with `PDF_TEST_PYTHON` (defaults to `python3`). Chromium must already be available to Playwright, and the API uses its normal Chrome/Chromium executable discovery for actual downloads.
 
 Oxlint and Oxfmt run separately; editor integration is optional.
 
