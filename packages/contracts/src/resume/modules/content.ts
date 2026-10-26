@@ -79,6 +79,7 @@ export type ContentItem = z.infer<typeof contentItemSchema>
 const contentModuleBase = z.object({
   name: z.string(),
   visible: z.boolean(),
+  startOnNewPage: z.boolean().optional(),
   content: z.string().optional(),
 })
 export const contentModuleSchemas = {

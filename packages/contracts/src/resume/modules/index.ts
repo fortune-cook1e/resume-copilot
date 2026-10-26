@@ -9,6 +9,7 @@ import z from 'zod'
 export const moduleSchema = z.object({
   name: z.string(),
   visible: z.boolean().default(true),
+  startOnNewPage: z.boolean().optional(),
 })
 
 export const builtInModulesSchema = z.object({

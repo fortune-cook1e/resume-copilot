@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuCheckboxItem,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -81,6 +82,17 @@ export default function ModuleHeader({
             <ArrowDown />
             Move down
           </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuCheckboxItem
+            checked={section.startOnNewPage ?? false}
+            onCheckedChange={(checked) =>
+              update((draft) => {
+                draft.modules[moduleId]!.startOnNewPage = checked
+              })
+            }
+          >
+            Start on a new page
+          </DropdownMenuCheckboxItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onSelect={() => {

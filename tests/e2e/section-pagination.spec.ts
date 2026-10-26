@@ -334,6 +334,143 @@ test('retains ordered-list numbering on continuation pages', async ({ page }) =>
   }
 })
 
+test('does not create a page for hidden or visually empty sections with a fresh-page setting', async ({
+  page,
+}) => {
+  const data = {
+    ...structuredClone(defaultResumeData),
+    basics: { ...defaultResumeData.basics, name: 'Empty Section Author' },
+    modules: {
+      ...structuredClone(defaultResumeData.modules),
+      summary: {
+        id: 'summary',
+        name: 'Empty summary heading',
+        visible: true,
+        items: [],
+        content: '<p><br></p>',
+        startOnNewPage: true,
+      },
+      languages: {
+        id: 'languages',
+        name: 'Hidden languages',
+        visible: false,
+        startOnNewPage: true,
+        items: [{ id: 'language', visible: true, language: 'Hidden text', fluency: '' }],
+      },
+    },
+    sectionOrder: ['summary', 'languages'],
+  }
+  await page.addInitScript((data) => {
+    Object.assign(window, { __RESUME_DATA__: { id: 'empty-fixture', data, isPrint: true } })
+  }, data)
+  await page.goto('/resume/print')
+  await expect(page.locator('#resume-document')).toHaveAttribute('data-ready', 'true')
+  const pages = page.getByRole('region', { name: /^Page \d+$/ })
+  await expect(pages).toHaveCount(1)
+  await expect(pages).not.toContainText('Empty summary heading')
+  await expect(pages).not.toContainText('Hidden text')
+})
+
+test('starts a section on a fresh page and retains it through reorder, reopen and real PDF export', async ({
+  page,
+  context,
+}, testInfo) => {
+  test.skip(
+    !process.env.AUTH_TEST_DATABASE_URL,
+    'Requires an explicitly selected isolated test database and API build',
+  )
+  await context.addCookies([
+    { name: 'better-auth.session_token', value: cookie, url: 'http://127.0.0.1:3100' },
+  ])
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  const data = structuredClone(defaultResumeData)
+  data.basics.name = 'Page Start Author'
+  data.modules.projects.items = [
+    {
+      id: 'project',
+      visible: true,
+      name: 'FreshPageProject',
+      date: '',
+      description: '',
+      summary: 'Short project content.',
+      website: { icon: '', link: '', label: '' },
+    },
+  ]
+  data.modules.education.items = [
+    {
+      id: 'school',
+      visible: true,
+      university: 'FirstUniversity',
+      major: '',
+      date: '',
+      location: '',
+      summary: '',
+    },
+  ]
+  const created = await page.request.post('/api/resumes', {
+    headers: { origin: 'http://127.0.0.1:3100' },
+    data: {
+      title: 'Page start journey',
+      data: { ...data, sectionOrder: ['education', 'projects'] },
+    },
+  })
+  expect(created.status()).toBe(201)
+  const { data: resume } = await created.json()
+  await page.goto(`/builder/${resume.id}`)
+  const pages = page.getByRole('region', { name: /^Page \d+$/ })
+  await expect(pages).toHaveCount(1)
+  await page.getByRole('button', { name: 'Projects section actions' }).click()
+  const option = page.getByRole('menuitemcheckbox', { name: 'Start on a new page' })
+  await expect(option).not.toBeChecked()
+  await option.click()
+  await expect(pages).toHaveCount(2)
+  await expect(pages.nth(1)).toContainText('FreshPageProject')
+  await expect(pages.nth(0)).toContainText('FirstUniversity')
+  await page.getByRole('button', { name: 'Projects', exact: true }).press('Alt+ArrowUp')
+  await expect(page.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible()
+  await page.reload()
+  await expect(page.locator('#resume-document')).toHaveAttribute('data-ready', 'true')
+  await expect(pages).toHaveCount(2)
+  await expect(pages.nth(1)).toContainText('FirstUniversity')
+  await page.getByRole('button', { name: 'Projects section actions' }).click()
+  await expect(option).toBeChecked()
+  await page.keyboard.press('Escape')
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download PDF' }).click()
+  const file = testInfo.outputPath('fresh-page.pdf')
+  await (await downloadPromise).saveAs(file)
+  const pdfPages = readPdfPages(file)
+  expect(pdfPages).toHaveLength(2)
+  expect(pdfPages[0]).toContain('Page Start Author')
+  expect(pdfPages[1]).toContain('FreshPageProject')
+  expect(pdfPages[1]).toContain('FirstUniversity')
+  await page.getByRole('button', { name: 'Hide Projects', exact: true }).click()
+  await expect(pages).toHaveCount(1)
+  await page.getByRole('button', { name: 'Show Projects', exact: true }).click()
+  await expect(pages).toHaveCount(2)
+  await page.getByRole('button', { name: 'Projects section actions' }).click()
+  await option.click()
+  await expect(pages).toHaveCount(1)
+  await expect(page.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible()
+  const invalid = await page.request.patch(`/api/resumes/${resume.id}`, {
+    headers: { origin: 'http://127.0.0.1:3100' },
+    data: {
+      data: {
+        ...data,
+        modules: {
+          ...data.modules,
+          projects: { ...data.modules.projects, startOnNewPage: 'true' },
+        },
+      },
+    },
+  })
+  expect(invalid.status()).toBe(400)
+  const cleanup = await page.request.delete(`/api/resumes/${resume.id}`, {
+    headers: { origin: 'http://127.0.0.1:3100' },
+  })
+  expect(cleanup.status()).toBe(200)
+})
+
 test('does not split a Unicode grapheme at a page boundary', async ({ page }) => {
   const data = structuredClone(defaultResumeData)
   const glyph = '👩‍💻'

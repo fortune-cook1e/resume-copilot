@@ -49,6 +49,8 @@ export default function Page({
       subtree: true,
       childList: true,
       characterData: true,
+      attributes: true,
+      attributeFilter: ['data-start-on-new-page'],
     })
     document.fonts?.addEventListener('loadingdone', schedule)
     schedule()

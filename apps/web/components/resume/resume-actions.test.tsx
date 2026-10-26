@@ -71,6 +71,57 @@ it('retains print order through the save contract while accepting documents with
   expect(editorDataSchema.parse(defaultResumeData)).toEqual(defaultResumeData)
 })
 
+it.each(['projects', 'languages', 'custom-typed', 'custom-legacy'] as const)(
+  'saves the fresh-page menu setting for %s without losing its section shape',
+  async (id) => {
+    const data = structuredClone(defaultResumeData) as ResumeData
+    data.modules.languages = { id: 'languages', name: 'Languages', visible: true, items: [] }
+    data.modules['custom-typed'] = {
+      id: 'custom-typed',
+      name: 'Typed languages',
+      type: 'languages',
+      visible: true,
+      items: [],
+    }
+    data.modules['custom-legacy'] = {
+      id: 'custom-legacy',
+      name: 'Legacy custom',
+      visible: true,
+      items: [],
+    }
+    useResumeStore.getState().initializeResume({ id: 'draft', title: 'Resume', data })
+    render(<ModuleHeader moduleId={id} />)
+    fireEvent.keyDown(
+      screen.getByRole('button', { name: data.modules[id]!.name + ' section actions' }),
+      { key: 'Enter' },
+    )
+    const option = screen.getByRole('menuitemcheckbox', { name: 'Start on a new page' })
+    expect(option.getAttribute('aria-checked')).toBe('false')
+    fireEvent.click(option)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(600)
+    })
+    const saved = updateResumeSchema.parse(api.update.mock.lastCall![1]).data!
+    expect(saved.modules[id]).toEqual({
+      ...data.modules[id],
+      startOnNewPage: true,
+    })
+    for (const setting of ['startOnNewPage']) {
+      expect(
+        updateResumeSchema.safeParse({
+          data: {
+            ...saved,
+            modules: {
+              ...saved.modules,
+              [id]: { ...saved.modules[id], [setting]: 'true' },
+            },
+          },
+        }).success,
+      ).toBe(false)
+    }
+  },
+)
+
 it('rejects malformed module data at the shared save boundary', () => {
   const invalidDocuments = [
     { ...structuredClone(defaultResumeData), basics: { ...defaultResumeData.basics, name: 123 } },

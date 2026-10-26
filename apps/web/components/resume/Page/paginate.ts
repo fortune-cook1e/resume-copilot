@@ -57,6 +57,9 @@ export function paginate(documentElement: HTMLElement, target: HTMLElement) {
   }
 
   target.replaceChildren()
+  const breaks = Array.from(source.querySelectorAll('[data-start-on-new-page="true"]'))
+    .map((section) => texts.find((text) => section.contains(text.node))?.start)
+    .filter((position): position is number => position !== undefined)
   let start = 0
   do {
     const page = document.createElement('section')
@@ -73,7 +76,7 @@ export function paginate(documentElement: HTMLElement, target: HTMLElement) {
       content.replaceChildren(fragment(start, end))
       return content.scrollHeight <= content.clientHeight
     }
-    const limit = length
+    const limit = breaks.find((position) => position > start) ?? length
     let end = limit
     if (!fits(end)) {
       let low = start,

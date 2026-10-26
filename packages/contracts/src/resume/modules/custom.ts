@@ -35,6 +35,7 @@ const customModuleBase = z.object({
   id: z.string().regex(/^custom-.+/),
   name: z.string(),
   visible: z.boolean().default(true),
+  startOnNewPage: z.boolean().optional(),
 })
 
 // Untyped custom sections retain the original entry shape. Typed sections use

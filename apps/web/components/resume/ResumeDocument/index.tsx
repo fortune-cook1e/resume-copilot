@@ -42,7 +42,11 @@ export default function ResumeDocument({ selection, onSelect }: EditorSelectionP
             content = <Content sectionId={sectionId} />
           }
           return (
-            <div key={sectionId} data-pagination-section={sectionId}>
+            <div
+              key={sectionId}
+              data-pagination-section={sectionId}
+              data-start-on-new-page={section.startOnNewPage || undefined}
+            >
               {content}
             </div>
           )
