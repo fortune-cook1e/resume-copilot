@@ -21,8 +21,6 @@ import { afterAll, beforeAll, describe, expect, it, onTestFinished, vi } from 'v
 const require = createRequire(import.meta.url)
 const { createApplication } = require('../dist/main.js') as typeof import('../dist/main.js')
 const { AppModule } = require('../dist/app.module.js') as typeof import('../dist/app.module.js')
-const { ApplicationState } =
-  require('../dist/lifecycle/application-state.js') as typeof import('../dist/lifecycle/application-state.js')
 const { appConfig } =
   require('../dist/config/app.config.js') as typeof import('../dist/config/app.config.js')
 const { RawResponse } =
@@ -296,11 +294,14 @@ describe('API bootstrap', () => {
     expect(response.headers.get('access-control-allow-origin')).toBeNull()
   })
 
-  it('reports readiness after initialization without allowing cached probes', async () => {
+  it('reports readiness from a live database probe without caching the result', async () => {
     const response = await fetch(`${baseURL}/api/health/ready`)
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ status: 'ready' })
     expect(response.headers.get('cache-control')).toBe('no-store')
+    expect(await response.json()).toEqual({
+      status: 'ready',
+      checks: { database: 'up' },
+    })
   })
 
   it('does not expose an unprefixed health endpoint', async () => {
@@ -501,26 +502,6 @@ describe('API bootstrap', () => {
       data: null,
       error: { code: 'NOT_FOUND', message: 'Not Found' },
     })
-  })
-
-  it('reports not-ready during shutdown while liveness remains independent', async () => {
-    // Exercise the same transition used by the signal handler; real signals are
-    // tested above since an externally closed listener cannot reliably serve 503.
-    app.get(ApplicationState).beginShutdown()
-    const ready = await fetch(`${baseURL}/api/health/ready`)
-    expect(ready.status).toBe(503)
-    expect(await ready.json()).toEqual({
-      statusCode: 503,
-      code: 'SERVICE_UNAVAILABLE',
-      message: 'Service Unavailable',
-      requestId: ready.headers.get('x-request-id'),
-    })
-    expect(ready.headers.get('cache-control')).toBe('no-store')
-    const work = await fetch(`${baseURL}/api/test-errors`, { method: 'POST' })
-    expect(work.status).toBe(503)
-    expect(work.headers.get('connection')).toBe('close')
-    const live = await fetch(`${baseURL}/api/health`)
-    expect(live.status).toBe(200)
   })
 })
 

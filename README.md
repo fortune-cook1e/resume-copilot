@@ -62,13 +62,14 @@ pnpm build
 pnpm --filter @resume-copilot/web test
 ```
 
-`pnpm test` runs all workspace tests. API tests require `AUTH_TEST_DATABASE_URL` pointing to an already-migrated database named **`resume_copilot_test` only**; tests clear test-only rows. Never use development or production data.
+`pnpm test` runs all workspace tests. The API's `database` test project requires `AUTH_TEST_DATABASE_URL` pointing to an already-migrated database named **`resume_copilot_test` only**; tests clear test-only rows. Never use development or production data. Its `http` test project uses temporary local HTTP listeners and does not require PostgreSQL.
 
 Vitest suites live beside the source behavior they cover. Run a focused suite with a workspace-relative path, for example:
 
 ```bash
 pnpm --filter @resume-copilot/web exec vitest run lib/request.test.ts
 pnpm --filter @resume-copilot/api test src/resumes/resumes.test.mts
+pnpm --filter @resume-copilot/api test --project http
 ```
 
 Playwright discovers browser journeys under repository-root `tests/e2e/`; run them separately with `pnpm test:e2e`. No browser E2E suites are currently committed.

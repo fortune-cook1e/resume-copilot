@@ -19,6 +19,24 @@ export class DatabaseService implements OnModuleInit, OnApplicationShutdown {
     await this.client`SELECT 1`
   }
 
+  async checkHealth() {
+    const query = this.client`SELECT 1`
+    let deadline: NodeJS.Timeout | undefined
+    try {
+      await Promise.race([
+        query,
+        new Promise<never>((_resolve, reject) => {
+          deadline = setTimeout(() => {
+            reject(new Error('Database health check timed out'))
+            query.cancel()
+          }, 1000)
+        }),
+      ])
+    } finally {
+      clearTimeout(deadline)
+    }
+  }
+
   // Nest closes HTTP connections before this hook, so in-flight requests retain database access.
   async onApplicationShutdown() {
     await this.client.end({ timeout: 5 })

@@ -1,7 +1,7 @@
 import 'reflect-metadata'
 import { NestFactory } from '@nestjs/core'
 import type { ConfigType } from '@nestjs/config'
-import { Logger as NestLogger, ServiceUnavailableException, type Type } from '@nestjs/common'
+import { Logger as NestLogger, type Type } from '@nestjs/common'
 import { text, type NextFunction, type Request, type Response } from 'express'
 import type { Server } from 'node:http'
 import type { NestExpressApplication } from '@nestjs/platform-express'
@@ -12,7 +12,6 @@ import { pino } from 'pino'
 import { requestLogging } from './common/logging'
 import { AppModule } from './app.module'
 import { appConfig, ConfigurationError } from './config/app.config'
-import { ApplicationState } from './lifecycle/application-state'
 import { AuthService } from './auth/auth.service'
 
 export async function createApplication(rootModule: Type = AppModule) {
@@ -39,15 +38,6 @@ export async function createApplication(rootModule: Type = AppModule) {
   app.use(helmet())
   app.disable('x-powered-by')
   app.set('trust proxy', false)
-  const state = app.get(ApplicationState)
-  app.use((request: Request, response: Response, next: NextFunction) => {
-    if (!state.isReady && request.path !== '/api/health' && request.path !== '/api/health/ready') {
-      response.setHeader('Connection', 'close')
-      next(new ServiceUnavailableException())
-      return
-    }
-    next()
-  })
   // Better Auth owns its redirects, Cookies and body parsing; mount it before Nest parsers.
   app.use(
     '/api/auth',

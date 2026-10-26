@@ -6,8 +6,6 @@ import { currentUserSchema, httpResponseSchema } from '@resume-copilot/contracts
 
 const require = createRequire(import.meta.url)
 const { createApplication } = require('../../dist/main.js') as typeof import('../../dist/main.js')
-const { ApplicationState } =
-  require('../../dist/lifecycle/application-state.js') as typeof import('../../dist/lifecycle/application-state.js')
 
 describe('trusted identity over HTTP', () => {
   let app: INestApplication
@@ -359,15 +357,5 @@ describe('trusted identity over HTTP', () => {
       data: null,
       error: { code: 'UNAUTHORIZED', message: 'Unauthorized' },
     })
-  })
-
-  it('does not initiate a new OAuth login after shutdown begins', async () => {
-    app.get(ApplicationState).beginShutdown()
-    const response = await fetch(`${baseURL}/api/auth/sign-in/social`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', origin: 'http://localhost:3000' },
-      body: JSON.stringify({ provider: 'google', callbackURL: '/dashboard/resumes' }),
-    })
-    expect(response.status).toBe(503)
   })
 })

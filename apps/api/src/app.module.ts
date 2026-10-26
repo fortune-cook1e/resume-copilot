@@ -7,8 +7,7 @@ import { createLogger } from './common/logging'
 import { HttpExceptionFilter } from './common/filters/http-exception.filter'
 import { ResponseInterceptor } from './common/responses/response.interceptor'
 import { appConfig } from './config/app.config'
-import { AppController } from './app.controller'
-import { ApplicationState } from './lifecycle/application-state'
+import { HealthModule } from './health/health.module'
 import { ShutdownDeadline } from './lifecycle/shutdown-deadline'
 import { AuthModule } from './auth/auth.module'
 import { ResumesModule } from './resumes/resumes.module'
@@ -17,6 +16,7 @@ import { ResumesModule } from './resumes/resumes.module'
   imports: [
     AuthModule,
     ResumesModule,
+    HealthModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: resolve(__dirname, '../.env'),
@@ -34,11 +34,9 @@ import { ResumesModule } from './resumes/resumes.module'
     }),
   ],
   providers: [
-    ApplicationState,
     ShutdownDeadline,
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
   ],
-  controllers: [AppController],
 })
 export class AppModule {}
