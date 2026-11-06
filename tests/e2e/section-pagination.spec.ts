@@ -260,6 +260,139 @@ test('automatically continues long sections and rich text with matching screen a
   }
 })
 
+test('signs in, creates a resume and displays every page after editing and reopening', async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  test.skip(!process.env.AUTH_TEST_DATABASE_URL, 'Requires an isolated test database and API build')
+  const email = `core-${randomUUID()}@example.test`
+  const code = randomUUID()
+  const fetch = globalThis.fetch
+  const claims = Buffer.from(
+    JSON.stringify({ sub: code, name: 'Core Journey Author', email, email_verified: true }),
+  ).toString('base64url')
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256' })).toString('base64url')
+  const payload = `${header}.${claims}`
+  const signature = createHmac('sha256', code).update(payload).digest('base64url')
+
+  // Replace only Google's endpoints. Better Auth still owns the OAuth state,
+  // callback, account creation and session cookie.
+  globalThis.fetch = async (input, init) => {
+    const url = input instanceof Request ? input.url : String(input)
+    if (url !== 'https://oauth2.googleapis.com/token') return fetch(input, init)
+    const tokenRequest = new Request(input, init)
+    const form = await tokenRequest.formData()
+    if (form.get('code') !== code || !form.get('code_verifier'))
+      return Response.json({ error: 'invalid_grant' }, { status: 400 })
+    return Response.json({
+      access_token: 'core-journey-test-token',
+      token_type: 'Bearer',
+      id_token: `${payload}.${signature}`,
+    })
+  }
+
+  try {
+    await context.route('https://accounts.google.com/o/oauth2/v2/auth?**', async (route) => {
+      const authorize = new URL(route.request().url())
+      const state = authorize.searchParams.get('state')
+      expect(state).toBeTruthy()
+      expect(authorize.searchParams.get('code_challenge')).toBeTruthy()
+      const callback = new URL('/api/auth/callback/google', baseURL)
+      expect(authorize.searchParams.get('redirect_uri')).toBe(callback.href)
+      callback.searchParams.set('code', code)
+      callback.searchParams.set('state', state!)
+      await route.fulfill({ status: 302, headers: { location: callback.href } })
+    })
+
+    await page.goto('/dashboard/resumes')
+    await expect(page).toHaveURL(/\/login(?:\?|$)/)
+    await page.getByRole('button', { name: 'Continue with Google' }).click()
+    await expect(page).toHaveURL(/\/dashboard\/resumes$/)
+
+    await expect(page.getByRole('heading', { name: 'No resumes yet' })).toBeVisible()
+    const title = 'Core flow resume'
+    await page.getByRole('button', { name: 'New Resume', exact: true }).click()
+    const dialog = page.getByRole('dialog', { name: 'Create new resume' })
+    await dialog.getByRole('textbox', { name: 'Title', exact: true }).fill(title)
+    await dialog.getByRole('button', { name: 'Create', exact: true }).click()
+    await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Open editor', exact: true }).click()
+    await expect(page).toHaveURL(/\/builder\/[^/?]+$/)
+
+    const preview = page.getByRole('region', { name: 'Resume preview', exact: true })
+    const sheets = preview.getByRole('region', { name: /^Page \d+$/ })
+    await expect(sheets.first().locator('canvas')).toBeVisible()
+    await expect(sheets).toHaveCount(1)
+    const editor = page.getByRole('complementary', { name: 'Resume content' })
+    const summary = editor.getByRole('region', { name: 'Summary section' })
+    await editor.getByRole('button', { name: 'Add section', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Summary', exact: true }).click()
+    const text = summary.getByRole('textbox', { name: 'Summary', exact: true })
+    await expect(text).toBeVisible()
+
+    const markers = Array.from({ length: 95 }, (_, i) => `Achievement${i + 1}`)
+    const list = `<ul>${markers.map((marker) => `<li><p>${marker} A result from this role, with enough detail to wrap onto another line in the resume preview.</p></li>`).join('')}</ul>`
+    const saved = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'PATCH' &&
+        new URL(response.url()).pathname.startsWith('/api/resumes/') &&
+        !!response.request().postData()?.includes('Achievement95'),
+    )
+    await text.evaluate((element, html) => {
+      element.focus()
+      const clipboard = new DataTransfer()
+      clipboard.setData('text/html', html)
+      element.dispatchEvent(
+        new ClipboardEvent('paste', { clipboardData: clipboard, bubbles: true, cancelable: true }),
+      )
+    }, list)
+    expect((await saved).ok()).toBe(true)
+
+    const verifyPages = async () => {
+      await expect(sheets.last()).toContainText(/\bAchievement95\b/)
+      const contents = await sheets.allInnerTexts()
+      expect(contents.length).toBeGreaterThanOrEqual(3)
+      const markersByPage = contents.map((content) => content.match(/\bAchievement\d+\b/g) ?? [])
+      for (const pageMarkers of markersByPage) expect(pageMarkers.length).toBeGreaterThan(0)
+      expect(markersByPage.flat()).toEqual(markers)
+      const bounds = await sheets.evaluateAll((elements) =>
+        elements.map((element) => {
+          const { top, bottom } = element.getBoundingClientRect()
+          return { top, bottom }
+        }),
+      )
+      for (let index = 0; index < contents.length; index++) {
+        if (index > 0) expect(bounds[index].top).toBeGreaterThan(bounds[index - 1].bottom)
+        const sheet = sheets.nth(index)
+        await sheet.scrollIntoViewIfNeeded()
+        const canvas = sheet.locator('canvas')
+        await expect(canvas).toBeInViewport()
+        await expect
+          .poll(() =>
+            canvas.evaluate((element: HTMLCanvasElement) => {
+              const context = element.getContext('2d')
+              if (!context || !element.width || !element.height) return false
+              const { data } = context.getImageData(0, 0, element.width, element.height)
+              return data.some(
+                (channel, index) => index % 4 === 0 && channel < 200 && data[index + 3] > 0,
+              )
+            }),
+          )
+          .toBe(true)
+      }
+      return markersByPage
+    }
+
+    const beforeReload = await verifyPages()
+    await page.reload()
+    expect(await verifyPages()).toEqual(beforeReload)
+  } finally {
+    globalThis.fetch = fetch
+    await database!`DELETE FROM "user" WHERE email = ${email}`
+  }
+})
+
 test('saves, reopens and exports the same real multi-page resume through the authenticated editor', async ({
   page,
   context,
