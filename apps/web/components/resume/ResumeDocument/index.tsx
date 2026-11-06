@@ -13,10 +13,16 @@ import { getSectionOrder } from '../ResumeEditor/sections'
 import type { CustomModuleId } from '@resume-copilot/contracts'
 import type { EditorSelectionProps } from '@/types/resume/editor'
 import { PreviewSelectionContext } from './PreviewBlock'
-import { defaultResumeTypography } from './typography'
+import { resolveResumeTypography } from './typography'
+import { resumeFontCss } from './font-sources'
 
 const fontStacks = {
   'EB Garamond': '"EB Garamond", Georgia, serif',
+  Tinos: 'Tinos, Georgia, serif',
+  'Source Serif 4': '"Source Serif 4", Georgia, serif',
+  'Source Sans 3': '"Source Sans 3", Arial, sans-serif',
+  Carlito: 'Carlito, Arial, sans-serif',
+  Lato: 'Lato, Arial, sans-serif',
   Helvetica: 'Helvetica, Arial, sans-serif',
   Times: '"Times New Roman", Times, serif',
   Courier: '"Courier New", Courier, monospace',
@@ -39,8 +45,9 @@ export default function ResumeDocument({
     skills: Skills,
   }
   const variables: Record<string, string | number> = {}
+  const typography = resolveResumeTypography(resume.typography)
   for (const group of ['heading', 'body'] as const) {
-    const style = { ...defaultResumeTypography[group], ...resume.typography?.[group] }
+    const style = typography[group]
     variables[`--resume-${group}-family`] = fontStacks[style.fontFamily]
     variables[`--resume-${group}-pdf-font`] = style.fontFamily
     variables[`--resume-${group}-size`] = `${style.fontSize}pt`
@@ -50,6 +57,9 @@ export default function ResumeDocument({
 
   return (
     <PreviewSelectionContext.Provider value={onSelect ? { selection, onSelect } : null}>
+      <style href="resume-preset-fonts" precedence="default">
+        {resumeFontCss}
+      </style>
       <div
         id={sourceId}
         data-ready="false"

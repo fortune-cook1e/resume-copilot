@@ -959,6 +959,13 @@ test('scrolls the preview with the wheel and changes zoom only through its contr
       expect(created.status()).toBe(201)
       resumeId = (await created.json()).data.id
     }
+    const requestedPresetFonts = new Set<string>()
+    context.on('request', (request) => {
+      const url = new URL(request.url())
+      if (url.hostname === 'fonts.gstatic.com' && url.pathname.startsWith('/s/')) {
+        requestedPresetFonts.add(url.pathname.split('/')[2])
+      }
+    })
     const fontWarnings: string[] = []
     page.on('console', (message) => {
       if (/Math\.sumPrecise|Cannot load system font: EBGaramond/.test(message.text()))
@@ -976,6 +983,7 @@ test('scrolls the preview with the wheel and changes zoom only through its contr
         .evaluate((canvas: HTMLCanvasElement) => canvas.width)
     await expect.poll(() => canvasWidth(0)).toBeGreaterThan(0)
     await expect.poll(() => canvasWidth(2)).toBe(0)
+    expect([...requestedPresetFonts]).toEqual(['ebgaramond'])
     const previewText = await pages.allInnerTexts()
     const serverExports: string[] = []
     page.on('request', (request) => {
@@ -1073,8 +1081,14 @@ test('scrolls the preview with the wheel and changes zoom only through its contr
     const design = page.getByRole('tab', { name: 'Design' })
     await design.click()
     const typography = page.getByRole('tabpanel', { name: 'Design' })
-    await expect(typography.getByRole('group', { name: 'Heading' })).toBeVisible()
-    await expect(typography.getByRole('group', { name: 'Body' })).toBeVisible()
+    const presets = typography.getByRole('group', { name: 'Typography' })
+    const slider = typography.getByRole('slider', { name: 'Text size' })
+    await expect(presets.getByRole('button')).toHaveCount(5)
+    await expect(presets.getByRole('button', { name: /^Classic/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await expect(slider).toHaveAttribute('aria-valuenow', '10')
     await expect(percentage).toHaveText(fitPercentage)
     await page.getByRole('tab', { name: 'Write' }).click()
     await pages.nth(1).getByRole('button', { name: 'Edit Scrollable project' }).press('Enter')
@@ -1108,31 +1122,30 @@ test('scrolls the preview with the wheel and changes zoom only through its contr
         '| 技能 | Level |\n| --- | --- |\n| TypeScript | Advanced |',
         `<a href="https://example.test/chart"><img src="data:image/png;base64,${png}" alt="Chart"></a>`,
       ].join('\n\n')
+      data.typography = {
+        heading: { fontFamily: 'Helvetica', fontSize: 16 },
+        body: { fontFamily: 'Courier', fontSize: 11 },
+      }
       await page.setViewportSize({ width: 1440, height: 900 })
       await page.reload()
       await design.click()
-      const heading = typography.getByRole('group', { name: 'Heading' })
-      const body = typography.getByRole('group', { name: 'Body' })
-      const headingFont = heading.getByRole('combobox', { name: 'Font family' })
-      const bodyFont = body.getByRole('combobox', { name: 'Font family' })
-      await expect(headingFont).toHaveText('EB Garamond')
-      await headingFont.press('Enter')
-      await page.getByRole('option', { name: 'Helvetica', exact: true }).click()
-      await heading.getByLabel('Font size (pt)').fill('16')
-      await heading.getByLabel('Line height').fill('1.25')
-      await bodyFont.click()
-      await page.getByRole('option', { name: 'Courier', exact: true }).click()
-      await body.getByLabel('Font size (pt)').fill('11')
-      await body.getByLabel('Line height').fill('1.6')
+      await expect(presets.getByRole('button', { pressed: true })).toHaveCount(0)
+      await expect(page.locator('#resume-pdf-source')).toHaveCSS('--resume-body-size', '11pt')
+      await expect(slider).toBeDisabled()
+
+      const balanced = presets.getByRole('button', { name: /^Balanced/ })
+      await balanced.click()
+      await slider.press('ArrowRight')
+      await slider.press('ArrowRight')
+      await expect(slider).toHaveAttribute('aria-valuenow', '11')
+      await presets.getByRole('button', { name: /^Professional/ }).click()
+      await expect(slider).toHaveAttribute('aria-valuenow', '11')
+      await balanced.click()
       await expect(page.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible()
       await page.reload()
       await design.click()
-      await expect(headingFont).toHaveText('Helvetica')
-      await expect(heading.getByLabel('Font size (pt)')).toHaveValue('16')
-      await expect(heading.getByLabel('Line height')).toHaveValue('1.25')
-      await expect(bodyFont).toHaveText('Courier')
-      await expect(body.getByLabel('Font size (pt)')).toHaveValue('11')
-      await expect(body.getByLabel('Line height')).toHaveValue('1.6')
+      await expect(balanced).toHaveAttribute('aria-pressed', 'true')
+      await expect(slider).toHaveAttribute('aria-valuenow', '11')
       await expect(pages.first().locator('canvas')).toBeVisible()
       await expect(pages.first()).toContainText('职业经历')
       const styledDownload = page.waitForEvent('download')
@@ -1143,16 +1156,42 @@ test('scrolls the preview with the wheel and changes zoom only through its contr
         styledPath,
         [...contactLinks, 'https://example.test/chart'],
         [
-          { text: 'Scroll Preview Author', font: 'Helvetica', size: 24 },
-          { text: 'Projects', font: 'Helvetica', size: 16 },
-          { text: 'Scrollable project', font: 'Courier', size: 11 },
+          { text: 'Scroll Preview Author', font: 'SourceSerif4', size: 23.1 },
+          { text: 'Projects', font: 'SourceSerif4', size: 15.4 },
+          { text: 'Scrollable project', font: 'SourceSans3', size: 11 },
         ],
         6,
       ).join(' ')
       expect(styledText).toContain('职业经历')
       expect(styledText).toContain('技能')
       expect(styledText).toContain('TypeScript')
+
+      for (const [label, font] of [
+        ['Traditional', 'Tinos'],
+        ['Professional', 'Carlito'],
+        ['Clean', 'Lato'],
+      ]) {
+        await presets.getByRole('button', { name: new RegExp(`^${label}`) }).click()
+        await expect(slider).toHaveAttribute('aria-valuenow', '11')
+        const download = page.waitForEvent('download')
+        await page.getByRole('button', { name: 'Download PDF' }).click()
+        const path = testInfo.outputPath(`${label.toLowerCase()}-typography.pdf`)
+        await (await download).saveAs(path)
+        readPdfPages(path, undefined, [
+          { text: 'Scroll Preview Author', font, size: 23.1 },
+          { text: 'Scrollable project', font, size: 11 },
+        ])
+      }
       expect(serverExports).toEqual([])
+
+      expect([...requestedPresetFonts].sort()).toEqual([
+        'carlito',
+        'ebgaramond',
+        'lato',
+        'sourcesans3',
+        'sourceserif4',
+        'tinos',
+      ])
 
       data.modules.projects.items[0].summary = 'Font coverage fixture 🧑‍🚀'
       await page.reload()

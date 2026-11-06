@@ -16,17 +16,40 @@ export const resumeTypographyStyleSchema = z
   .partial()
 export type ResumeTypographyStyle = z.infer<typeof resumeTypographyStyleSchema>
 
+export const resumeTypographyPresetIds = [
+  'classic',
+  'traditional',
+  'balanced',
+  'professional',
+  'clean',
+] as const
+export type ResumeTypographyPresetId = (typeof resumeTypographyPresetIds)[number]
+
+export const resumeTextSize = { min: 9, max: 12.5, step: 0.5, default: 10 } as const
+
+const resumeTypographySchema = z.union([
+  z.object({
+    preset: z.enum(resumeTypographyPresetIds),
+    textSize: z
+      .number()
+      .min(resumeTextSize.min)
+      .max(resumeTextSize.max)
+      .multipleOf(resumeTextSize.step),
+  }),
+  z.object({
+    preset: z.never().optional(),
+    textSize: z.never().optional(),
+    heading: resumeTypographyStyleSchema.optional(),
+    body: resumeTypographyStyleSchema.optional(),
+  }),
+])
+
 export const resumeDataSchema = z.object({
   basics: basicsSchema,
   modules: modulesSchema,
   // Optional so existing documents retain their original print order.
   sectionOrder: z.array(z.string()).optional(),
-  typography: z
-    .object({
-      heading: resumeTypographyStyleSchema.optional(),
-      body: resumeTypographyStyleSchema.optional(),
-    })
-    .optional(),
+  typography: resumeTypographySchema.optional(),
 })
 
 export const defaultResumeData = {

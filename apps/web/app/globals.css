@@ -241,38 +241,6 @@
   text-underline-offset: 2px;
 }
 
-@font-face {
-  font-family: 'EB Garamond';
-  src: url('/fonts/EBGaramond-normal-400.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'EB Garamond';
-  src: url('/fonts/EBGaramond-normal-700.ttf') format('truetype');
-  font-weight: 600 900;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'EB Garamond';
-  src: url('/fonts/EBGaramond-italic-400.ttf') format('truetype');
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'EB Garamond';
-  src: url('/fonts/EBGaramond-italic-700.ttf') format('truetype');
-  font-weight: 600 900;
-  font-style: italic;
-  font-display: swap;
-}
-
 .resume-typography :where(ul, ol) {
   padding-inline-start: 12pt;
 }

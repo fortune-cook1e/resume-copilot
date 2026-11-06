@@ -1,14 +1,14 @@
 import type { FormeDocument, FormeNode, FormeStyle } from '@formepdf/react'
+import { resumeFontSources } from '../../ResumeDocument/font-sources'
 
 const chineseFamily = 'Noto Sans SC'
-const garamondFamily = 'EB Garamond'
 const han = /\p{Script=Han}|[\u3000-\u303f\uff00-\uffef]/u
 const cache = new Map<string, Promise<string>>()
 
-async function loadFont(asset: string) {
-  const response = await fetch(new URL(`/fonts/${asset}`, self.location.origin))
+async function loadFont(source: string) {
+  const response = await fetch(new URL(source, self.location.origin))
   if (!response.ok || !response.body) throw new Error('Could not load a PDF font.')
-  const bytes = asset.endsWith('.gz')
+  const bytes = source.endsWith('.gz')
     ? await new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer()
     : await response.arrayBuffer()
   return new Promise<string>((resolve, reject) => {
@@ -20,14 +20,14 @@ async function loadFont(asset: string) {
   })
 }
 
-function cachedFont(asset: string) {
-  let font = cache.get(asset)
+function cachedFont(source: string) {
+  let font = cache.get(source)
   if (!font) {
-    font = loadFont(asset).catch((error) => {
-      cache.delete(asset)
+    font = loadFont(source).catch((error) => {
+      cache.delete(source)
       throw error
     })
-    cache.set(asset, font)
+    cache.set(source, font)
   }
   return font
 }
@@ -51,23 +51,26 @@ export async function registerPdfFonts(document: FormeDocument) {
 
   const faces = new Map<string, { family: string; weight: number; italic: boolean }>()
   for (const style of styles) {
-    if (style.fontFamily === garamondFamily) {
+    const family = style.fontFamily
+    const sources = family && resumeFontSources.get(family)
+    if (family && sources) {
       const weight = (style.fontWeight ?? 400) >= 600 ? 700 : 400
       const italic = style.fontStyle === 'Italic' || style.fontStyle === 'Oblique'
-      faces.set(`EBGaramond-${italic ? 'italic' : 'normal'}-${weight}.ttf`, {
-        family: garamondFamily,
-        weight,
-        italic,
-      })
+      const source = sources[italic ? (`${weight}italic` as const) : weight]
+      faces.set(source, { family, weight, italic })
     }
     if (needsChinese && style.fontFamily) style.fontFamily = `${style.fontFamily}, ${chineseFamily}`
   }
   if (needsChinese)
-    faces.set('NotoSansSC-Regular.ttf.gz', { family: chineseFamily, weight: 400, italic: false })
+    faces.set('/fonts/NotoSansSC-Regular.ttf.gz', {
+      family: chineseFamily,
+      weight: 400,
+      italic: false,
+    })
 
   if (faces.size) {
     document.fonts = await Promise.all(
-      Array.from(faces, async ([asset, face]) => ({ ...face, src: await cachedFont(asset) })),
+      Array.from(faces, async ([source, face]) => ({ ...face, src: await cachedFont(source) })),
     )
   }
 }
