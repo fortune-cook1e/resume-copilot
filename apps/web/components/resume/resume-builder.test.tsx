@@ -48,7 +48,7 @@ describe('leaving and exporting the builder draft', () => {
     useResumeStore.getState().updateResume((draft) => {
       draft.basics.name = 'Unsaved draft'
     })
-    render(<BuilderToolbar onBusyChange={() => {}} />)
+    render(<BuilderToolbar onBusyChange={() => {}} getPdf={api.export} />)
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }))
     })
@@ -82,13 +82,18 @@ describe('leaving and exporting the builder draft', () => {
     useResumeStore.getState().updateResume((draft) => {
       draft.basics.name = 'Latest draft'
     })
-    render(<BuilderToolbar onBusyChange={() => {}} />)
+    render(<BuilderToolbar onBusyChange={() => {}} getPdf={api.export} />)
     const button = screen.getByRole('button', { name: 'Download PDF' })
     fireEvent.click(button)
     fireEvent.click(button)
     expect(api.export).not.toHaveBeenCalled()
     await act(async () => finish())
-    expect(api.export).toHaveBeenCalledExactlyOnceWith('Latest draft', 'resume-one')
+    expect(api.export).toHaveBeenCalledExactlyOnceWith(
+      useResumeStore.getState().resume,
+      'Latest draft',
+      'resume-one',
+      'export',
+    )
     expect(download).toHaveBeenCalledTimes(1)
   })
 
@@ -101,7 +106,7 @@ describe('leaving and exporting the builder draft', () => {
         }),
     )
     const download = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
-    const view = render(<BuilderToolbar onBusyChange={() => {}} />)
+    const view = render(<BuilderToolbar onBusyChange={() => {}} getPdf={api.export} />)
     fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }))
     view.unmount()
     useResumeStore.getState().reset()

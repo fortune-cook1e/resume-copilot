@@ -1,17 +1,28 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { useRouter } from 'next/navigation'
 import { FileText, LoaderCircle, Palette, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import ResumeEditor from '@/components/resume/ResumeEditor'
 import ResumeBuilder from '@/components/resume/ResumeBuilder'
+import ResumeDocument from '@/components/resume/ResumeDocument'
 import ResumeTypography from '@/components/resume/ResumeTypography'
 import BuilderToolbar from '@/components/resume/BuilderToolbar'
 import { useResumeStore } from '@/stores/resume-store'
-import { getResume } from '@/services/resume'
+import { exportResumePDF, getResume } from '@/services/resume'
 import type { EditorSelection } from '@/types/resume/editor'
+import { useResumePdf } from './ResumeBuilder/pdf/use-resume-pdf'
+
+// Matches Tailwind's lg breakpoint, where both panes are visible.
+const desktopPreviewQuery = '(min-width: 64rem)'
+function subscribeDesktopPreview(onChange: () => void) {
+  const query = window.matchMedia(desktopPreviewQuery)
+  query.addEventListener('change', onChange)
+  return () => query.removeEventListener('change', onChange)
+}
+const desktopPreview = () => window.matchMedia(desktopPreviewQuery).matches
 
 export default function ResumeWorkspace({ resumeId }: { resumeId: string }) {
   const router = useRouter()
@@ -23,6 +34,14 @@ export default function ResumeWorkspace({ resumeId }: { resumeId: string }) {
   const [editorMode, setEditorMode] = useState<'write' | 'design'>('write')
   const [actionBusy, setActionBusy] = useState(false)
   const [selection, setSelection] = useState<EditorSelection | null>(null)
+  const isDesktop = useSyncExternalStore(subscribeDesktopPreview, desktopPreview, () => false)
+  const previewVisible = isDesktop || mobileView === 'page'
+  const {
+    sourceRef,
+    preview: pdf,
+    error: pdfFailed,
+    render: renderPdf,
+  } = useResumePdf(isReady && loadedId === resumeId ? resumeId : null, previewVisible)
 
   useEffect(() => {
     let cancelled = false
@@ -89,7 +108,7 @@ export default function ResumeWorkspace({ resumeId }: { resumeId: string }) {
       value={editorMode}
       onValueChange={(mode) => {
         if (mode === 'write' || mode === 'design') setEditorMode(mode)
-        setMobileView('write')
+        if (!isDesktop) setMobileView('write')
       }}
       className="h-svh min-w-0 gap-0 overflow-hidden bg-background"
     >
@@ -99,6 +118,14 @@ export default function ResumeWorkspace({ resumeId }: { resumeId: string }) {
       >
         Skip to resume content
       </a>
+      <div
+        ref={sourceRef}
+        className="resume-document-source !visible text-[#171717]"
+        aria-hidden="true"
+        inert
+      >
+        <ResumeDocument sourceId="resume-pdf-source" />
+      </div>
       <BuilderToolbar
         onBusyChange={setActionBusy}
         editorTabs={
@@ -113,6 +140,17 @@ export default function ResumeWorkspace({ resumeId }: { resumeId: string }) {
             </TabsTrigger>
           </TabsList>
         }
+        getPdf={async (revision, filename, id, action) => {
+          try {
+            const result = await renderPdf(revision)
+            return new Blob([result.bytes], { type: 'application/pdf' })
+          } catch (error) {
+            const current = useResumeStore.getState()
+            if (current.resumeId !== id || current.resume !== revision) throw error
+            if (action === 'preview') return null
+            return exportResumePDF(filename, id)
+          }
+        }}
       />
       <main className="grid min-h-0 flex-1 lg:grid-cols-[400px_minmax(0,1fr)]">
         <aside
@@ -135,6 +173,9 @@ export default function ResumeWorkspace({ resumeId }: { resumeId: string }) {
           className={`relative min-h-0 min-w-0 overflow-hidden bg-slate-100 ${mobileView === 'page' ? 'block' : 'hidden'} lg:block`}
         >
           <ResumeBuilder
+            previewVisible={previewVisible}
+            pdf={pdf}
+            pdfFailed={pdfFailed}
             selection={selection}
             onSelect={
               actionBusy

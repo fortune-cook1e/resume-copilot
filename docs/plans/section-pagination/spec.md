@@ -1,5 +1,7 @@
 # Section pagination
 
+The editor's primary rendering path now uses Forme in a browser Worker. PDF.js displays the same PDF bytes used for download. Browser-generated PDFs keep each list marker with the start of its item, including when a long item continues on another page. Existing pagination flags and draft save semantics still define the expected behavior. The DOM layout and Chromium path described below applies to the standalone print route and compatibility rendering.
+
 ## Problem Statement
 
 Resume authors cannot currently control where sections begin on a new PDF page or keep a short section together. The builder presents one growing document with a guide at the first A4 boundary, while Chromium determines PDF pagination separately. Authors cannot reliably judge the final page boundaries from the preview.

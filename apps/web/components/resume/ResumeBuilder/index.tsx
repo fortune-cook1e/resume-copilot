@@ -7,6 +7,8 @@ import Controls from './Controls'
 import Page from '@/components/resume/Page'
 import { MM_TO_PX, PAGE_SIZE_MAP } from '@/constants'
 import type { EditorSelectionProps } from '@/types/resume/editor'
+import PdfPreview from './pdf/PdfPreview'
+import type { ResumePdf } from './pdf/use-resume-pdf'
 
 const documentContent = <ResumeDocument />
 
@@ -19,7 +21,17 @@ function fitScale(viewport: HTMLElement) {
   return Math.max(0.2, Math.floor(fit * 100) / 100)
 }
 
-export default function ResumeBuilder({ selection, onSelect }: EditorSelectionProps = {}) {
+export default function ResumeBuilder({
+  selection,
+  onSelect,
+  pdf,
+  pdfFailed,
+  previewVisible,
+}: EditorSelectionProps & {
+  pdf: ResumePdf | null
+  pdfFailed: boolean
+  previewVisible: boolean
+}) {
   const isReady = useResumeStore((state) => state.isReady)
   const viewportRef = useRef<HTMLDivElement>(null)
   const documentRef = useRef<HTMLDivElement>(null)
@@ -71,9 +83,17 @@ export default function ResumeBuilder({ selection, onSelect }: EditorSelectionPr
               transformOrigin: 'top left',
             }}
           >
-            <Page mode="builder" selection={selection} onSelect={onSelect}>
-              {documentContent}
-            </Page>
+            {!previewVisible ? null : pdfFailed ? (
+              <Page mode="builder" selection={selection} onSelect={onSelect}>
+                {documentContent}
+              </Page>
+            ) : pdf ? (
+              <PdfPreview pdf={pdf} selection={selection} onSelect={onSelect} />
+            ) : (
+              <p role="status" className="text-sm text-muted-foreground">
+                Preparing preview…
+              </p>
+            )}
           </div>
         </div>
       </div>

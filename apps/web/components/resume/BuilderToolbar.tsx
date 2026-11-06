@@ -14,16 +14,23 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useResumeStore } from '@/stores/resume-store'
-import { exportResumePDF } from '@/services/resume'
+import type { ResumeData } from '@resume-copilot/contracts'
 
 type Action = 'back' | 'preview' | 'export' | 'retry'
 
 export default function BuilderToolbar({
   onBusyChange,
+  getPdf,
   editorTabs,
 }: {
   onBusyChange: (busy: boolean) => void
   editorTabs?: ReactNode
+  getPdf: (
+    revision: ResumeData,
+    filename: string,
+    resumeId: string,
+    action: 'preview' | 'export',
+  ) => Promise<Blob | null>
 }) {
   const title = useResumeStore((state) => state.title)
   const saveStatus = useResumeStore((state) => state.saveStatus)
@@ -85,14 +92,33 @@ export default function BuilderToolbar({
       }
 
       if (action === 'back') router.push('/dashboard/resumes')
-      if (action === 'preview')
-        preview?.location.replace(`/resume/print?id=${encodeURIComponent(resumeId)}`)
-      if (action === 'export') {
+      if (action === 'export' || action === 'preview') {
         const latest = useResumeStore.getState()
-        const filename = latest.resume?.basics.name || latest.title || 'Resume'
-        const blob = await exportResumePDF(filename, resumeId)
-        if (!mounted.current || useResumeStore.getState().resumeId !== resumeId) return
+        if (!latest.resume) {
+          preview?.close()
+          return
+        }
+        const filename = latest.resume.basics.name || latest.title || 'Resume'
+        const blob = await getPdf(latest.resume, filename, resumeId, action)
+        const current = useResumeStore.getState()
+        if (!mounted.current || current.resumeId !== resumeId || current.resume !== latest.resume) {
+          preview?.close()
+          return
+        }
+        if (!blob) {
+          if (!preview) throw new Error('Could not export this resume.')
+          preview.location.replace(`/resume/print?id=${encodeURIComponent(resumeId)}`)
+          return
+        }
         const url = URL.createObjectURL(blob)
+        if (preview) {
+          try {
+            preview.location.replace(url)
+          } finally {
+            setTimeout(() => URL.revokeObjectURL(url), 60000)
+          }
+          return
+        }
         const link = document.createElement('a')
         try {
           link.href = url
@@ -101,7 +127,7 @@ export default function BuilderToolbar({
           link.click()
         } finally {
           link.remove()
-          URL.revokeObjectURL(url)
+          setTimeout(() => URL.revokeObjectURL(url), 0)
         }
       }
     } catch {
