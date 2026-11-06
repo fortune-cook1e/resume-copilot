@@ -1014,6 +1014,9 @@ test('scrolls the preview with the wheel and changes zoom only through its contr
     const paper = preview.getByRole('region', { name: 'Page 1', exact: true })
     const before = (await paper.boundingBox())!
     let area = (await preview.boundingBox())!
+    expect(before.width).toBeGreaterThan(area.width - 80)
+    expect(before.width).toBeLessThan(area.width)
+    expect(before.y + before.height).toBeGreaterThan(area.y + area.height)
     await page.mouse.move(area.x + area.width / 2, area.y + area.height / 2)
     await page.mouse.wheel(0, 400)
     await expect.poll(async () => (await paper.boundingBox())!.y).toBeLessThan(before.y - 100)
@@ -1054,11 +1057,16 @@ test('scrolls the preview with the wheel and changes zoom only through its contr
     await expect.poll(async () => (await paper.boundingBox())!.y).toBeGreaterThan(priorDrag.y + 100)
     await zoom.getByRole('button', { name: 'Zoom in' }).click()
     await expect(percentage).not.toHaveText(initialPercentage)
+    await page.mouse.move(area.x + area.width / 2, area.y + area.height / 2)
+    await page.mouse.wheel(0, 400)
+    await expect.poll(async () => (await paper.boundingBox())!.y).toBeLessThan(before.y - 100)
     await zoom.getByRole('button', { name: 'Fit page' }).click()
-    await expect(percentage).toHaveText(initialPercentage)
-    await expect
-      .poll(async () => (await paper.boundingBox())?.width ?? 0)
-      .toBeCloseTo(before.width, 1)
+    await expect.poll(async () => (await paper.boundingBox())!.y).toBeCloseTo(before.y, 1)
+    const fitted = (await paper.boundingBox())!
+    expect(fitted.width).toBeLessThan(before.width)
+    expect(fitted.y + fitted.height).toBeLessThan(area.y + area.height)
+    const fitPercentage = await percentage.innerText()
+    expect(fitPercentage).not.toBe(initialPercentage)
     await page.mouse.move(area.x + 12, area.y + 12)
     await page.screenshot({ path: testInfo.outputPath('fixed-scroll-preview.png') })
     expect(fontWarnings).toEqual([])
@@ -1067,7 +1075,7 @@ test('scrolls the preview with the wheel and changes zoom only through its contr
     const typography = page.getByRole('tabpanel', { name: 'Design' })
     await expect(typography.getByRole('group', { name: 'Heading' })).toBeVisible()
     await expect(typography.getByRole('group', { name: 'Body' })).toBeVisible()
-    await expect(percentage).toHaveText(initialPercentage)
+    await expect(percentage).toHaveText(fitPercentage)
     await page.getByRole('tab', { name: 'Write' }).click()
     await pages.nth(1).getByRole('button', { name: 'Edit Scrollable project' }).press('Enter')
     await expect(page.getByRole('textbox', { name: 'Name', exact: true })).toHaveValue(

@@ -12,12 +12,12 @@ import type { ResumePdf } from './pdf/use-resume-pdf'
 
 const documentContent = <ResumeDocument />
 
-function fitScale(viewport: HTMLElement) {
-  const fit = Math.min(
-    1,
-    (viewport.clientWidth - 48) / (PAGE_SIZE_MAP.a4.width * MM_TO_PX),
-    (viewport.clientHeight - 120) / (PAGE_SIZE_MAP.a4.height * MM_TO_PX),
-  )
+function fitScale(viewport: HTMLElement, mode: 'width' | 'page') {
+  const widthFit = (viewport.clientWidth - 48) / (PAGE_SIZE_MAP.a4.width * MM_TO_PX)
+  const fit =
+    mode === 'width'
+      ? Math.min(2.5, widthFit)
+      : Math.min(1, widthFit, (viewport.clientHeight - 120) / (PAGE_SIZE_MAP.a4.height * MM_TO_PX))
   return Math.max(0.2, Math.floor(fit * 100) / 100)
 }
 
@@ -35,7 +35,7 @@ export default function ResumeBuilder({
   const isReady = useResumeStore((state) => state.isReady)
   const viewportRef = useRef<HTMLDivElement>(null)
   const documentRef = useRef<HTMLDivElement>(null)
-  const fitted = useRef(false)
+  const initialized = useRef(false)
   const [scale, setScale] = useState(0.6)
   const [size, setSize] = useState({
     width: PAGE_SIZE_MAP.a4.width * MM_TO_PX,
@@ -54,9 +54,9 @@ export default function ResumeBuilder({
           previous.width === width && previous.height === height ? previous : { width, height },
         )
       }
-      if (!fitted.current && viewport.clientWidth && viewport.clientHeight) {
-        setScale(fitScale(viewport))
-        fitted.current = true
+      if (!initialized.current && viewport.clientWidth && viewport.clientHeight) {
+        setScale(fitScale(viewport, 'width'))
+        initialized.current = true
       }
     }
     const observer = new ResizeObserver(measure)
@@ -102,7 +102,7 @@ export default function ResumeBuilder({
         onFit={() => {
           const viewport = viewportRef.current
           if (!viewport?.clientWidth || !viewport.clientHeight) return
-          setScale(fitScale(viewport))
+          setScale(fitScale(viewport, 'page'))
           viewport.scrollTo(0, 0)
         }}
         onChange={(next) => setScale(Math.max(0.2, Math.min(2.5, Math.round(next * 100) / 100)))}
