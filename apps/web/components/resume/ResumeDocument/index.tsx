@@ -1,5 +1,6 @@
 'use client'
 
+import type { CSSProperties } from 'react'
 import { useResumeStore } from '@/stores/resume-store'
 import Basics from './modules/Basics'
 import Education from './modules/Education'
@@ -12,11 +13,23 @@ import { getSectionOrder } from '../ResumeEditor/sections'
 import type { CustomModuleId } from '@resume-copilot/contracts'
 import type { EditorSelectionProps } from '@/types/resume/editor'
 import { PreviewSelectionContext } from './PreviewBlock'
+import { defaultResumeTypography } from './typography'
 
-export default function ResumeDocument({ selection, onSelect }: EditorSelectionProps = {}) {
+const fontStacks = {
+  'EB Garamond': '"EB Garamond", Georgia, serif',
+  Helvetica: 'Helvetica, Arial, sans-serif',
+  Times: '"Times New Roman", Times, serif',
+  Courier: '"Courier New", Courier, monospace',
+}
+
+export default function ResumeDocument({
+  selection,
+  onSelect,
+  sourceId = 'resume-document',
+}: EditorSelectionProps & { sourceId?: string } = {}) {
   const { resume } = useResumeStore()
   if (!resume) {
-    return <div id="resume-document" data-ready="false" className="p-custom" />
+    return <div id={sourceId} data-ready="false" className="p-custom" />
   }
 
   const builtins = {
@@ -25,10 +38,24 @@ export default function ResumeDocument({ selection, onSelect }: EditorSelectionP
     projects: Projects,
     skills: Skills,
   }
+  const variables: Record<string, string | number> = {}
+  for (const group of ['heading', 'body'] as const) {
+    const style = { ...defaultResumeTypography[group], ...resume.typography?.[group] }
+    variables[`--resume-${group}-family`] = fontStacks[style.fontFamily]
+    variables[`--resume-${group}-pdf-font`] = style.fontFamily
+    variables[`--resume-${group}-size`] = `${style.fontSize}pt`
+    variables[`--resume-${group}-line-height`] = style.lineHeight
+    if (group === 'heading') variables['--resume-name-size'] = `${style.fontSize * 1.5}pt`
+  }
 
   return (
     <PreviewSelectionContext.Provider value={onSelect ? { selection, onSelect } : null}>
-      <div id="resume-document" data-ready="false" className="p-custom space-y-4">
+      <div
+        id={sourceId}
+        data-ready="false"
+        className="resume-typography space-y-4"
+        style={variables as CSSProperties}
+      >
         <Basics />
         {getSectionOrder(resume).map((sectionId) => {
           const section = resume.modules[sectionId]!

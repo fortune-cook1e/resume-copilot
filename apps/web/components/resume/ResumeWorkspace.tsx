@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { FileText, LoaderCircle, Pencil } from 'lucide-react'
+import { FileText, LoaderCircle, Palette, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import ResumeEditor from '@/components/resume/ResumeEditor'
 import ResumeBuilder from '@/components/resume/ResumeBuilder'
+import ResumeTypography from '@/components/resume/ResumeTypography'
 import BuilderToolbar from '@/components/resume/BuilderToolbar'
 import { useResumeStore } from '@/stores/resume-store'
 import { getResume } from '@/services/resume'
@@ -18,6 +20,7 @@ export default function ResumeWorkspace({ resumeId }: { resumeId: string }) {
   const [loadError, setLoadError] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const [mobileView, setMobileView] = useState<'write' | 'page'>('write')
+  const [editorMode, setEditorMode] = useState<'write' | 'design'>('write')
   const [actionBusy, setActionBusy] = useState(false)
   const [selection, setSelection] = useState<EditorSelection | null>(null)
 
@@ -82,14 +85,35 @@ export default function ResumeWorkspace({ resumeId }: { resumeId: string }) {
   }
 
   return (
-    <div className="flex h-svh min-w-0 flex-col overflow-hidden bg-background">
+    <Tabs
+      value={editorMode}
+      onValueChange={(mode) => {
+        if (mode === 'write' || mode === 'design') setEditorMode(mode)
+        setMobileView('write')
+      }}
+      className="h-svh min-w-0 gap-0 overflow-hidden bg-background"
+    >
       <a
         href="#builder-content"
         className="sr-only z-50 rounded-md bg-background p-3 focus:not-sr-only focus:absolute"
       >
         Skip to resume content
       </a>
-      <BuilderToolbar onBusyChange={setActionBusy} />
+      <BuilderToolbar
+        onBusyChange={setActionBusy}
+        editorTabs={
+          <TabsList aria-label="Resume editor mode" className="shrink-0">
+            <TabsTrigger value="write" aria-label="Write" disabled={actionBusy}>
+              <Pencil />
+              <span className="hidden sm:inline">Write</span>
+            </TabsTrigger>
+            <TabsTrigger value="design" aria-label="Design" disabled={actionBusy}>
+              <Palette />
+              <span className="hidden sm:inline">Design</span>
+            </TabsTrigger>
+          </TabsList>
+        }
+      />
       <main className="grid min-h-0 flex-1 lg:grid-cols-[400px_minmax(0,1fr)]">
         <aside
           id="builder-content"
@@ -98,7 +122,12 @@ export default function ResumeWorkspace({ resumeId }: { resumeId: string }) {
           className={`min-h-0 overflow-y-auto border-r bg-stone-50/60 dark:bg-stone-950 ${mobileView === 'write' ? 'block' : 'hidden'} lg:block`}
         >
           <div inert={actionBusy || undefined} aria-busy={actionBusy}>
-            <ResumeEditor selection={selection} onSelect={setSelection} />
+            <TabsContent value="write">
+              <ResumeEditor selection={selection} onSelect={setSelection} />
+            </TabsContent>
+            <TabsContent value="design">
+              <ResumeTypography />
+            </TabsContent>
           </div>
         </aside>
         <section
@@ -112,7 +141,10 @@ export default function ResumeWorkspace({ resumeId }: { resumeId: string }) {
                 ? undefined
                 : (next) => {
                     setSelection(next)
-                    if (next) setMobileView('write')
+                    if (next) {
+                      setEditorMode('write')
+                      setMobileView('write')
+                    }
                   }
             }
           />
@@ -122,25 +154,27 @@ export default function ResumeWorkspace({ resumeId }: { resumeId: string }) {
         aria-label="Editor view"
         className="flex shrink-0 border-t bg-background pb-[env(safe-area-inset-bottom)] lg:hidden"
       >
-        <button
+        <Button
+          variant="ghost"
           type="button"
           aria-pressed={mobileView === 'write'}
-          className={`flex h-14 flex-1 items-center justify-center gap-2 text-sm ${mobileView === 'write' ? 'font-semibold text-blue-600' : 'text-muted-foreground'}`}
+          className={`h-14 flex-1 rounded-none ${mobileView === 'write' ? 'font-semibold text-blue-600' : 'text-muted-foreground'}`}
           onClick={() => setMobileView('write')}
         >
-          <Pencil className="size-4" />
-          Write
-        </button>
-        <button
+          {editorMode === 'design' ? <Palette className="size-4" /> : <Pencil className="size-4" />}
+          {editorMode === 'design' ? 'Design' : 'Write'}
+        </Button>
+        <Button
+          variant="ghost"
           type="button"
           aria-pressed={mobileView === 'page'}
-          className={`flex h-14 flex-1 items-center justify-center gap-2 text-sm ${mobileView === 'page' ? 'font-semibold text-blue-600' : 'text-muted-foreground'}`}
+          className={`h-14 flex-1 rounded-none ${mobileView === 'page' ? 'font-semibold text-blue-600' : 'text-muted-foreground'}`}
           onClick={() => setMobileView('page')}
         >
           <FileText className="size-4" />
           Page
-        </button>
+        </Button>
       </nav>
-    </div>
+    </Tabs>
   )
 }

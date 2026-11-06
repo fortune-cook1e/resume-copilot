@@ -42,7 +42,7 @@ print(json.dumps(pages))
         { encoding: 'utf8' },
       ),
     )
-  // PDF text origins must stay inside the 32px (24pt) content margins.
+  // PDF text origins must stay inside the 14pt horizontal and 18pt vertical margins.
   // The browser check additionally measures full glyph rectangles.
   for (const page of pages) {
     expect(page.width).toBeGreaterThan(594)
@@ -50,10 +50,10 @@ print(json.dumps(pages))
     expect(page.height).toBeGreaterThan(840)
     expect(page.height).toBeLessThan(843)
     for (const [x, y] of page.origins) {
-      expect(x).toBeGreaterThanOrEqual(23)
-      expect(x).toBeLessThanOrEqual(page.width - 23)
-      expect(y).toBeGreaterThanOrEqual(23)
-      expect(y).toBeLessThanOrEqual(page.height - 23)
+      expect(x).toBeGreaterThanOrEqual(13)
+      expect(x).toBeLessThanOrEqual(page.width - 13)
+      expect(y).toBeGreaterThanOrEqual(17)
+      expect(y).toBeLessThanOrEqual(page.height - 17)
     }
   }
   return pages.map((page) => page.text)

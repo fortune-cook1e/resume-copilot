@@ -3,6 +3,7 @@
 import { useResumeStore } from '@/stores/resume-store'
 import { renderMarkdown } from '@/lib/markdown'
 import PreviewBlock from '../PreviewBlock'
+import EntryHeader from '../EntryHeader'
 
 const Experience = () => {
   const { resume } = useResumeStore()
@@ -19,9 +20,11 @@ const Experience = () => {
 
   return (
     <div className="space-y-1">
-      <h2 className="text-xl font-semibold text-resume-theme">{experience.name}</h2>
+      <h2 data-resume-heading className="font-semibold">
+        {experience.name}
+      </h2>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {visibleItems.map((item) => (
           <PreviewBlock
             key={item.id}
@@ -30,19 +33,16 @@ const Experience = () => {
             label={item.company || 'experience'}
             className="space-y-1"
           >
-            <div className="flex justify-between gap-4">
-              <div className="font-semibold text-base">{item.company}</div>
-              <div className="text-sm flex-shrink-0">{item.date}</div>
-            </div>
-
-            <div className="flex justify-between gap-4 text-sm">
-              <div>{item.position}</div>
-              <div className="text-right text-gray-600 flex-shrink-0">{item.location}</div>
-            </div>
+            <EntryHeader
+              title={item.company}
+              subtitle={item.position}
+              date={item.date}
+              location={item.location}
+            />
 
             {item.summary && (
               <div
-                className="text-sm text-gray-700 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1"
+                className="text-neutral-700 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1"
                 dangerouslySetInnerHTML={{ __html: renderMarkdown(item.summary) }}
               />
             )}

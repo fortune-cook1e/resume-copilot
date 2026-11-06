@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Check, ChevronDown, Download, Eye, LoaderCircle, Pencil } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, Download, Eye, LoaderCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -20,8 +20,10 @@ type Action = 'back' | 'preview' | 'export' | 'retry'
 
 export default function BuilderToolbar({
   onBusyChange,
+  editorTabs,
 }: {
   onBusyChange: (busy: boolean) => void
+  editorTabs?: ReactNode
 }) {
   const title = useResumeStore((state) => state.title)
   const saveStatus = useResumeStore((state) => state.saveStatus)
@@ -161,22 +163,20 @@ export default function BuilderToolbar({
                     ? 'Unsaved changes'
                     : 'Not saved'}
               {saveStatus === 'error' ? (
-                <button
+                <Button
+                  variant="link"
                   type="button"
-                  className="underline underline-offset-2"
+                  className="h-auto p-0 text-inherit underline underline-offset-2"
                   disabled={!!busy}
                   onClick={() => void perform('retry')}
                 >
                   Retry
-                </button>
+                </Button>
               ) : null}
             </div>
           </div>
         </div>
-        <div className="hidden items-center gap-2 rounded-lg bg-muted px-4 py-2 text-sm font-medium lg:flex">
-          <Pencil className="size-4" />
-          Write
-        </div>
+        {editorTabs}
         <div className="flex shrink-0 items-center gap-2">
           <Button
             variant="ghost"

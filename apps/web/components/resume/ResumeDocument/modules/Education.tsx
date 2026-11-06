@@ -3,6 +3,7 @@
 import { useResumeStore } from '@/stores/resume-store'
 import { renderMarkdown } from '@/lib/markdown'
 import PreviewBlock from '../PreviewBlock'
+import EntryHeader from '../EntryHeader'
 
 const Education = () => {
   const { resume } = useResumeStore()
@@ -19,32 +20,31 @@ const Education = () => {
 
   return (
     <div className="space-y-1">
-      <h2 className="text-xl font-semibold text-resume-theme">{education.name}</h2>
+      <h2 data-resume-heading className="font-semibold">
+        {education.name}
+      </h2>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {visibleItems.map((item) => (
           <PreviewBlock
             key={item.id}
             sectionId="education"
             itemId={item.id}
             label={item.university || 'education'}
-            className="flex justify-between gap-4"
+            className="space-y-1"
           >
-            <div className="flex-1 space-y-1">
-              <div className="font-semibold text-base">{item.university}</div>
-              <div className="text-sm">{item.major}</div>
-              {item.summary && (
-                <div
-                  className="text-sm text-gray-600 mt-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1"
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(item.summary) }}
-                />
-              )}
-            </div>
-
-            <div className="text-right text-sm flex-shrink-0 space-y-1">
-              <div>{item.date}</div>
-              <div className="text-gray-600">{item.location}</div>
-            </div>
+            <EntryHeader
+              title={item.university}
+              subtitle={item.major}
+              date={item.date}
+              location={item.location}
+            />
+            {item.summary && (
+              <div
+                className="text-neutral-700 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1"
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(item.summary) }}
+              />
+            )}
           </PreviewBlock>
         ))}
       </div>

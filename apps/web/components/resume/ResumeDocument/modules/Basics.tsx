@@ -1,5 +1,4 @@
 import { useResumeStore } from '@/stores/resume-store'
-import Link from './Link'
 import PreviewBlock from '../PreviewBlock'
 import { Mail, Phone as PhoneIcon, MapPin, Link as LinkIcon } from 'lucide-react'
 import { getContactIcon } from '@/components/resume/contact-icons'
@@ -10,56 +9,45 @@ const Basics = () => {
   if (!resume) return null
 
   const {
-    basics: { name, headline, location, phone, email, website, picture, customFields },
+    basics: { name, headline, location, phone, email, website, customFields },
   } = resume
 
   return (
-    <PreviewBlock
-      sectionId="basics"
-      label="basics"
-      className="flex items-start gap-4 border-b border-resume-theme pb-5"
-    >
-      {/* Todo: Add profile picture support (currently requires custom template with image URL in basics.picture.url) */}
-      {/* {picture.url && (
-        <img
-          src={picture.url}
-          alt={name}
-          className="w-16 h-16 rounded-full object-cover flex-shrink-0"
-        />
-      )} */}
-
-      <div className="flex-1 space-y-2">
+    <PreviewBlock sectionId="basics" label="basics" className="border-b border-resume-theme pb-3">
+      <div className="space-y-1.5">
         <div>
-          <div className="text-2xl font-bold text-resume-theme">{name}</div>
-          <div className="text-base">{headline}</div>
+          <div data-resume-heading="name" className="font-bold">
+            {name}
+          </div>
+          <div className="text-neutral-800">{headline}</div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-          {location && (
-            <div className="flex items-center gap-x-1.5">
-              <MapPin className="h-4 w-4 text-resume-theme" />
-              <div>{location}</div>
-            </div>
-          )}
-          {phone && (
-            <div className="flex items-center gap-x-1.5">
-              <PhoneIcon className="h-4 w-4 text-resume-theme" />
-              <a href={`tel:${phone}`} target="_blank" rel="noreferrer">
-                {phone}
-              </a>
-            </div>
-          )}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-neutral-800">
           {email && (
-            <div className="flex items-center gap-x-1.5">
-              <Mail className="h-4 w-4 text-resume-theme" />
+            <div className="flex items-center gap-x-1">
+              <Mail className="size-3 shrink-0 text-resume-theme" />
               <a href={`mailto:${email}`} target="_blank" rel="noreferrer">
                 {email}
               </a>
             </div>
           )}
+          {phone && (
+            <div className="flex items-center gap-x-1">
+              <PhoneIcon className="size-3 shrink-0 text-resume-theme" />
+              <a href={`tel:${phone}`} target="_blank" rel="noreferrer">
+                {phone}
+              </a>
+            </div>
+          )}
+          {location && (
+            <div className="flex items-center gap-x-1">
+              <MapPin className="size-3 shrink-0 text-resume-theme" />
+              <div>{location}</div>
+            </div>
+          )}
           {website.link && (
-            <div className="flex items-center gap-x-1.5">
-              <LinkIcon className="h-4 w-4 text-resume-theme" />
+            <div className="flex items-center gap-x-1">
+              <LinkIcon className="size-3 shrink-0 text-resume-theme" />
               <a href={website.link} target="_blank" rel="noreferrer">
                 {website.label || 'Website'}
               </a>
@@ -69,8 +57,8 @@ const Basics = () => {
             const IconComponent = getContactIcon(field.icon)
             if (!field.label.trim() && !field.link.trim()) return null
             return (
-              <div key={index} className="flex items-center gap-x-1.5">
-                <IconComponent className="h-4 w-4 text-resume-theme" />
+              <div key={index} className="flex items-center gap-x-1">
+                <IconComponent className="size-3 shrink-0 text-resume-theme" />
                 {field.link.trim() ? (
                   <a href={field.link} target="_blank" rel="noreferrer">
                     {field.label || field.icon}

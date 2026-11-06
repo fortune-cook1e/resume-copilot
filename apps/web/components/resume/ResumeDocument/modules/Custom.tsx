@@ -5,6 +5,7 @@ import type { Custom, CustomModuleId } from '@resume-copilot/contracts'
 import { renderMarkdown } from '@/lib/markdown'
 import Link from './Link'
 import PreviewBlock from '../PreviewBlock'
+import EntryHeader from '../EntryHeader'
 
 interface CustomProps {
   moduleId: CustomModuleId
@@ -25,9 +26,11 @@ const Custom = ({ moduleId }: CustomProps) => {
 
   return (
     <div className="space-y-1">
-      <h2 className="text-xl font-semibold text-resume-theme">{customModule.name}</h2>
+      <h2 data-resume-heading className="font-semibold">
+        {customModule.name}
+      </h2>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {visibleItems.map((item) => (
           <PreviewBlock
             key={item.id}
@@ -36,25 +39,22 @@ const Custom = ({ moduleId }: CustomProps) => {
             label={item.name || customModule.name}
             className="space-y-1"
           >
-            <div className="flex justify-between gap-4">
-              <div className="font-semibold text-base">{item.name}</div>
-              <div className="text-sm flex-shrink-0">{item.date}</div>
-            </div>
-
-            <div className="flex justify-between gap-4 text-sm">
-              <div className="text-gray-700">{item.description}</div>
-              <div className="text-right text-gray-600 flex-shrink-0">{item.location}</div>
-            </div>
+            <EntryHeader
+              title={item.name}
+              subtitle={item.description}
+              date={item.date}
+              location={item.location}
+            />
 
             {item.website.link && (
-              <div className="text-sm text-resume-theme">
+              <div className="text-neutral-800">
                 <Link url={item.website} label={item.website.label || 'Link'} />
               </div>
             )}
 
             {item.summary && (
               <div
-                className="text-sm text-gray-700 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1"
+                className="text-neutral-700 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1"
                 dangerouslySetInnerHTML={{ __html: renderMarkdown(item.summary) }}
               />
             )}

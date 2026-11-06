@@ -1,6 +1,5 @@
 'use client'
 
-import { Badge } from '@/components/ui/badge'
 import { useResumeStore } from '@/stores/resume-store'
 import PreviewBlock from '../PreviewBlock'
 
@@ -19,34 +18,21 @@ const Skills = () => {
 
   return (
     <div className="space-y-1">
-      <h2 className="text-xl font-semibold text-resume-theme">{skills.name}</h2>
+      <h2 data-resume-heading className="font-semibold">
+        {skills.name}
+      </h2>
 
-      <div className="space-y-3">
+      <ul className="list-disc">
         {visibleItems.map((item) => (
-          <PreviewBlock
-            key={item.id}
-            sectionId="skills"
-            itemId={item.id}
-            label={item.name || 'skill'}
-            className="space-y-2"
-          >
-            <div className="flex items-center justify-between gap-4">
-              <div className="font-semibold text-base">{item.name}</div>
-              <div className="text-sm text-gray-600 flex-shrink-0">{item.level}</div>
-            </div>
-
-            {item.keywords.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {item.keywords.map((keyword, index) => (
-                  <Badge key={`${item.id}-${index}`} variant="secondary">
-                    {keyword}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </PreviewBlock>
+          <li key={item.id}>
+            <PreviewBlock sectionId="skills" itemId={item.id} label={item.name} className="min-w-0">
+              <strong>{item.name}</strong>
+              {item.keywords.length > 0 && `: ${item.keywords.join(', ')}`}
+              {item.level && <span className="text-neutral-700"> · {item.level}</span>}
+            </PreviewBlock>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   )
 }

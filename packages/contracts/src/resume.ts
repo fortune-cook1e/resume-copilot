@@ -6,11 +6,27 @@ export * from './resume/common'
 
 export const resumeVisibilitySchema = z.enum(['public', 'private'])
 
+export const resumeFontFamilies = ['EB Garamond', 'Helvetica', 'Times', 'Courier'] as const
+export const resumeTypographyStyleSchema = z
+  .object({
+    fontFamily: z.enum(resumeFontFamilies),
+    fontSize: z.number().min(6).max(36),
+    lineHeight: z.number().min(1).max(2.5),
+  })
+  .partial()
+export type ResumeTypographyStyle = z.infer<typeof resumeTypographyStyleSchema>
+
 export const resumeDataSchema = z.object({
   basics: basicsSchema,
   modules: modulesSchema,
   // Optional so existing documents retain their original print order.
   sectionOrder: z.array(z.string()).optional(),
+  typography: z
+    .object({
+      heading: resumeTypographyStyleSchema.optional(),
+      body: resumeTypographyStyleSchema.optional(),
+    })
+    .optional(),
 })
 
 export const defaultResumeData = {

@@ -26,5 +26,6 @@ export const contactIcons = [
 ]
 
 export function getContactIcon(name: string) {
-  return contactIcons.find((icon) => icon.name === name)?.component ?? Link
+  const key = name.replace(/[^a-z0-9]/gi, '').toLowerCase()
+  return contactIcons.find((icon) => icon.name.toLowerCase() === key)?.component ?? Link
 }

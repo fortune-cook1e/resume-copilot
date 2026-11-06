@@ -71,7 +71,8 @@ export function paginate(documentElement: HTMLElement, target: HTMLElement) {
     page.setAttribute('role', 'region')
     page.setAttribute('aria-label', `Page ${target.children.length + 1}`)
     const content = document.createElement('div')
-    content.className = 'resume-page-content space-y-4'
+    content.className = `resume-page-content ${source.className}`
+    content.style.cssText = source.style.cssText
     page.appendChild(content)
     target.appendChild(page)
     if (!length) break
