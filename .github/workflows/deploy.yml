@@ -55,6 +55,8 @@ jobs:
           file: ./Dockerfile
           target: ${{ matrix.target }}
           push: true
+          # The current Aliyun registry rejects OCI provenance attestation manifests.
+          provenance: false
           tags: ${{ secrets.ALIYUN_REGISTRY }}/resume-copilot:${{ github.sha }}-${{ matrix.name }}
           build-args: |
             NEXT_PUBLIC_APP_URL=${{ secrets.APP_URL }}
