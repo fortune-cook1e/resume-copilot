@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "singleQuote": true,
+  "printWidth": 100,
+  "semi": false,
+  "sortPackageJson": false,
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/.next/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/out/**",
+    "**/coverage/**",
+    "**/playwright-report/**",
+    "**/test-results/**",
+    "**/blob-report/**",
+    "**/*.tsbuildinfo",
+    "**/next-env.d.ts",
+    "**/drizzle/meta/**",
+    "pnpm-lock.yaml",
+    "**/.env*",
+    "**/*.pem",
+    ".pnpm-store/**",
+    ".agents/skills/**",
+    ".codex/**"
+  ]
+}

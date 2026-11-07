@@ -1,126 +1,88 @@
 # Resume Copilot
 
-AI-powered resume builder with job matching analysis.
+A workspace for creating and managing independent resumes for different roles, with structured editing, live preview, and PDF export. Manual editing works without a Codex connection or OpenAI API key; Codex collaboration is planned.
 
-Resume Copilot is a Next.js-based platform for writing and optimizing resumes, with AI-powered parsing and job matching analysis.
+## Project layout and stack
 
+This pnpm monorepo uses TypeScript across three workspaces:
 
-## Tech Stack
+| Workspace            | Stack and responsibility                                                                                 |
+| -------------------- | -------------------------------------------------------------------------------------------------------- |
+| `apps/web`           | Next.js, React, Tailwind CSS and shadcn/ui; editor and shared preview/print layout.                      |
+| `apps/api`           | NestJS, Better Auth, Drizzle and PostgreSQL; authentication, resume persistence and Chromium PDF export. |
+| `packages/contracts` | Shared Zod schemas, inferred types and document defaults.                                                |
 
-- **Frontend / Backend**: Next.js 16 (App Router, TypeScript)
-- **Database**: PostgreSQL 16 (via Docker)
-- **ORM**: Drizzle ORM + drizzle-kit
-- **Auth**: better-auth
-- **AI Service**: Python FastAPI + NLP/Embedding pipeline (uv)
-- **Package Manager**: pnpm
+## Run locally
 
----
+Requires Node.js **24 (>=24.21.0)**, pnpm **12.15.0**, PostgreSQL, a Google OAuth client, and Chrome/Chromium for PDF export. `.nvmrc` selects Node.js **24.21.0**.
 
-## Prerequisites
-
-| Tool           | Version | Install                                                      |
-| -------------- | ------- | ------------------------------------------------------------ |
-| Node.js        | ≥ 20    | [nodejs.org](https://nodejs.org)                             |
-| pnpm           | ≥ 9     | `npm i -g pnpm`                                              |
-| Docker Desktop | latest  | [docker.com](https://www.docker.com/products/docker-desktop) |
-| uv (Python)    | latest  | `brew install uv`                                            |
-
----
-
-## Local Development Setup
-
-### 1. Clone & install dependencies
+1. Create `apps/api/.env` from [the API example](apps/api/.env.example) and `apps/web/.env` from [the Web example](apps/web/.env.example). Do not overwrite existing local files or commit secrets.
+2. Configure API `DATABASE_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, a unique `BETTER_AUTH_SECRET` of at least 32 characters, and `BETTER_AUTH_URL=http://localhost:3000`. Set `HOST=127.0.0.1`, `PORT=3001`, and `PUPPETEER_EXECUTABLE_PATH` if Chromium is not found at a standard path.
+3. Configure Web `BETTER_AUTH_URL=http://localhost:3000` and `API_INTERNAL_URL=http://127.0.0.1:3001`. Database credentials and auth secrets belong only in API configuration.
+4. Register `http://localhost:3000/api/auth/callback/google` as the Google OAuth redirect URI. Start PostgreSQL and apply API migrations to the explicitly selected development database; see [database commands](#database-commands). Do not reset an existing database.
 
 ```bash
-git clone <repo-url>
-cd resume-copilot
-pnpm install
-```
-
-### 2. Configure environment variables
-
-```bash
-cp .env.example .env
-```
-
-The default `.env` works out-of-the-box for local development:
-
-```env
-DATABASE_URL=postgresql://resume:resume123@localhost:5432/resume_copilot
-
-BETTER_AUTH_SECRET=resume-copilot-secret-key-change-in-production
-# Equal to NEXT_PUBLIC_APP_URL
-BETTER_AUTH_URL=http://localhost:3000
-APP_URL=http://localhost:3000
-
-# The base URL of the server
-# Starts with NEXT_PUBLIC_ to be exposed to the client-side code
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-
-# Python AI Service
-PYTHON_SERVICE_URL=http://localhost:8000
-
-# Ollama Cloud
-OLLAMA_BASE_URL=https://ollama.com
-OLLAMA_MODEL=gpt-oss:20b
-OLLAMA_API_KEY={create your API key in Ollama dashboard and paste here}
-
-
-```
-
-### 3. Start required containers (PostgreSQL)
-
-```bash
-docker compose up -d
-```
-
-This starts PostgreSQL on `localhost:5432`. Verify it's running:
-
-```bash
-docker compose ps
-```
-
-### 4. Run database migrations
-
-```bash
-pnpm drizzle-kit migrate
-```
-
-### 5. Start the Python AI service
-
-In a separate terminal:
-
-```bash
-cd ai
-uv sync          # first time only — creates .venv and installs dependencies
-uv run uvicorn server:app --reload --port 8000
-```
-
-The AI service will be available at **http://localhost:8000**.  
-API docs: **http://localhost:8000/docs**
-
-### 6. Start the Next.js dev server
-
-Back in the project root:
-
-```bash
+nvm use
+npm install --global pnpm@12.15.0
+pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open **http://localhost:3000**.
+Web: <http://localhost:3000> · API health: <http://localhost:3001/api/health>
 
----
+Run either application separately with `pnpm dev:web` or `pnpm dev:api`. Run all commands below from the repository root.
 
-## Stopping
+## Database commands
+
+API schemas and migrations live in `apps/api/src/database/schema` and `apps/api/drizzle`.
+
+| Command            | Purpose                                                         |
+| ------------------ | --------------------------------------------------------------- |
+| `pnpm db:generate` | Generate a migration; review the SQL before applying it.        |
+| `pnpm db:migrate`  | Apply pending migrations to the selected database.              |
+| `pnpm db:push`     | Synchronize a disposable database, bypassing migration history. |
+| `pnpm db:studio`   | Inspect a trusted local database.                               |
+
+Drizzle reads `DATABASE_URL` from the shell, **not automatically from `apps/api/.env`**:
 
 ```bash
-# Stop Next.js: Ctrl+C in its terminal
-# Stop Python:  Ctrl+C in its terminal
-
-# Stop Docker containers
-docker compose down
+DATABASE_URL='postgresql://USER:PASSWORD@127.0.0.1:5432/resume_copilot' pnpm db:migrate
 ```
 
----
+Replace the placeholders and verify the database target before executing. Do not use `db:push` on development/test/production databases maintained through migrations or expose Studio publicly.
 
+## Checks
 
+```bash
+pnpm format
+pnpm format:check
+pnpm lint
+pnpm typecheck
+pnpm build
+pnpm --filter @resume-copilot/web test
+```
+
+`pnpm test` runs all workspace tests. The API's `database` test project requires `AUTH_TEST_DATABASE_URL` pointing to an already-migrated database named **`resume_copilot_test` only**; tests clear test-only rows. Never use development or production data. Its `http` test project uses temporary local HTTP listeners and does not require PostgreSQL.
+
+Vitest suites live beside the source behavior they cover. Run a focused suite with a workspace-relative path, for example:
+
+```bash
+pnpm --filter @resume-copilot/web exec vitest run lib/request.test.ts
+pnpm --filter @resume-copilot/api test src/resumes/resumes.test.mts
+pnpm --filter @resume-copilot/api test --project http
+```
+
+Playwright discovers browser journeys under repository-root `tests/e2e/`; run them separately with `pnpm test:e2e`. Web uses port 3100; API test listeners use port 3101. Build API first with `pnpm --filter @resume-copilot/api build`. Authenticated journeys require `AUTH_TEST_DATABASE_URL` targeting the existing, migrated `resume_copilot_test` database; they create and remove only their synthetic user's fixtures. Without this variable, authenticated journeys are reported as skipped; independent rendering/preview checks still run, using a read-only public API fixture for preview interactions. Tests do not start containers or run migrations.
+
+PDF assertions use an existing Python interpreter with `pypdf`; select it with `PDF_TEST_PYTHON` (defaults to `python3`). Chromium must already be available to Playwright, and the API uses its normal Chrome/Chromium executable discovery for actual downloads.
+
+Oxlint and Oxfmt run separately; editor integration is optional.
+
+## Further reading
+
+- [Product definition](docs/product.en.md)
+- [Current development handoff](docs/handoff.md)
+
+## Production deployment
+
+GitHub Actions deploys the Web and API images with production Compose. Configure the server using the root [.env.example](.env.example). The first cutover uses a manually selected, backup-verified database reset; later releases use incremental migrations. See [production deployment](docs/deployment.md) for setup, execution and recovery.
