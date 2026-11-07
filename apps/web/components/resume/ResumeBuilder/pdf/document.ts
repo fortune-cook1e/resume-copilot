@@ -198,6 +198,9 @@ export function createPdfDocument(source: HTMLElement): PdfDocument {
         left: points(css.paddingLeft),
       },
     }
+    const flexSizing: FormeStyle = Number(css.flexGrow)
+      ? { flexGrow: Number(css.flexGrow), width: { Pt: points(css.width) } }
+      : {}
     if (element instanceof SVGSVGElement) {
       const width = points(css.width)
       const height = points(css.height)
@@ -373,12 +376,13 @@ export function createPdfDocument(source: HTMLElement): PdfDocument {
       return inlineNodes(runs(element.childNodes, safeHref(element), undefined, file), {
         ...textStyle(css),
         ...spacing,
+        ...flexSizing,
         ...(css.flexShrink === '0' ? { flexShrink: 0 } : {}),
       })
     }
     const nested = convertChildren()
     if (!nested.length) return []
-    const style: FormeStyle = { ...spacing }
+    const style: FormeStyle = { ...spacing, ...flexSizing }
     if (css.display === 'flex') {
       Object.assign(
         style,
@@ -404,7 +408,6 @@ export function createPdfDocument(source: HTMLElement): PdfDocument {
         nested[1].style.width = { Pt: secondaryWidth }
       }
     }
-    if (Number(css.flexGrow)) style.flexGrow = Number(css.flexGrow)
     if (css.flexShrink === '0') style.flexShrink = 0
     if (css.borderBottomStyle !== 'none' && points(css.borderBottomWidth)) {
       style.borderWidth = { top: 0, right: 0, bottom: points(css.borderBottomWidth), left: 0 }

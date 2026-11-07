@@ -73,6 +73,7 @@ export function paginate(documentElement: HTMLElement, target: HTMLElement) {
     const content = document.createElement('div')
     content.className = `resume-page-content ${source.className}`
     content.style.cssText = source.style.cssText
+    if (source.dataset.template) content.dataset.template = source.dataset.template
     page.appendChild(content)
     target.appendChild(page)
     if (!length) break

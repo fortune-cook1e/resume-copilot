@@ -10,6 +10,7 @@ import {
   type SectionId,
 } from '../../ResumeEditor/sections'
 import PreviewBlock from '../PreviewBlock'
+import SectionHeading from '../SectionHeading'
 import EntryHeader from '../EntryHeader'
 import Link from './Link'
 
@@ -26,9 +27,7 @@ export default function Content({ sectionId }: { sectionId: SectionId }) {
   if (!text?.trim() && !visible.length) return null
   return (
     <div className="space-y-1">
-      <h2 data-resume-heading className="font-semibold">
-        {section.name}
-      </h2>
+      <SectionHeading>{section.name}</SectionHeading>
       {text && (
         <PreviewBlock
           sectionId={sectionId}
@@ -38,7 +37,7 @@ export default function Content({ sectionId }: { sectionId: SectionId }) {
           <div dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />
         </PreviewBlock>
       )}
-      <div className="space-y-2">
+      <div className="resume-entries">
         {visible.map((item) => (
           <PreviewBlock
             key={item.id}

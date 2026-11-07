@@ -50,7 +50,7 @@ export default function Page({
       childList: true,
       characterData: true,
       attributes: true,
-      attributeFilter: ['data-start-on-new-page', 'data-keep-together', 'style'],
+      attributeFilter: ['data-start-on-new-page', 'data-keep-together', 'data-template', 'style'],
     })
     document.fonts?.addEventListener('loadingdone', schedule)
     schedule()

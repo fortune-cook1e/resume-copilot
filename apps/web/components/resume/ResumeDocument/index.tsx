@@ -15,6 +15,7 @@ import type { EditorSelectionProps } from '@/types/resume/editor'
 import { PreviewSelectionContext } from './PreviewBlock'
 import { resolveResumeTypography } from './typography'
 import { resumeFontCss } from './font-sources'
+import { densityPresets, resolveThemeColor } from './design'
 
 const fontStacks = {
   'EB Garamond': '"EB Garamond", Georgia, serif',
@@ -46,6 +47,12 @@ export default function ResumeDocument({
   }
   const variables: Record<string, string | number> = {}
   const typography = resolveResumeTypography(resume.typography)
+  variables['--resume-theme'] = resolveThemeColor(resume.design?.themeColor)
+  const density = densityPresets[resume.design?.density ?? 'normal']
+  if (resume.design?.density) typography.body.lineHeight = density.lineHeight
+  variables['--resume-entry-gap'] = `${density.entryGap}pt`
+  variables['--resume-section-gap'] = `${density.sectionGap}pt`
+  variables['--resume-list-gap'] = `${(density.entryGap * 2) / 3}pt`
   for (const group of ['heading', 'body'] as const) {
     const style = typography[group]
     variables[`--resume-${group}-family`] = fontStacks[style.fontFamily]
@@ -63,7 +70,8 @@ export default function ResumeDocument({
       <div
         id={sourceId}
         data-ready="false"
-        className="resume-typography space-y-4"
+        data-template={resume.design?.template ?? 'onyx'}
+        className="resume-typography"
         style={variables as CSSProperties}
       >
         <Basics />

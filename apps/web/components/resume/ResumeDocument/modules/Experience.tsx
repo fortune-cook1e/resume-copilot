@@ -3,6 +3,7 @@
 import { useResumeStore } from '@/stores/resume-store'
 import { renderMarkdown } from '@/lib/markdown'
 import PreviewBlock from '../PreviewBlock'
+import SectionHeading from '../SectionHeading'
 import EntryHeader from '../EntryHeader'
 
 const Experience = () => {
@@ -20,11 +21,9 @@ const Experience = () => {
 
   return (
     <div className="space-y-1">
-      <h2 data-resume-heading className="font-semibold">
-        {experience.name}
-      </h2>
+      <SectionHeading>{experience.name}</SectionHeading>
 
-      <div className="space-y-2">
+      <div className="resume-entries">
         {visibleItems.map((item) => (
           <PreviewBlock
             key={item.id}
@@ -34,6 +33,7 @@ const Experience = () => {
             className="space-y-1"
           >
             <EntryHeader
+              inline={resume.design?.template === 'meowth'}
               title={item.company}
               subtitle={item.position}
               date={item.date}

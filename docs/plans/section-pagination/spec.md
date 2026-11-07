@@ -1,6 +1,6 @@
 # Section pagination
 
-The editor's primary rendering path now uses Forme in a browser Worker. PDF.js displays the same PDF bytes used for download. Browser-generated PDFs keep each list marker with the start of its item, including when a long item continues on another page. Existing pagination flags and draft save semantics still define the expected behavior. The DOM layout and Chromium path described below applies to the standalone print route and compatibility rendering.
+The editor's primary rendering path now uses Forme in a browser Worker. PDF.js displays the same PDF bytes used for download. Browser-generated PDFs keep each list marker with the start of its item, including when a long item continues on another page. Existing pagination flags and draft save semantics still define the expected behavior. Template and density changes reflow the document while retaining section order and pagination flags. Both the Forme output and compatibility print retain the selected template, density and theme color. The DOM layout and Chromium path described below applies to the standalone print route and compatibility rendering.
 
 ## Problem Statement
 

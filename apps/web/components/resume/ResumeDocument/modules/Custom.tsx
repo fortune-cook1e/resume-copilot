@@ -5,6 +5,7 @@ import type { Custom, CustomModuleId } from '@resume-copilot/contracts'
 import { renderMarkdown } from '@/lib/markdown'
 import Link from './Link'
 import PreviewBlock from '../PreviewBlock'
+import SectionHeading from '../SectionHeading'
 import EntryHeader from '../EntryHeader'
 
 interface CustomProps {
@@ -26,11 +27,9 @@ const Custom = ({ moduleId }: CustomProps) => {
 
   return (
     <div className="space-y-1">
-      <h2 data-resume-heading className="font-semibold">
-        {customModule.name}
-      </h2>
+      <SectionHeading>{customModule.name}</SectionHeading>
 
-      <div className="space-y-2">
+      <div className="resume-entries">
         {visibleItems.map((item) => (
           <PreviewBlock
             key={item.id}

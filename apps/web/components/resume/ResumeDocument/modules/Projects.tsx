@@ -4,6 +4,7 @@ import { useResumeStore } from '@/stores/resume-store'
 import { renderMarkdown } from '@/lib/markdown'
 import Link from './Link'
 import PreviewBlock from '../PreviewBlock'
+import SectionHeading from '../SectionHeading'
 import EntryHeader from '../EntryHeader'
 
 const Projects = () => {
@@ -21,11 +22,9 @@ const Projects = () => {
 
   return (
     <div className="space-y-1">
-      <h2 data-resume-heading className="font-semibold">
-        {projects.name}
-      </h2>
+      <SectionHeading>{projects.name}</SectionHeading>
 
-      <div className="space-y-2">
+      <div className="resume-entries">
         {visibleItems.map((item) => (
           <PreviewBlock
             key={item.id}

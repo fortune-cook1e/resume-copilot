@@ -13,7 +13,13 @@ const Basics = () => {
   } = resume
 
   return (
-    <PreviewBlock sectionId="basics" label="basics" className="border-b border-resume-theme pb-3">
+    <PreviewBlock
+      sectionId="basics"
+      label="basics"
+      className={
+        resume.design?.template === 'meowth' ? 'pb-1' : 'border-b border-resume-theme pb-3'
+      }
+    >
       <div className="space-y-1.5">
         <div>
           <div data-resume-heading="name" className="font-bold">

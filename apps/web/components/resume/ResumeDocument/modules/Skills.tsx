@@ -2,6 +2,7 @@
 
 import { useResumeStore } from '@/stores/resume-store'
 import PreviewBlock from '../PreviewBlock'
+import SectionHeading from '../SectionHeading'
 
 const Skills = () => {
   const { resume } = useResumeStore()
@@ -18,9 +19,7 @@ const Skills = () => {
 
   return (
     <div className="space-y-1">
-      <h2 data-resume-heading className="font-semibold">
-        {skills.name}
-      </h2>
+      <SectionHeading>{skills.name}</SectionHeading>
 
       <ul className="list-disc">
         {visibleItems.map((item) => (

@@ -246,5 +246,19 @@
 }
 
 .resume-typography :where(li) {
-  margin-block-end: 4pt;
+  margin-block-end: var(--resume-list-gap, 4pt);
+}
+
+.resume-typography[data-template='meowth'] .resume-section-heading {
+  color: var(--resume-theme);
+  border-bottom: 1pt solid var(--resume-theme);
+  padding-bottom: 1pt;
+}
+
+.resume-typography > :not(:last-child) {
+  margin-bottom: var(--resume-section-gap, 12pt);
+}
+
+.resume-entries > :not(:last-child) {
+  margin-bottom: var(--resume-entry-gap, 6pt);
 }

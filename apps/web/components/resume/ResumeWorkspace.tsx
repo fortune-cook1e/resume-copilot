@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import ResumeEditor from '@/components/resume/ResumeEditor'
 import ResumeBuilder from '@/components/resume/ResumeBuilder'
 import ResumeDocument from '@/components/resume/ResumeDocument'
-import ResumeTypography from '@/components/resume/ResumeTypography'
+import ResumeDesign from '@/components/resume/ResumeDesign'
 import BuilderToolbar from '@/components/resume/BuilderToolbar'
 import { useResumeStore } from '@/stores/resume-store'
 import { exportResumePDF, getResume } from '@/services/resume'
@@ -164,7 +164,7 @@ export default function ResumeWorkspace({ resumeId }: { resumeId: string }) {
               <ResumeEditor selection={selection} onSelect={setSelection} />
             </TabsContent>
             <TabsContent value="design">
-              <ResumeTypography />
+              <ResumeDesign />
             </TabsContent>
           </div>
         </aside>

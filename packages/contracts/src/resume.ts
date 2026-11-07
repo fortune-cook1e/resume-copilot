@@ -44,12 +44,23 @@ const resumeTypographySchema = z.union([
   }),
 ])
 
+export const resumeThemeColorSchema = z
+  .enum(['blue', 'moss', 'teal', 'plum', 'rust', 'burgundy', 'ochre', 'graphite'])
+  .or(z.string().regex(/^#[0-9a-f]{6}$/i))
+
 export const resumeDataSchema = z.object({
   basics: basicsSchema,
   modules: modulesSchema,
   // Optional so existing documents retain their original print order.
   sectionOrder: z.array(z.string()).optional(),
   typography: resumeTypographySchema.optional(),
+  design: z
+    .object({
+      template: z.enum(['onyx', 'meowth']).optional(),
+      density: z.enum(['compact', 'normal', 'roomy']).optional(),
+      themeColor: resumeThemeColorSchema.optional(),
+    })
+    .optional(),
 })
 
 export const defaultResumeData = {

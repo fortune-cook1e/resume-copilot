@@ -26,7 +26,8 @@ function readPdfPages(
   expectedLinks?: string[],
   expectedStyles?: { text: string; font: string; size: number }[],
   imageCount?: number,
-  expectedRows?: { left: string; right: string }[],
+  expectedRows?: { left: string; right: string; rightRange?: [number, number] }[],
+  expectedColor?: [number, number, number],
 ): string[] {
   const pages: {
     text: string
@@ -35,8 +36,9 @@ function readPdfPages(
     origins: [number, number][]
     layoutText: string
     links: string[]
-    styles: { text: string; font: string; size: number }[]
+    styles: { text: string; font: string; size: number; x: number }[]
     images: number
+    colors: number[][]
   }[] = JSON.parse(
     execFileSync(
       process.env.PDF_TEST_PYTHON ?? 'python3',
@@ -49,18 +51,21 @@ pages = []
 for page in PdfReader(sys.argv[1]).pages:
     origins = []
     styles = []
+    colors = []
     # Read the actual PDF text-paint operators. Aggregated text callbacks
     # can report a reset matrix after a marked-content list item.
     def visitor(operator, args, cm, tm):
+        if operator in (b'rg', b'RG'):
+            colors.append([float(value) for value in args])
         if operator in (b'Tj', b'TJ') and args:
             origins.append([tm[4]*cm[0]+tm[5]*cm[2]+cm[4], tm[4]*cm[1]+tm[5]*cm[3]+cm[5]])
     def styled_text(text, cm, tm, font, size):
         if text.strip() and font:
-            styles.append(dict(text=text, font=font.get('/BaseFont', ''), size=size))
+            styles.append(dict(text=text, font=font.get('/BaseFont', ''), size=size, x=tm[4]*cm[0]+tm[5]*cm[2]+cm[4]))
     text = page.extract_text(visitor_operand_before=visitor, visitor_text=styled_text)
     links = [ref.get_object().get('/A', {}).get('/URI') for ref in page.get('/Annots', [])]
     layout_text = page.extract_text(extraction_mode='layout') if sys.argv[2] == 'true' else ''
-    pages.append(dict(text=text, width=float(page.mediabox.width), height=float(page.mediabox.height), origins=origins, layoutText=layout_text, links=[url for url in links if url], styles=styles, images=len(page.images)))
+    pages.append(dict(text=text, width=float(page.mediabox.width), height=float(page.mediabox.height), origins=origins, layoutText=layout_text, links=[url for url in links if url], styles=styles, images=len(page.images), colors=colors))
 print(json.dumps(pages))
 `,
         path,
@@ -83,6 +88,14 @@ print(json.dumps(pages))
       expect(y).toBeLessThanOrEqual(page.height - 17)
     }
   }
+  if (expectedColor)
+    expect(
+      pages
+        .flatMap((page) => page.colors)
+        .some((color) =>
+          color.every((value, index) => Math.abs(value * 255 - expectedColor[index]) < 1),
+        ),
+    ).toBe(true)
   if (expectedLinks) expect(pages.flatMap((page) => page.links)).toEqual(expectedLinks)
   if (imageCount !== undefined)
     expect(pages.reduce((total, page) => total + page.images, 0)).toBe(imageCount)
@@ -99,6 +112,14 @@ print(json.dumps(pages))
     ).toBe(true)
   }
   for (const row of expectedRows ?? []) {
+    if (row.rightRange) {
+      const [min, max] = row.rightRange
+      expect(
+        pages
+          .flatMap((page) => page.styles)
+          .some((style) => style.text.includes(row.right) && style.x >= min && style.x <= max),
+      ).toBe(true)
+    }
     expect(
       pages.some((page) =>
         page.layoutText.split('\n').some((line) => {
@@ -1111,6 +1132,173 @@ test('scrolls the preview with the wheel and changes zoom only through its contr
     await page.getByRole('button', { name: 'Write', exact: true }).click()
     await expect(preview.locator('canvas')).toHaveCount(0)
 
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await design.click()
+    const templates = typography.getByRole('group', { name: 'Template', exact: true })
+    await expect(templates.getByRole('button', { name: 'Onyx', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await templates.getByRole('button', { name: 'Meowth', exact: true }).click()
+    await expect(pages.first()).toContainText('EXPERIENCE')
+    const meowthDownload = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Download PDF' }).click()
+    const meowthPath = testInfo.outputPath('meowth.pdf')
+    await (await meowthDownload).saveAs(meowthPath)
+    readPdfPages(meowthPath, undefined, undefined, undefined, [
+      { left: 'Frontend Engineer', right: 'Sample Studio', rightRange: [180, 350] },
+      { left: 'Sample Studio', right: '2023 - Present' },
+    ])
+    await page.reload()
+    await design.click()
+    await expect(templates.getByRole('button', { name: 'Meowth', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await expect(pages.first()).toContainText('EXPERIENCE')
+    const density = typography.getByRole('group', { name: 'Density', exact: true })
+    await density.getByRole('button', { name: 'Compact', exact: true }).click()
+    await expect(page.locator('#resume-pdf-source')).toHaveCSS('--resume-body-line-height', '1.35')
+    await expect(pages.last()).toContainText(/\bAchievement129\b/)
+    const compactDownload = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Download PDF' }).click()
+    const compactPath = testInfo.outputPath('compact-density.pdf')
+    await (await compactDownload).saveAs(compactPath)
+    const compactPages = readPdfPages(compactPath)
+    await density.getByRole('button', { name: 'Roomy', exact: true }).click()
+    await expect(page.locator('#resume-pdf-source')).toHaveCSS('--resume-body-line-height', '1.65')
+    const roomyDownload = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Download PDF' }).click()
+    const roomyPath = testInfo.outputPath('roomy-density.pdf')
+    await (await roomyDownload).saveAs(roomyPath)
+    const roomyPages = readPdfPages(roomyPath)
+    const countMarkers = (text: string) => text.match(/\bAchievement\d+\b/g)?.length ?? 0
+    const firstProjectPage = compactPages.findIndex((text) => text.includes('Achievement0'))
+    expect(countMarkers(roomyPages[firstProjectPage])).toBeLessThan(
+      countMarkers(compactPages[firstProjectPage]),
+    )
+    const contents = await pages.allInnerTexts()
+    expect(contents.map(countMarkers)).toEqual(roomyPages.map(countMarkers))
+    expect(contents.flatMap((content) => content.match(/\bAchievement\d+\b/g) ?? [])).toEqual(
+      Array.from({ length: achievementCount }, (_, index) => `Achievement${index}`),
+    )
+    await expect(page.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible()
+    await page.reload()
+    await design.click()
+    await expect(density.getByRole('button', { name: 'Roomy', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await density.getByRole('button', { name: 'Normal', exact: true }).click()
+    const colors = typography.getByRole('group', { name: 'Theme color', exact: true })
+    await colors.getByRole('button', { name: 'Moss', exact: true }).click()
+    await expect(page.locator('#resume-pdf-source .resume-section-heading').first()).toHaveCSS(
+      'color',
+      'rgb(62, 107, 79)',
+    )
+    const colorDownload = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Download PDF' }).click()
+    const colorPath = testInfo.outputPath('moss-theme.pdf')
+    await (await colorDownload).saveAs(colorPath)
+    readPdfPages(colorPath, undefined, undefined, undefined, undefined, [62, 107, 79])
+    await page.reload()
+    await design.click()
+    await expect(colors.getByRole('button', { name: 'Moss', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await expect(templates.getByRole('button', { name: 'Meowth', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    const hex = colors.getByRole('textbox', { name: 'HEX color', exact: true })
+    await expect(hex).toHaveValue('#3E6B4F')
+    await hex.fill('#12')
+    await expect(hex).toHaveAttribute('aria-invalid', 'true')
+    await expect(page.locator('#resume-pdf-source .resume-section-heading').first()).toHaveCSS(
+      'color',
+      'rgb(62, 107, 79)',
+    )
+    await hex.fill('123456')
+    await expect(page.locator('#resume-pdf-source .resume-section-heading').first()).toHaveCSS(
+      'color',
+      'rgb(18, 52, 86)',
+    )
+    const customDownload = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Download PDF' }).click()
+    const customPath = testInfo.outputPath('custom-theme.pdf')
+    await (await customDownload).saveAs(customPath)
+    readPdfPages(customPath, undefined, undefined, undefined, undefined, [18, 52, 86])
+    await page.reload()
+    await design.click()
+    await expect(hex).toHaveValue('#123456')
+    await expect(colors.getByRole('button', { pressed: true })).toHaveCount(0)
+    await colors.getByRole('button', { name: 'Teal', exact: true }).click()
+    await expect(hex).toHaveValue('#1F6E73')
+    await hex.fill('#123456')
+    await expect(page.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible()
+    await templates.scrollIntoViewIfNeeded()
+    await typography.screenshot({ path: testInfo.outputPath('design-options.png') })
+    const printPage = await context.newPage()
+    await printPage.goto(`/resume/print?id=${resumeId}`)
+    await expect(printPage.locator('#resume-document')).toHaveAttribute('data-ready', 'true')
+    const printHeading = printPage
+      .getByRole('region', { name: 'Page 1', exact: true })
+      .locator('.resume-section-heading')
+      .first()
+    await expect
+      .poll(() =>
+        printHeading.evaluate((element) =>
+          Number.parseFloat(getComputedStyle(element).borderBottomWidth),
+        ),
+      )
+      .toBeGreaterThan(0)
+    await expect(printHeading).toHaveCSS('color', 'rgb(18, 52, 86)')
+    await printPage.close()
+    await presets.getByRole('button', { name: /^Balanced/ }).click()
+    await slider.press('ArrowRight')
+    await density.getByRole('button', { name: 'Roomy', exact: true }).click()
+    const reset = typography.getByRole('button', { name: 'Reset design', exact: true })
+    await reset.click()
+    await expect(templates.getByRole('button', { name: 'Onyx', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await expect(presets.getByRole('button', { name: /^Classic/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await expect(slider).toHaveAttribute('aria-valuenow', '10')
+    await expect(density.getByRole('button', { name: 'Normal', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await expect(hex).toHaveValue('#0284C7')
+    await expect(pages.first()).toContainText('Experience')
+    await expect(pages.nth(1)).toContainText('Achievement0')
+    await expect(page.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible()
+    await page.reload()
+    await design.click()
+    await expect(templates.getByRole('button', { name: 'Onyx', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await expect(presets.getByRole('button', { name: /^Classic/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await expect(slider).toHaveAttribute('aria-valuenow', '10')
+    await expect(density.getByRole('button', { name: 'Normal', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await expect(hex).toHaveValue('#0284C7')
+    await expect(pages.last()).toContainText(/\bAchievement129\b/)
+    const resetContents = await pages.allInnerTexts()
+    expect(resetContents.flatMap((text) => text.match(/\bAchievement\d+\b/g) ?? [])).toEqual(
+      Array.from({ length: achievementCount }, (_, index) => `Achievement${index}`),
+    )
+
     if (fixture) {
       const png =
         'iVBORw0KGgoAAAANSUhEUgAAAAwAAAAICAIAAABChommAAAAEUlEQVR4nGPgyttCEDGMKgIAzyhwgacy0uYAAAAASUVORK5CYII='
@@ -1132,6 +1320,13 @@ test('scrolls the preview with the wheel and changes zoom only through its contr
       await expect(presets.getByRole('button', { pressed: true })).toHaveCount(0)
       await expect(page.locator('#resume-pdf-source')).toHaveCSS('--resume-body-size', '11pt')
       await expect(slider).toBeDisabled()
+      await reset.click()
+      await expect(presets.getByRole('button', { name: /^Classic/ })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+      await expect(slider).toHaveAttribute('aria-valuenow', '10')
+      await expect(slider).toBeEnabled()
 
       const balanced = presets.getByRole('button', { name: /^Balanced/ })
       await balanced.click()
