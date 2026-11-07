@@ -2,106 +2,98 @@ name: Deploy to Aliyun
 
 on:
   push:
-    branches:
-      - master # 推送到 master 分支时触发
-  workflow_dispatch: # 允许手动触发
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      database_action:
+        description: 'migrate for normal releases; reset rebuilds the database after a verified backup'
+        type: choice
+        options: [migrate, reset]
+        default: migrate
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: resume-copilot-production
+  cancel-in-progress: false
 
 jobs:
-  deploy:
+  verify-deployment:
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
-
     steps:
-      # 1. Checkout code
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24.21.0
+      - run: bash -n scripts/deploy.sh
+      - run: node --test scripts/deploy.test.mjs
 
-      # 2. Set up Docker Buildx
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # 3. Login to Aliyun Container Registry (ACR)
-      - name: Login to Aliyun ACR
-        uses: docker/login-action@v3
+  build:
+    needs: verify-deployment
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: web
+            target: runner
+          - name: api
+            target: api-runner
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: docker/setup-buildx-action@v4.4.1
+      - uses: docker/login-action@v4.8.0
         with:
           registry: ${{ secrets.ALIYUN_REGISTRY }}
-          # namespace: ${{ secrets.ALIYUN_REGISTRY_NAMESPACE }}
           username: ${{ secrets.ALIYUN_REGISTRY_USERNAME }}
           password: ${{ secrets.ALIYUN_REGISTRY_PASSWORD }}
-
-      # 4. Build and push App Docker image
-      - name: Build and push App Docker image
-        uses: docker/build-push-action@v5
+      - uses: docker/build-push-action@v7.4.0
         with:
           context: .
           file: ./Dockerfile
+          target: ${{ matrix.target }}
           push: true
-          tags: |
-            ${{ secrets.ALIYUN_REGISTRY }}/resume-copilot:latest
-            ${{ secrets.ALIYUN_REGISTRY }}/resume-copilot:${{ github.sha }}
+          tags: ${{ secrets.ALIYUN_REGISTRY }}/resume-copilot:${{ github.sha }}-${{ matrix.name }}
           build-args: |
             NEXT_PUBLIC_APP_URL=${{ secrets.APP_URL }}
+            API_INTERNAL_URL=http://api:3001
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
 
-      # 5. Copy docker-compose file to server
-      - name: Copy docker-compose.prod.yml to server
-        uses: appleboy/scp-action@v0.1.7
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Copy production deployment files
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.ALIYUN_HOST }}
           username: ${{ secrets.ALIYUN_SSH_USER }}
           password: ${{ secrets.ALIYUN_SSH_PASSWORD }}
           port: ${{ secrets.ALIYUN_SSH_PORT || 22 }}
-          source: 'docker-compose.prod.yml'
+          source: 'docker-compose.prod.yml,scripts/deploy.sh'
           target: ${{ secrets.ALIYUN_APP_DIR }}
-
-      # 6. Deploy to Aliyun Server
-      - name: Deploy to Aliyun Server
-        uses: appleboy/ssh-action@v1.0.0
+      - name: Deploy the selected release
+        uses: appleboy/ssh-action@v1.2.5
+        env:
+          DEPLOY_DIRECTORY: ${{ secrets.ALIYUN_APP_DIR }}
+          ALIYUN_REGISTRY: ${{ secrets.ALIYUN_REGISTRY }}
+          REGISTRY_USERNAME: ${{ secrets.ALIYUN_REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.ALIYUN_REGISTRY_PASSWORD }}
+          IMAGE_TAG: ${{ github.sha }}
+          DATABASE_ACTION: ${{ inputs.database_action || 'migrate' }}
         with:
           host: ${{ secrets.ALIYUN_HOST }}
           username: ${{ secrets.ALIYUN_SSH_USER }}
           password: ${{ secrets.ALIYUN_SSH_PASSWORD }}
           port: ${{ secrets.ALIYUN_SSH_PORT || 22 }}
+          command_timeout: 20m
+          envs: DEPLOY_DIRECTORY,ALIYUN_REGISTRY,REGISTRY_USERNAME,REGISTRY_PASSWORD,IMAGE_TAG,DATABASE_ACTION
           script: |
-            # Navigate to app directory
-            cd ${{ secrets.ALIYUN_APP_DIR }} || exit 1
-
-            # Export environment variables for docker-compose
-            export ALIYUN_REGISTRY="${{ secrets.ALIYUN_REGISTRY }}"
-
-            # Login to Aliyun ACR
-            echo "${{ secrets.ALIYUN_REGISTRY_PASSWORD }}" | docker login \
-              --username ${{ secrets.ALIYUN_REGISTRY_USERNAME }} \
-              --password-stdin \
-              ${{ secrets.ALIYUN_REGISTRY }}
-
-            # Pull latest images
-            echo "📥 Pulling latest images..."
-            docker pull ${{ secrets.ALIYUN_REGISTRY }}/resume-copilot:latest
-
-            # Stop and remove old containers (keep database running)
-            docker compose -f docker-compose.prod.yml down app
-
-            # Run database migrations
-            echo "📦 Running database migrations..."
-            if ! docker compose -f docker-compose.prod.yml run --rm app sh -c "npx drizzle-kit migrate"; then
-              echo "❌ Migration failed! Aborting deployment."
-              exit 1
-            fi
-            echo "✅ Migrations completed successfully"
-
-            # Start new containers (--remove-orphans cleans up containers no longer in compose file, e.g. old chrome service)
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
-
-            # Clean up old images
-            docker image prune -af --filter "until=72h"
-
-            # Show running containers
-            docker compose -f docker-compose.prod.yml ps
-
-      # 7. Notify deployment status
-      - name: Deployment Success
-        if: success()
-        run: echo "✅ Deployment successful!"
-
-      - name: Deployment Failed
-        if: failure()
-        run: echo "❌ Deployment failed!"
+            set -eu
+            cd "$DEPLOY_DIRECTORY"
+            printf '%s' "$REGISTRY_PASSWORD" | docker login --username "$REGISTRY_USERNAME" --password-stdin "$ALIYUN_REGISTRY"
+            bash scripts/deploy.sh "$DATABASE_ACTION"

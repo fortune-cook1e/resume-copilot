@@ -58,3 +58,7 @@ docs
 **/playwright-report
 **/test-results
 .nyc_output
+
+# Production deployment state and database backups
+.deploy-state
+backups

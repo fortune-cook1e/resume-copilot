@@ -82,3 +82,7 @@ Oxlint and Oxfmt run separately; editor integration is optional.
 
 - [Product definition](docs/product.en.md)
 - [Current development handoff](docs/handoff.md)
+
+## Production deployment
+
+GitHub Actions deploys the Web and API images with production Compose. Configure the server using the root [.env.example](.env.example). The first cutover uses a manually selected, backup-verified database reset; later releases use incremental migrations. See [production deployment](docs/deployment.md) for setup, execution and recovery.

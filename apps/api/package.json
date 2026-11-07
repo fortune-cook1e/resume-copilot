@@ -13,7 +13,8 @@
     "db:studio": "drizzle-kit studio",
     "lint": "oxlint .",
     "typecheck": "pnpm --filter @resume-copilot/contracts build && tsc --noEmit -p tsconfig.build.json",
-    "test": "pnpm build && tsc --noEmit && vitest run"
+    "test": "pnpm build && tsc --noEmit && vitest run",
+    "db:migrate:deploy": "node scripts/migrate.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.0",
@@ -40,5 +41,10 @@
     "@types/node": "^22.0.0",
     "drizzle-kit": "0.31.9",
     "vitest": "^4.1.2"
-  }
+  },
+  "files": [
+    "dist",
+    "drizzle",
+    "scripts/migrate.mjs"
+  ]
 }

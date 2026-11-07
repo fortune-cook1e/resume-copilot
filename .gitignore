@@ -27,3 +27,7 @@ test-results/
 blob-report/
 playwright/.cache/
 playwright/.auth/
+
+# Production deployment state and database backups
+.deploy-state/
+backups/

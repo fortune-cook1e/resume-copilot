@@ -1,5 +1,3 @@
-# Transitional image for the preserved web application only.
-# The new NestJS application's production deployment is not part of this scaffold.
 FROM node:24.21.0-alpine AS deps
 WORKDIR /app
 RUN npm install --global pnpm@12.15.0
@@ -13,9 +11,28 @@ RUN pnpm install --frozen-lockfile
 FROM deps AS builder
 COPY . .
 ARG NEXT_PUBLIC_APP_URL
+ARG API_INTERNAL_URL=http://api:3001
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+ENV API_INTERNAL_URL=${API_INTERNAL_URL}
 RUN pnpm --filter @resume-copilot/web build
+
+FROM deps AS api-builder
+COPY . .
+RUN pnpm --filter @resume-copilot/api build \
+    && pnpm --filter @resume-copilot/api --prod deploy /opt/api
+
+FROM node:24.21.0-alpine AS api-runner
+WORKDIR /app
+RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates ttf-freefont font-noto-cjk
+ENV NODE_ENV=production
+ENV HOST=0.0.0.0
+ENV PORT=3001
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+COPY --from=api-builder --chown=node:node /opt/api ./
+USER node
+EXPOSE 3001
+CMD ["node", "dist/main.js"]
 
 FROM node:24.21.0-alpine AS runner
 WORKDIR /app/apps/web
