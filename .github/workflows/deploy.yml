@@ -3,14 +3,7 @@ name: Deploy to Aliyun
 on:
   push:
     branches: [master]
-  workflow_dispatch:
-    inputs:
-      database_action:
-        description: 'migrate for normal releases; reset rebuilds the database after a verified backup'
-        type: choice
-        options: [migrate, reset]
-        default: migrate
-        required: true
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -86,16 +79,15 @@ jobs:
           REGISTRY_USERNAME: ${{ secrets.ALIYUN_REGISTRY_USERNAME }}
           REGISTRY_PASSWORD: ${{ secrets.ALIYUN_REGISTRY_PASSWORD }}
           IMAGE_TAG: ${{ github.sha }}
-          DATABASE_ACTION: ${{ inputs.database_action || 'migrate' }}
         with:
           host: ${{ secrets.ALIYUN_HOST }}
           username: ${{ secrets.ALIYUN_SSH_USER }}
           password: ${{ secrets.ALIYUN_SSH_PASSWORD }}
           port: ${{ secrets.ALIYUN_SSH_PORT || 22 }}
           command_timeout: 20m
-          envs: DEPLOY_DIRECTORY,ALIYUN_REGISTRY,REGISTRY_USERNAME,REGISTRY_PASSWORD,IMAGE_TAG,DATABASE_ACTION
+          envs: DEPLOY_DIRECTORY,ALIYUN_REGISTRY,REGISTRY_USERNAME,REGISTRY_PASSWORD,IMAGE_TAG
           script: |
             set -eu
             cd "$DEPLOY_DIRECTORY"
             printf '%s' "$REGISTRY_PASSWORD" | docker login --username "$REGISTRY_USERNAME" --password-stdin "$ALIYUN_REGISTRY"
-            bash scripts/deploy.sh "$DATABASE_ACTION"
+            bash scripts/deploy.sh

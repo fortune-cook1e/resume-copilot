@@ -38,7 +38,7 @@ try {
         )[0].created_at
       : null
     if (tables.count && (!last || Number(last) < journal.entries[0].when))
-      throw new Error('Legacy database requires the one-time reset deployment.')
+      throw new Error('Database migration history is incompatible with this release.')
     await migrate(drizzle(client), { migrationsFolder: folder })
     console.log('Database migrations completed.')
   } else {
@@ -46,7 +46,7 @@ try {
   }
 } catch {
   console.error(
-    'Database preflight or migration failed. Check the target, connection, and migration history. A legacy database needs the one-time reset deployment.',
+    'Database preflight or migration failed. Check the target, connection, and migration history.',
   )
   process.exitCode = 1
 } finally {

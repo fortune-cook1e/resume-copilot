@@ -12,17 +12,15 @@ async function fixture(t, fail = '') {
   const directory = await mkdtemp(path.join(tmpdir(), 'resume-deploy-'))
   t.after(() => rm(directory, { recursive: true, force: true }))
   await mkdir(path.join(directory, 'bin'))
+  await writeFile(path.join(directory, 'commands.log'), '')
   await writeFile(
     path.join(directory, 'bin', 'docker'),
     [
       '#!/bin/bash',
       'printf "%s\\n" "$*" >> "$DEPLOY_TEST_LOG"',
       'case "$*" in',
-      '  *"ps --services --status running"*) echo app ;;',
       '  *"printenv POSTGRES_DB"*) echo resume_copilot ;;',
       '  *"printenv POSTGRES_USER"*) echo resume ;;',
-      '  *"pg_dump"*) echo synthetic-dump ;;',
-      '  *"pg_restore"*) cat >/dev/null; [ "$DEPLOY_TEST_FAIL" != restore ] ;;',
       '  *"node scripts/migrate.mjs --check-target"*) [ "$DEPLOY_TEST_FAIL" != target ] ;;',
       '  *"node scripts/migrate.mjs") [ "$DEPLOY_TEST_FAIL" != migrate ] ;;',
       'esac',
@@ -39,7 +37,7 @@ async function fixture(t, fail = '') {
     IMAGE_TAG: 'test-sha',
   }
   const run = (mode, failure = fail) =>
-    spawnSync('bash', [script, mode], {
+    spawnSync('bash', [script, ...(mode ? [mode] : [])], {
       env: { ...env, DEPLOY_TEST_FAIL: failure },
       encoding: 'utf8',
     })
@@ -49,49 +47,35 @@ async function fixture(t, fail = '') {
 
 test('normal deployment applies migrations without resetting the database', async (t) => {
   const { run, commands } = await fixture(t)
-  const result = run('migrate')
+  const result = run()
   assert.equal(result.status, 0, result.stderr)
   const log = await commands()
-  assert.match(log, /node scripts\/migrate.mjs/)
-  assert.doesNotMatch(log, /dropdb|pg_dump/)
+  assert.match(log, /api node scripts\/migrate\.mjs\n/)
+  assert.match(log, /up -d --wait --wait-timeout 120 api app/)
+  assert.doesNotMatch(log, /dropdb|createdb|pg_dump|pg_restore/)
 })
 
-test('reset verifies the backup before dropping the database and refuses repetition', async (t) => {
+test('retired reset argument is rejected before any Docker operation', async (t) => {
   const { run, commands } = await fixture(t)
   const result = run('reset')
-  assert.equal(result.status, 0, result.stderr)
-  const log = await commands()
-  const restore = log.indexOf('pg_restore')
-  const drop = log.indexOf('dropdb --force')
-  assert.ok(restore >= 0 && drop > restore)
-  assert.match(log.slice(drop), /createdb/)
-  assert.match(log.slice(drop), /node scripts\/migrate.mjs/)
-  const again = run('reset')
-  assert.notEqual(again.status, 0)
-  const after = await commands()
-  assert.equal(after.match(/dropdb --force/g)?.length, 1)
-})
-
-test('failed backup verification preserves the target database and restarts the old app', async (t) => {
-  const { run, commands } = await fixture(t, 'restore')
-  const result = run('reset')
   assert.notEqual(result.status, 0)
-  const log = await commands()
-  assert.doesNotMatch(log, /dropdb --force/)
-  assert.match(log, /start app/)
+  assert.equal(await commands(), '')
 })
 
-test('initialization failure resumes through migrate without a second database reset', async (t) => {
+test('failed migration prevents application replacement and allows retry', async (t) => {
   const { run, commands } = await fixture(t, 'migrate')
-  assert.notEqual(run('reset').status, 0)
-  assert.notEqual(run('reset', '').status, 0)
-  const resumed = run('migrate', '')
+  assert.notEqual(run().status, 0)
+  assert.doesNotMatch(await commands(), /up -d --wait --wait-timeout 120 api app/)
+  const resumed = run(undefined, '')
   assert.equal(resumed.status, 0, resumed.stderr)
-  assert.equal((await commands()).match(/dropdb --force/g)?.length, 1)
+  assert.doesNotMatch(await commands(), /dropdb|createdb/)
 })
 
-test('wrong database target fails before stopping applications or taking a backup', async (t) => {
+test('wrong database target fails before migrations or application replacement', async (t) => {
   const { run, commands } = await fixture(t, 'target')
-  assert.notEqual(run('reset').status, 0)
-  assert.doesNotMatch(await commands(), /stop app|pg_dump|dropdb/)
+  assert.notEqual(run().status, 0)
+  assert.doesNotMatch(
+    await commands(),
+    /api node scripts\/migrate\.mjs\n|up -d --wait --wait-timeout 120 api app/,
+  )
 })
