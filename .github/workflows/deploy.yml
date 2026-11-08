@@ -1,93 +1,104 @@
-name: Deploy to Aliyun
+name: Cloudflare
 
 on:
   push:
     branches: [master]
+  pull_request:
   workflow_dispatch: {}
 
 permissions:
   contents: read
 
 concurrency:
-  group: resume-copilot-production
+  group: cloudflare-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  WRANGLER_SEND_METRICS: 'false'
+  NEXT_TELEMETRY_DISABLED: '1'
+
 jobs:
-  verify-deployment:
-    if: github.ref == 'refs/heads/master'
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-node@v7.1.0
         with:
           node-version: 24.21.0
-      - run: bash -n scripts/deploy.sh
-      - run: node --test scripts/deploy.test.mjs
-
-  build:
-    needs: verify-deployment
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - name: web
-            target: runner
-          - name: api
-            target: api-runner
-    steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: docker/setup-buildx-action@v4.4.1
-      - uses: docker/login-action@v4.8.0
+      - run: npm install --global pnpm@12.15.0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm typecheck
+      - run: pnpm --filter @resume-copilot/web build:cf
+        env:
+          NEXT_PUBLIC_APP_URL: ${{ vars.APP_URL || secrets.APP_URL || 'http://localhost:3000' }}
+      - run: pnpm --filter @resume-copilot/web exec wrangler deploy --dry-run --outdir .worker-test
+      - run: node scripts/check-worker-size.mjs
+      - run: pnpm --filter @resume-copilot/web exec playwright install --with-deps chromium
+      - run: python3 -m pip install pypdf
+      - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v6
+        if: failure()
         with:
-          registry: ${{ secrets.ALIYUN_REGISTRY }}
-          username: ${{ secrets.ALIYUN_REGISTRY_USERNAME }}
-          password: ${{ secrets.ALIYUN_REGISTRY_PASSWORD }}
-      - uses: docker/build-push-action@v7.4.0
-        with:
-          context: .
-          file: ./Dockerfile
-          target: ${{ matrix.target }}
-          push: true
-          # The current Aliyun registry rejects OCI provenance attestation manifests.
-          provenance: false
-          tags: ${{ secrets.ALIYUN_REGISTRY }}/resume-copilot:${{ github.sha }}-${{ matrix.name }}
-          build-args: |
-            NEXT_PUBLIC_APP_URL=${{ secrets.APP_URL }}
-            API_INTERNAL_URL=http://api:3001
-          cache-from: type=gha,scope=${{ matrix.name }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+          name: browser-test-results
+          path: apps/web/test-results
+          retention-days: 3
 
   deploy:
-    needs: build
+    needs: verify
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID || secrets.D1_DATABASE_ID }}
+      NEXT_PUBLIC_APP_URL: ${{ vars.APP_URL || secrets.APP_URL }}
     steps:
       - uses: actions/checkout@v7.0.1
-      - name: Copy production deployment files
-        uses: appleboy/scp-action@v1.0.0
+      - uses: actions/setup-node@v7.1.0
         with:
-          host: ${{ secrets.ALIYUN_HOST }}
-          username: ${{ secrets.ALIYUN_SSH_USER }}
-          password: ${{ secrets.ALIYUN_SSH_PASSWORD }}
-          port: ${{ secrets.ALIYUN_SSH_PORT || 22 }}
-          source: 'docker-compose.prod.yml,scripts/deploy.sh'
-          target: ${{ secrets.ALIYUN_APP_DIR }}
-      - name: Deploy the selected release
-        uses: appleboy/ssh-action@v1.2.5
+          node-version: 24.21.0
+      - run: npm install --global pnpm@12.15.0
+      - run: pnpm install --frozen-lockfile
+      - name: Configure public bindings
+        run: |
+          node --input-type=module <<'JS'
+          import { readFileSync, writeFileSync } from 'node:fs'
+          import ts from 'typescript'
+          const { D1_DATABASE_ID, NEXT_PUBLIC_APP_URL, CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN } = process.env
+          if (!D1_DATABASE_ID || !CLOUDFLARE_ACCOUNT_ID || !CLOUDFLARE_API_TOKEN || !NEXT_PUBLIC_APP_URL?.startsWith('https://')) throw new Error('Cloudflare configuration is incomplete')
+          const path = 'apps/api/wrangler.jsonc'
+          const parsed = ts.parseConfigFileTextToJson(path, readFileSync(path, 'utf8'))
+          if (parsed.error) throw new Error('Invalid Worker configuration')
+          const config = parsed.config
+          config.d1_databases[0].database_id = D1_DATABASE_ID
+          config.vars.BETTER_AUTH_URL = new URL(NEXT_PUBLIC_APP_URL).origin
+          writeFileSync(path, JSON.stringify(config, null, 2))
+          JS
+      - name: Validate API secrets
         env:
-          DEPLOY_DIRECTORY: ${{ secrets.ALIYUN_APP_DIR }}
-          ALIYUN_REGISTRY: ${{ secrets.ALIYUN_REGISTRY }}
-          REGISTRY_USERNAME: ${{ secrets.ALIYUN_REGISTRY_USERNAME }}
-          REGISTRY_PASSWORD: ${{ secrets.ALIYUN_REGISTRY_PASSWORD }}
-          IMAGE_TAG: ${{ github.sha }}
-        with:
-          host: ${{ secrets.ALIYUN_HOST }}
-          username: ${{ secrets.ALIYUN_SSH_USER }}
-          password: ${{ secrets.ALIYUN_SSH_PASSWORD }}
-          port: ${{ secrets.ALIYUN_SSH_PORT || 22 }}
-          command_timeout: 20m
-          envs: DEPLOY_DIRECTORY,ALIYUN_REGISTRY,REGISTRY_USERNAME,REGISTRY_PASSWORD,IMAGE_TAG
-          script: |
-            set -eu
-            cd "$DEPLOY_DIRECTORY"
-            printf '%s' "$REGISTRY_PASSWORD" | docker login --username "$REGISTRY_USERNAME" --password-stdin "$ALIYUN_REGISTRY"
-            bash scripts/deploy.sh
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        run: |
+          node --input-type=module <<'JS'
+          import { writeFileSync } from 'node:fs'
+          const secrets = Object.fromEntries(['BETTER_AUTH_SECRET', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'].map(key => [key, process.env[key]]))
+          if (Object.values(secrets).some(value => !value) || secrets.BETTER_AUTH_SECRET.length < 32) throw new Error('API secrets are incomplete')
+          writeFileSync(process.env.RUNNER_TEMP + '/api-secrets.json', JSON.stringify(secrets), { mode: 0o600 })
+          JS
+      - run: pnpm build:cf
+      - run: pnpm --filter @resume-copilot/web exec wrangler deploy --dry-run --outdir .worker-test
+      - run: node scripts/check-worker-size.mjs
+      - run: pnpm --filter @resume-copilot/api db:migrate:remote
+      - run: pnpm --filter @resume-copilot/api exec wrangler deploy
+      - name: Set API secrets
+        run: |
+          pnpm --filter @resume-copilot/api exec wrangler secret bulk "$RUNNER_TEMP/api-secrets.json"
+          rm "$RUNNER_TEMP/api-secrets.json"
+      - run: pnpm --filter @resume-copilot/web deploy
+      - name: Check public entry
+        run: |
+          curl --fail --retry 5 --retry-delay 3 "$NEXT_PUBLIC_APP_URL/api/health/ready"
+          curl --fail --retry 5 --retry-delay 3 --output /dev/null "$NEXT_PUBLIC_APP_URL/login"
