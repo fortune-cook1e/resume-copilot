@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { createHmac, randomUUID } from 'node:crypto'
-import { createRequire } from 'node:module'
+import { createTestRuntime } from '../../apps/api/worker.fixture.cjs'
 import { createServer } from 'node:http'
 import { test, expect } from '../../apps/web/node_modules/@playwright/test'
 import {
@@ -10,16 +10,9 @@ import {
 } from '../../packages/contracts/src/resume'
 
 test.describe.configure({ mode: 'serial' })
-const apiRequire = createRequire(require.resolve('../../apps/api/package.json'))
-type TestApplication = Pick<
-  import('../../apps/api/node_modules/@nestjs/common').INestApplication,
-  'listen' | 'close'
->
-let app: TestApplication | undefined
-let database: ReturnType<typeof import('../../apps/api/node_modules/postgres')> | undefined
+let app: Awaited<ReturnType<typeof createTestRuntime>> | undefined
 const userId = `pagination-${randomUUID()}`
 let cookie = ''
-let seeded = false
 
 function readPdfPages(
   path: string,
@@ -134,49 +127,23 @@ print(json.dumps(pages))
 }
 
 test.beforeAll(async () => {
-  const url = process.env.AUTH_TEST_DATABASE_URL
-  if (!url) return
-  if (new URL(url).pathname !== '/resume_copilot_test')
-    throw new Error('An isolated resume_copilot_test database is required')
-  const postgres = apiRequire('postgres') as typeof import('../../apps/api/node_modules/postgres')
-  database = postgres(url, { onnotice: () => {} })
-  const [target] = await database`SELECT current_database() AS name`
-  if (target.name !== 'resume_copilot_test') throw new Error('Refusing non-test database')
-  Object.assign(process.env, {
-    NODE_ENV: 'test',
-    DATABASE_URL: url,
-    LOG_LEVEL: 'silent',
-    BETTER_AUTH_URL: 'http://127.0.0.1:3100',
-    BETTER_AUTH_SECRET: 'pagination-test-only-secret-at-least-thirty-two-characters',
-    GOOGLE_CLIENT_ID: 'pagination-test-client',
-    GOOGLE_CLIENT_SECRET: 'pagination-test-secret',
-  })
-  await database`INSERT INTO "user" (id, name, email, email_verified)
-    VALUES (${userId}, 'Pagination Author', ${userId + '@example.test'}, true)`
-  seeded = true
+  app = await createTestRuntime({ origin: 'http://127.0.0.1:3100', port: 3101 })
+  const database = await app.runtime.getD1Database('DB')
+  await database
+    .prepare('INSERT INTO user (id, name, email, email_verified) VALUES (?, ?, ?, ?)')
+    .bind(userId, 'Pagination Author', userId + '@example.test', 1)
+    .run()
   const token = randomUUID()
-  await database`INSERT INTO session (id, token, user_id, expires_at)
-    VALUES (${randomUUID()}, ${token}, ${userId}, now() + interval '1 hour')`
-  const signature = createHmac('sha256', process.env.BETTER_AUTH_SECRET!)
-    .update(token)
-    .digest('base64')
+  await database
+    .prepare('INSERT INTO session (id, token, user_id, expires_at) VALUES (?, ?, ?, ?)')
+    .bind(randomUUID(), token, userId, Date.now() + 3600000)
+    .run()
+  const signature = createHmac('sha256', app.secret).update(token).digest('base64')
   cookie = encodeURIComponent(`${token}.${signature}`)
-  const { createApplication } = apiRequire('./dist/main.js') as {
-    createApplication: () => Promise<TestApplication>
-  }
-  app = await createApplication()
-  await app.listen(3101, '127.0.0.1')
 })
 
 test.afterAll(async () => {
-  await app?.close()
-  if (database) {
-    try {
-      if (seeded) await database`DELETE FROM "user" WHERE id = ${userId}`
-    } finally {
-      await database.end()
-    }
-  }
+  await app?.runtime.dispose()
 })
 
 test('automatically continues long sections and rich text with matching screen and PDF pages', async ({
@@ -286,32 +253,14 @@ test('signs in, creates a resume and displays every page after editing and reope
   context,
   baseURL,
 }) => {
-  test.skip(!process.env.AUTH_TEST_DATABASE_URL, 'Requires an isolated test database and API build')
   const email = `core-${randomUUID()}@example.test`
   const code = randomUUID()
-  const fetch = globalThis.fetch
-  const claims = Buffer.from(
-    JSON.stringify({ sub: code, name: 'Core Journey Author', email, email_verified: true }),
-  ).toString('base64url')
-  const header = Buffer.from(JSON.stringify({ alg: 'HS256' })).toString('base64url')
-  const payload = `${header}.${claims}`
-  const signature = createHmac('sha256', code).update(payload).digest('base64url')
-
-  // Replace only Google's endpoints. Better Auth still owns the OAuth state,
-  // callback, account creation and session cookie.
-  globalThis.fetch = async (input, init) => {
-    const url = input instanceof Request ? input.url : String(input)
-    if (url !== 'https://oauth2.googleapis.com/token') return fetch(input, init)
-    const tokenRequest = new Request(input, init)
-    const form = await tokenRequest.formData()
-    if (form.get('code') !== code || !form.get('code_verifier'))
-      return Response.json({ error: 'invalid_grant' }, { status: 400 })
-    return Response.json({
-      access_token: 'core-journey-test-token',
-      token_type: 'Bearer',
-      id_token: `${payload}.${signature}`,
-    })
-  }
+  await app!.setGoogleProfile({
+    sub: code,
+    name: 'Core Journey Author',
+    email,
+    email_verified: true,
+  })
 
   try {
     await context.route('https://accounts.google.com/o/oauth2/v2/auth?**', async (route) => {
@@ -409,8 +358,8 @@ test('signs in, creates a resume and displays every page after editing and reope
     await page.reload()
     expect(await verifyPages()).toEqual(beforeReload)
   } finally {
-    globalThis.fetch = fetch
-    await database!`DELETE FROM "user" WHERE email = ${email}`
+    const database = await app!.runtime.getD1Database('DB')
+    await database.prepare('DELETE FROM user WHERE email = ?').bind(email).run()
   }
 })
 
@@ -418,10 +367,6 @@ test('saves, reopens and exports the same real multi-page resume through the aut
   page,
   context,
 }, testInfo) => {
-  test.skip(
-    !process.env.AUTH_TEST_DATABASE_URL,
-    'Requires an explicitly selected isolated test database and API build',
-  )
   await context.addCookies([
     { name: 'better-auth.session_token', value: cookie, url: 'http://127.0.0.1:3100' },
   ])
@@ -589,10 +534,6 @@ test('starts a section on a fresh page and retains it through reorder, reopen an
   page,
   context,
 }, testInfo) => {
-  test.skip(
-    !process.env.AUTH_TEST_DATABASE_URL,
-    'Requires an explicitly selected isolated test database and API build',
-  )
   await context.addCookies([
     { name: 'better-auth.session_token', value: cookie, url: 'http://127.0.0.1:3100' },
   ])
@@ -691,10 +632,6 @@ test('keeps a fitting section together, combines page rules, and lets oversized 
   page,
   context,
 }, testInfo) => {
-  test.skip(
-    !process.env.AUTH_TEST_DATABASE_URL,
-    'Requires an explicitly selected isolated test database and API build',
-  )
   await context.addCookies([
     { name: 'better-auth.session_token', value: cookie, url: 'http://127.0.0.1:3100' },
   ])

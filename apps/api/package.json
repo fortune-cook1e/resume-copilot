@@ -4,17 +4,16 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "dev": "pnpm --filter @resume-copilot/contracts build && nest start --watch",
+    "dev": "wrangler dev --port 3001",
     "build": "pnpm --filter @resume-copilot/contracts build && nest build",
-    "start": "node dist/main.js",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio",
+    "db:migrate": "wrangler d1 migrations apply DB --local",
     "lint": "oxlint .",
-    "typecheck": "pnpm --filter @resume-copilot/contracts build && tsc --noEmit -p tsconfig.build.json",
-    "test": "pnpm build && tsc --noEmit && vitest run",
-    "db:migrate:deploy": "node scripts/migrate.mjs"
+    "typecheck": "pnpm build && tsc --noEmit && tsc -p tsconfig.worker.json",
+    "test": "pnpm build:worker && tsc --noEmit && vitest run",
+    "build:worker": "wrangler deploy --dry-run --outdir .worker-test",
+    "deploy": "wrangler deploy",
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.0",
@@ -29,22 +28,18 @@
     "nestjs-pino": "^4.6.1",
     "pino": "^10.3.1",
     "pino-http": "^11.0.0",
-    "postgres": "3.4.8",
-    "puppeteer-core": "24.36.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261107.1",
     "@nestjs/cli": "^11.0.0",
     "@types/express": "^5",
     "@types/node": "^22.0.0",
     "drizzle-kit": "0.31.9",
-    "vitest": "^4.1.2"
-  },
-  "files": [
-    "dist",
-    "drizzle",
-    "scripts/migrate.mjs"
-  ]
+    "miniflare": "5.20261104.0-beta",
+    "vitest": "^4.1.2",
+    "wrangler": "^4.158.0"
+  }
 }

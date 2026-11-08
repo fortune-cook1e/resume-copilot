@@ -10,8 +10,15 @@
     "declaration": true,
     "sourceMap": true,
     "types": ["node"],
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "allowJs": true
   },
-  "include": ["src/**/*.ts", "src/**/*.mts", "vitest.config.mts", "vitest.setup.mts"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.mts",
+    "vitest.config.mts",
+    "worker.test.mts",
+    "worker.fixture.cjs"
+  ],
   "exclude": ["node_modules", "dist"]
 }

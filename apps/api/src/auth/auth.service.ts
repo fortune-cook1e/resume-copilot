@@ -17,7 +17,7 @@ function createAuth(database: DatabaseService, config: ConfigType<typeof appConf
     basePath: '/api/auth',
     secret: config.BETTER_AUTH_SECRET,
     trustedOrigins: [config.BETTER_AUTH_URL],
-    database: drizzleAdapter(database.db, { provider: 'pg', schema }),
+    database: drizzleAdapter(database.db, { provider: 'sqlite', schema }),
     emailAndPassword: { enabled: false },
     socialProviders: {
       google: {

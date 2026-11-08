@@ -4,19 +4,12 @@ import type { NextConfig } from 'next'
 const apiOrigin = new URL(process.env.API_INTERNAL_URL ?? 'http://127.0.0.1:3001').origin
 
 const nextConfig: NextConfig = {
+  agentRules: false,
   async rewrites() {
-    return {
-      beforeFiles: [
-        { source: '/api/auth/:path*', destination: `${apiOrigin}/api/auth/:path*` },
-        { source: '/api/me', destination: `${apiOrigin}/api/me` },
-        { source: '/api/resumes', destination: `${apiOrigin}/api/resumes` },
-        { source: '/api/resumes/:path*', destination: `${apiOrigin}/api/resumes/:path*` },
-        { source: '/api/export-pdf', destination: `${apiOrigin}/api/export-pdf` },
-      ],
-    }
+    // next dev uses HTTP locally; production routes /api through the Worker binding.
+    if (process.env.NODE_ENV !== 'development') return []
+    return [{ source: '/api/:path*', destination: `${apiOrigin}/api/:path*` }]
   },
-  // Enable standalone output for Docker deployment
-  output: 'standalone',
   outputFileTracingRoot: path.resolve(__dirname, '../..'),
   turbopack: {
     root: path.resolve(__dirname, '../..'),

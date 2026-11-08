@@ -1,0 +1,34 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "resume-copilot-api",
+  "main": "worker.ts",
+  "compatibility_date": "2026-11-08",
+  "compatibility_flags": ["nodejs_compat", "enable_nodejs_http_server_modules"],
+  "workers_dev": false,
+  "alias": {
+    "pino": "pino/pino.js",
+    "class-validator": "./unsupported-nest-feature.cjs",
+    "class-transformer": "./unsupported-nest-feature.cjs",
+    "@nestjs/websockets/socket-module": "./unsupported-nest-feature.cjs",
+    "@nestjs/microservices/microservices-module": "./unsupported-nest-feature.cjs",
+    "@nestjs/microservices": "./unsupported-nest-feature.cjs",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "resume-copilot",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "drizzle",
+    },
+  ],
+  "vars": {
+    "NODE_ENV": "production",
+  },
+  "observability": {
+    "enabled": true,
+  },
+  "build": {
+    "command": "pnpm build",
+    "watch_dir": ["src"],
+  },
+}

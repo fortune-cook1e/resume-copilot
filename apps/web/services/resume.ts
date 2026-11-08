@@ -40,16 +40,3 @@ export async function updateResume(id: string, params: UpdateResume): Promise<Re
 export async function deleteResume(id: string): Promise<{ id: string }> {
   return deletedResumeSchema.parse(await request.delete(`/resumes/${id}`))
 }
-
-/** Export a resume as PDF (returns Blob) */
-export async function exportResumePDF(title: string, resumeId: string): Promise<Blob> {
-  const data = (await request.post(
-    '/export-pdf',
-    { title, resumeId },
-    {
-      responseType: 'blob',
-      timeout: 120000,
-    },
-  )) as unknown as Blob
-  return data
-}

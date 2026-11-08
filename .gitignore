@@ -31,3 +31,10 @@ playwright/.auth/
 # Production deployment state and database backups
 .deploy-state/
 backups/
+
+# Cloudflare generated output and local bindings
+**/.open-next/
+**/.wrangler/
+**/.worker-test/
+.dev.vars*
+!.dev.vars.example

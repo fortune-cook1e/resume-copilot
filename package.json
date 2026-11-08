@@ -12,15 +12,14 @@
     "dev:api": "pnpm --filter @resume-copilot/api dev",
     "db:generate": "pnpm --filter @resume-copilot/api run db:generate",
     "db:migrate": "pnpm --filter @resume-copilot/api run db:migrate",
-    "db:push": "pnpm --filter @resume-copilot/api run db:push",
-    "db:studio": "pnpm --filter @resume-copilot/api run db:studio",
     "build": "pnpm -r --if-present run build",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "lint": "oxlint . && pnpm -r --if-present run lint",
     "typecheck": "pnpm -r --if-present run typecheck",
     "test": "pnpm -r --workspace-concurrency=1 --if-present run test",
-    "test:e2e": "pnpm --filter @resume-copilot/web test:e2e"
+    "test:e2e": "pnpm --filter @resume-copilot/web test:e2e",
+    "build:cf": "pnpm --filter @resume-copilot/api build:worker && pnpm --filter @resume-copilot/web build:cf"
   },
   "devDependencies": {
     "oxfmt": "0.74.0",
