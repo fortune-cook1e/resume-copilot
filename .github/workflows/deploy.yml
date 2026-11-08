@@ -97,7 +97,7 @@ jobs:
         run: |
           pnpm --filter @resume-copilot/api exec wrangler secret bulk "$RUNNER_TEMP/api-secrets.json"
           rm "$RUNNER_TEMP/api-secrets.json"
-      - run: pnpm --filter @resume-copilot/web deploy
+      - run: pnpm --filter @resume-copilot/web run deploy
       - name: Check public entry
         run: |
           curl --fail --retry 5 --retry-delay 3 "$NEXT_PUBLIC_APP_URL/api/health/ready"
