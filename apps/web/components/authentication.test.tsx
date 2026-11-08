@@ -139,7 +139,7 @@ describe('authenticated page after hydration', () => {
     expect(localStorage.getItem(SESSION_CHANGE_KEY)).toBeNull()
   })
 
-  it('clears old-user state only after confirmed sign-out and prevents double submission', async () => {
+  it('returns home after confirmed sign-out, clears private state and prevents double submission', async () => {
     const client = new QueryClient()
     client.setQueryData(['private'], 'retained')
     useResumeStore.getState().setResumeId('draft')
@@ -160,7 +160,7 @@ describe('authenticated page after hydration', () => {
     expect(state.signOut).toHaveBeenCalledTimes(1)
     expect(state.replace).not.toHaveBeenCalled()
     finish({ data: { success: true }, error: null })
-    await waitFor(() => expect(state.replace).toHaveBeenCalledWith('/login'))
+    await waitFor(() => expect(state.replace).toHaveBeenCalledWith('/'))
     expect(client.getQueryData(['private'])).toBeUndefined()
     expect(useResumeStore.getState().resumeId).toBeNull()
     expect(localStorage.getItem(SESSION_CHANGE_KEY)).toBeTruthy()

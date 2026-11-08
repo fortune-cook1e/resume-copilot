@@ -38,7 +38,7 @@ export function SignOutButton() {
     } catch {
       /* Storage may be unavailable; focus-based revalidation remains available. */
     }
-    router.replace('/login')
+    router.replace('/')
   }
 
   return (
