@@ -146,6 +146,45 @@ test.afterAll(async () => {
   await app?.runtime.dispose()
 })
 
+test('keeps editor mode tabs stationary while the save status changes', async ({
+  page,
+  context,
+}) => {
+  await context.addCookies([
+    { name: 'better-auth.session_token', value: cookie, url: 'http://127.0.0.1:3100' },
+  ])
+  const response = await page.request.post('/api/resumes', {
+    headers: { origin: 'http://127.0.0.1:3100' },
+    data: { title: 'CV', data: defaultResumeData },
+  })
+  expect(response.status()).toBe(201)
+  const { data: resume } = await response.json()
+  await page.goto(`/builder/${resume.id}`)
+  const status = page.locator('header [role="status"]')
+  const tabs = page.getByRole('tablist', { name: 'Resume editor mode' })
+  await expect(status).toHaveText('Saved')
+  await page.clock.install()
+
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 })
+    const before = await tabs.boundingBox()
+    expect(before).not.toBeNull()
+    await page.getByRole('button', { name: 'Rename resume' }).click()
+    await page.getByRole('textbox', { name: 'Resume name' }).fill(width === 1440 ? 'A' : 'CV')
+    // Keep the edit pending long enough to measure its layout before autosave.
+    await page.clock.pauseAt(await page.evaluate(() => Date.now()))
+    await page.getByRole('button', { name: 'Save name', exact: true }).click()
+    await expect(status).toHaveText('Unsaved changes')
+    const pending = await tabs.boundingBox()
+    expect(pending!.x).toBeCloseTo(before!.x, 1)
+    expect(pending!.width).toBeCloseTo(before!.width, 1)
+    expect(pending!.x + pending!.width / 2).toBeCloseTo(width / 2, 1)
+    await page.clock.resume()
+    await expect(status).toHaveText('Saved')
+    expect((await tabs.boundingBox())!.x).toBeCloseTo(before!.x, 1)
+  }
+})
+
 test('automatically continues long sections and rich text with matching screen and PDF pages', async ({
   page,
 }, testInfo) => {

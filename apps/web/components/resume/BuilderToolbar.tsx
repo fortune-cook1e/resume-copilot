@@ -145,7 +145,7 @@ export default function BuilderToolbar({
 
   return (
     <>
-      <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b bg-background px-3 sm:px-5">
+      <header className="grid h-16 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b bg-background px-3 sm:px-5">
         <div className="flex min-w-0 items-center gap-2">
           <Button
             variant="ghost"
@@ -156,11 +156,11 @@ export default function BuilderToolbar({
           >
             <ArrowLeft />
           </Button>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 max-w-[42vw] justify-start gap-1 px-1 font-semibold sm:max-w-72"
+              className="h-7 max-w-full justify-start gap-1 px-1 font-semibold sm:max-w-72"
               aria-label="Rename resume"
               disabled={!!busy}
               onClick={() => {
@@ -172,7 +172,7 @@ export default function BuilderToolbar({
               <ChevronDown className="size-3 text-muted-foreground" />
             </Button>
             <div
-              className="flex min-h-5 items-center gap-1.5 px-1 text-xs text-muted-foreground"
+              className="flex min-h-5 items-center gap-1.5 overflow-hidden whitespace-nowrap px-1 text-xs text-muted-foreground"
               role="status"
               aria-live="polite"
             >
@@ -203,7 +203,7 @@ export default function BuilderToolbar({
           </div>
         </div>
         {editorTabs}
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center justify-self-end gap-2">
           <Button
             variant="ghost"
             size="icon"
