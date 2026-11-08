@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -49,9 +50,14 @@ export function DashboardSidebar() {
     <Sidebar>
       <SidebarHeader className="border-b border-sidebar-border">
         <Link href="/dashboard" className="flex items-center gap-3 px-2 py-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
-            RC
-          </div>
+          <Image
+            src="/dog.png"
+            alt=""
+            width={32}
+            height={32}
+            className="size-8 shrink-0 rounded-lg"
+            unoptimized
+          />
           <span className="text-base font-semibold">Resume Copilot</span>
         </Link>
       </SidebarHeader>

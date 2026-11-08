@@ -1,5 +1,6 @@
+import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowRight, ArrowUpRight, FileText } from 'lucide-react'
+import { ArrowRight, ArrowUpRight } from 'lucide-react'
 import styles from './home.module.css'
 
 const repository = 'https://github.com/fortune-cook1e/resume-copilot'
@@ -13,9 +14,14 @@ export default function Home() {
       <div className={styles.container}>
         <header className={styles.header}>
           <Link href="/" className={styles.brand} aria-label="Resume Copilot home">
-            <span className={styles.monogram} aria-hidden="true">
-              <FileText size={19} />
-            </span>
+            <Image
+              src="/dog.png"
+              alt=""
+              width={36}
+              height={36}
+              className={styles.logo}
+              unoptimized
+            />
             Resume Copilot
           </Link>
           <nav aria-label="Main navigation">

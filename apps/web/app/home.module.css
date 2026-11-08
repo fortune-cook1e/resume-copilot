@@ -55,16 +55,14 @@
   font-weight: 600;
   letter-spacing: -0.5px;
 }
-.monogram {
-  display: grid;
-  place-items: center;
-  width: 34px;
+.logo {
+  flex-shrink: 0;
+  width: 36px;
   height: 36px;
-  border: 1px solid var(--line);
   border-radius: 10px;
-  background: #fff;
-  color: var(--accent);
+  object-fit: contain;
 }
+
 .sourceLink {
   display: inline-flex;
   align-items: center;
