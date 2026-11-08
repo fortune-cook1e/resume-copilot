@@ -11,7 +11,7 @@ import ResumeDocument from '@/components/resume/ResumeDocument'
 import ResumeDesign from '@/components/resume/ResumeDesign'
 import BuilderToolbar from '@/components/resume/BuilderToolbar'
 import { useResumeStore } from '@/stores/resume-store'
-import { exportResumePDF, getResume } from '@/services/resume'
+import { getResume } from '@/services/resume'
 import type { EditorSelection } from '@/types/resume/editor'
 import { useResumePdf } from './ResumeBuilder/pdf/use-resume-pdf'
 
@@ -140,7 +140,7 @@ export default function ResumeWorkspace({ resumeId }: { resumeId: string }) {
             </TabsTrigger>
           </TabsList>
         }
-        getPdf={async (revision, filename, id, action) => {
+        getPdf={async (revision, _filename, id, action) => {
           try {
             const result = await renderPdf(revision)
             return new Blob([result.bytes], { type: 'application/pdf' })
@@ -148,7 +148,7 @@ export default function ResumeWorkspace({ resumeId }: { resumeId: string }) {
             const current = useResumeStore.getState()
             if (current.resumeId !== id || current.resume !== revision) throw error
             if (action === 'preview') return null
-            return exportResumePDF(filename, id)
+            throw error
           }
         }}
       />

@@ -1,8 +1,7 @@
 import { createRequire } from 'node:module'
-import { once } from 'node:events'
-import { createServer, type Socket } from 'node:net'
+import type { D1Database } from '@cloudflare/workers-types'
 import { Module, type INestApplication } from '@nestjs/common'
-import { afterAll, beforeAll, beforeEach, describe, expect, it, onTestFinished } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const { NestFactory } = require('@nestjs/core') as typeof import('@nestjs/core')
@@ -59,38 +58,9 @@ describe('health endpoints', () => {
   })
 
   it('returns 503 within the probe deadline when the database stops responding', async () => {
-    // Accept TCP but never complete PostgreSQL startup: exercise the real driver without a DB.
-    const sockets = new Set<Socket>()
-    const stalledDatabase = createServer((socket) => {
-      sockets.add(socket)
-      socket.on('error', () => {})
-      socket.on('close', () => sockets.delete(socket))
-    })
-    stalledDatabase.listen(0, '127.0.0.1')
-    await once(stalledDatabase, 'listening')
-    const address = stalledDatabase.address()
-    if (!address || typeof address === 'string') throw new Error('No test port allocated')
     const database = new DatabaseService({
-      NODE_ENV: 'test',
-      HOST: '127.0.0.1',
-      PORT: 3001,
-      LOG_LEVEL: 'silent',
-      SHUTDOWN_TIMEOUT_MS: 1000,
-      BODY_LIMIT_BYTES: 1024,
-      DATABASE_URL: `postgresql://test:test@127.0.0.1:${address.port}/resume_copilot_test`,
-      BETTER_AUTH_URL: 'http://localhost:3000',
-      BETTER_AUTH_SECRET: 'test-only-secret-at-least-thirty-two-characters',
-      GOOGLE_CLIENT_ID: 'test-google-client',
-      GOOGLE_CLIENT_SECRET: 'test-google-secret',
-    })
-    onTestFinished(async () => {
-      const closed = new Promise<void>((resolve, reject) =>
-        stalledDatabase.close((error) => (error ? reject(error) : resolve())),
-      )
-      for (const socket of sockets) socket.destroy()
-      await database.onApplicationShutdown()
-      await closed
-    })
+      prepare: () => ({ first: () => new Promise(() => {}) }),
+    } as unknown as D1Database)
     databaseProbe = () => database.checkHealth()
     const response = await fetch(`${baseURL}/api/health/ready`, {
       signal: AbortSignal.timeout(2000),

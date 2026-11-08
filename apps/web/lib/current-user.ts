@@ -1,3 +1,4 @@
+import { getCloudflareContext } from '@opennextjs/cloudflare'
 import { headers } from 'next/headers'
 import { currentUserSchema, httpResponseSchema, type CurrentUser } from '@resume-copilot/contracts'
 import { error } from '@/lib/api-response'
@@ -12,14 +13,20 @@ export async function getCurrentUser(): Promise<
   if (!cookie) return { user: null, failure: error('Unauthorized', 401) }
 
   try {
-    const response = await fetch(
-      new URL('/api/me', process.env.API_INTERNAL_URL ?? 'http://127.0.0.1:3001'),
-      {
-        headers: { cookie },
-        cache: 'no-store',
-        signal: AbortSignal.timeout(3000),
-      },
-    )
+    const init = {
+      headers: { cookie },
+      cache: 'no-store' as const,
+      signal: AbortSignal.timeout(3000),
+    }
+    const response =
+      process.env.NODE_ENV === 'development'
+        ? await fetch(
+            new URL('/api/me', process.env.API_INTERNAL_URL ?? 'http://127.0.0.1:3001'),
+            init,
+          )
+        : await getCloudflareContext().env.API.fetch(
+            new Request('https://api.internal/api/me', init),
+          )
     if (response.status === 401) return { user: null, failure: error('Unauthorized', 401) }
     if (!response.ok) return unavailable()
 

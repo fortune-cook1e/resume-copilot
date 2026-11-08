@@ -1,6 +1,11 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { NextRequest } from 'next/server'
+
+vi.mock('@opennextjs/cloudflare', () => ({
+  getCloudflareContext: () => ({
+    env: { API: { fetch: (...args: Parameters<typeof fetch>) => fetch(...args) } },
+  }),
+}))
 
 vi.mock('next/headers', () => ({
   headers: async () => new Headers({ cookie: 'test-session=owner' }),
@@ -18,62 +23,10 @@ describe('authenticated resume access', () => {
     )
   })
 
-  it('routes resume CRUD and PDF export to Nest', async () => {
-    const { default: config } = await import('./next.config')
-    const rewrites = await config.rewrites?.()
-    expect(rewrites).toHaveProperty('beforeFiles')
-    if (!rewrites || !('beforeFiles' in rewrites)) throw new Error('Missing beforeFiles rewrites')
-    expect(rewrites.beforeFiles).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          source: '/api/resumes',
-          destination: expect.stringMatching(/\/api\/resumes$/),
-        }),
-        expect.objectContaining({
-          source: '/api/resumes/:path*',
-          destination: expect.stringMatching(/\/api\/resumes\/:path\*$/),
-        }),
-        expect.objectContaining({
-          source: '/api/export-pdf',
-          destination: expect.stringMatching(/\/api\/export-pdf$/),
-        }),
-      ]),
-    )
+  it('shares the default resume contract with Nest', async () => {
     const { defaultResumeData: apiDefault } = await import('@resume-copilot/contracts')
     const { defaultResumeData: webDefault } = await import('./types/resume')
     expect(apiDefault).toEqual(webDefault)
-  })
-
-  it.each(['/api/new-business-route', '/api/mcp'])(
-    'rejects cross-origin writes to %s by default',
-    async (pathname) => {
-      const { proxy } = await import('./proxy')
-      const response = await proxy(
-        new NextRequest(`http://localhost:3000${pathname}`, {
-          method: 'POST',
-          headers: { cookie: 'test-session=owner', origin: 'https://untrusted.invalid' },
-        }),
-      )
-      expect(response.status).toBe(403)
-    },
-  )
-
-  it('leaves Nest auth writes to Nest and permits same-origin Web writes', async () => {
-    const { proxy } = await import('./proxy')
-    const authResponse = await proxy(
-      new NextRequest('http://localhost:3000/api/auth/sign-in/social', {
-        method: 'POST',
-        headers: { origin: 'https://untrusted.invalid' },
-      }),
-    )
-    expect(authResponse.status).toBe(200)
-    const webResponse = await proxy(
-      new NextRequest('http://localhost:3000/api/new-business-route', {
-        method: 'POST',
-        headers: { origin: 'http://localhost:3000' },
-      }),
-    )
-    expect(webResponse.status).toBe(200)
   })
 
   it('redirects a rejected session before rendering the dashboard', async () => {

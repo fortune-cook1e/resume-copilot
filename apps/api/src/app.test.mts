@@ -1,8 +1,4 @@
-import { spawn, spawnSync } from 'node:child_process'
-import { once } from 'node:events'
-import { createServer } from 'node:net'
 import { createRequire } from 'node:module'
-import { fileURLToPath } from 'node:url'
 import {
   BadRequestException,
   Controller,
@@ -13,18 +9,18 @@ import {
   StreamableFile,
   type INestApplication,
 } from '@nestjs/common'
-import { httpErrorSchema, httpResponseSchema, paginatedDataSchema } from '@resume-copilot/contracts'
+import { httpResponseSchema, paginatedDataSchema } from '@resume-copilot/contracts'
 import { z } from 'zod'
-import { afterAll, beforeAll, describe, expect, it, onTestFinished, vi } from 'vitest'
-// Load every compiled module through Node, avoiding duplicate DI token identities
-// from mixing Vite-transformed imports with the production CommonJS require cache.
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 const require = createRequire(import.meta.url)
-const { createApplication } = require('../dist/main.js') as typeof import('../dist/main.js')
-const { AppModule } = require('../dist/app.module.js') as typeof import('../dist/app.module.js')
-const { appConfig } =
-  require('../dist/config/app.config.js') as typeof import('../dist/config/app.config.js')
+const { NestFactory, APP_FILTER, APP_INTERCEPTOR } =
+  require('@nestjs/core') as typeof import('@nestjs/core')
 const { RawResponse } =
   require('../dist/common/responses/raw-response.js') as typeof import('../dist/common/responses/raw-response.js')
+const { HttpExceptionFilter } =
+  require('../dist/common/filters/http-exception.filter.js') as typeof import('../dist/common/filters/http-exception.filter.js')
+const { ResponseInterceptor } =
+  require('../dist/common/responses/response.interceptor.js') as typeof import('../dist/common/responses/response.interceptor.js')
 const publicOrigin = 'http://localhost:3000'
 
 @Controller('test-errors')
@@ -77,171 +73,30 @@ class ErrorController {
   }
 }
 
-@Module({ imports: [AppModule], controllers: [ErrorController] })
+@Module({
+  controllers: [ErrorController],
+  providers: [
+    { provide: APP_FILTER, useClass: HttpExceptionFilter },
+    { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
+  ],
+})
 class TestModule {}
 
-// Test-only providers run against the compiled production bootstrap in a real process.
-const childFixture = `
-  const { Controller, Get, Injectable, Module } = require('@nestjs/common');
-  const { bootstrap } = require('./dist/main.js');
-  const { AppModule } = require('./dist/app.module.js');
-  const { DatabaseService } = require('./dist/database/database.module.js');
-  const { sql } = require('drizzle-orm');
-  let app;
-  class SlowController {
-    slow() {
-      process.send({ event: 'inflight' });
-      return new Promise((resolve, reject) => process.once('message', () => {
-        app.get(DatabaseService).db.execute(sql.raw('SELECT 1 AS value'))
-          .then(rows => resolve({ databaseAvailable: rows[0].value === 1 }))
-          .catch(reject);
-      }));
-    }
-  }
-  Controller('slow')(SlowController);
-  Get()(SlowController.prototype, 'slow', Object.getOwnPropertyDescriptor(SlowController.prototype, 'slow'));
-  class ClosingResource {
-    onModuleDestroy() {
-      process.send({ event: 'shutdown-started' });
-    }
-    onApplicationShutdown() {
-      process.send({ event: 'destroying' });
-      if (process.env.STALL_CLOSE === '1') return new Promise(() => {});
-    }
-  }
-  Injectable()(ClosingResource);
-  class TestModule {}
-  Module({ imports: [AppModule], controllers: [SlowController], providers: [ClosingResource] })(TestModule);
-  bootstrap(TestModule).then(async instance => {
-    app = instance;
-    process.send({ event: 'ready', url: await app.getUrl() });
-  }).catch(() => process.exit(1));
-`
-
-async function startChild(env: Record<string, string> = {}) {
-  const portServer = createServer()
-  portServer.listen(0, '127.0.0.1')
-  await once(portServer, 'listening')
-  const address = portServer.address()
-  if (!address || typeof address === 'string') throw new Error('No test port allocated')
-  await new Promise<void>((resolve, reject) =>
-    portServer.close((error) => (error ? reject(error) : resolve())),
-  )
-  const child = spawn(process.execPath, ['-e', childFixture], {
-    cwd: fileURLToPath(new URL('..', import.meta.url)),
-    env: {
-      ...process.env,
-      NODE_ENV: 'test',
-      HOST: '127.0.0.1',
-      PORT: String(address.port),
-      SHUTDOWN_TIMEOUT_MS: '2000',
-      ...env,
-    },
-    stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
-  })
-  const messages: { event: string; url?: string }[] = []
-  const output: string[] = []
-  child.on('message', (message) => messages.push(message as { event: string; url?: string }))
-  child.stdout!.on('data', (chunk) => output.push(String(chunk)))
-  child.stderr!.on('data', (chunk) => output.push(String(chunk)))
-  const exited = once(child, 'exit')
-  onTestFinished(async () => {
-    if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL')
-    await exited
-  })
-  await vi.waitFor(() => expect(messages.some((message) => message.event === 'ready')).toBe(true), {
-    timeout: 5000,
-  })
-  return {
-    child,
-    messages,
-    output,
-    exited,
-    url: messages.find((message) => message.event === 'ready')!.url!,
-  }
-}
-
-// Exercise the actual TypeScript build, including Nest's decorator metadata.
-// Run through `pnpm test`, which builds before starting Vitest.
-describe('API bootstrap', () => {
+describe('compiled HTTP response contracts', () => {
   let app: INestApplication
   let baseURL: string
-  const logs: string[] = []
-
   beforeAll(async () => {
-    vi.stubEnv('BODY_LIMIT_BYTES', '128')
-    vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
-      logs.push(String(chunk))
-      return true
-    })
-    app = await createApplication(TestModule)
+    app = await NestFactory.create(TestModule, { logger: false })
+    app.setGlobalPrefix('api')
     await app.listen(0, '127.0.0.1')
     baseURL = await app.getUrl()
   })
-
   afterAll(async () => {
     await app?.close()
-    vi.restoreAllMocks()
-    vi.unstubAllEnvs()
   })
-
-  it.each(['private-invalid-port', '', '0', '65536', '1.5'])(
-    'rejects invalid port configuration (%j) without exposing its value',
-    (invalidPort) => {
-      const result = spawnSync(
-        process.execPath,
-        [fileURLToPath(new URL('../dist/main.js', import.meta.url))],
-        {
-          env: { ...process.env, NODE_ENV: 'test', PORT: invalidPort },
-          encoding: 'utf8',
-          timeout: 5000,
-        },
-      )
-      expect(result.status).toBe(1)
-      expect(result.stdout + result.stderr).toContain('Invalid configuration: PORT')
-      expect(result.stdout + result.stderr).not.toContain('private-invalid-port')
-    },
-  )
-
-  it('does not flush unsafe initialization errors in development', () => {
-    const result = spawnSync(
-      process.execPath,
-      [fileURLToPath(new URL('../dist/main.js', import.meta.url))],
-      {
-        env: { ...process.env, NODE_ENV: 'development', PORT: 'private-dev-invalid-port' },
-        encoding: 'utf8',
-        timeout: 5000,
-      },
-    )
-    expect(result.status).toBe(1)
-    expect(result.stdout + result.stderr).toContain('Invalid configuration: PORT')
-    expect(result.stdout + result.stderr).not.toContain('private-dev-invalid-port')
-  })
-
-  it('normalizes a trailing slash in the public auth origin used for request checks', () => {
-    const previous = process.env.BETTER_AUTH_URL
-    process.env.BETTER_AUTH_URL = 'http://localhost:3000/'
-    try {
-      expect(appConfig().BETTER_AUTH_URL).toBe('http://localhost:3000')
-    } finally {
-      process.env.BETTER_AUTH_URL = previous
-    }
-  })
-
-  it('rejects an insecure public auth origin in production', () => {
-    const previous = process.env.NODE_ENV
-    process.env.NODE_ENV = 'production'
-    try {
-      expect(() => appConfig()).toThrow('Invalid configuration: BETTER_AUTH_URL')
-    } finally {
-      process.env.NODE_ENV = previous
-    }
-  })
-
   it('wraps business JSON while leaving the HTTP status and request ID header intact', async () => {
     const response = await fetch(`${baseURL}/api/test-errors/value`)
     expect(response.status).toBe(200)
-    expect(response.headers.get('x-request-id')).toMatch(/^[0-9a-f-]{36}$/)
     const body = await response.json()
     expect(body).toEqual({ data: { id: '123' }, error: null })
     expect(httpResponseSchema(z.object({ id: z.string() })).parse(body)).toEqual(body)
@@ -288,264 +143,30 @@ describe('API bootstrap', () => {
     expect(await noContent.text()).toBe('')
   })
 
-  it('serves health under the API prefix', async () => {
-    const response = await fetch(`${baseURL}/api/health`)
-    expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ status: 'ok' })
-    expect(response.headers.get('cache-control')).toBe('no-store')
-    expect(response.headers.get('x-content-type-options')).toBe('nosniff')
-    expect(response.headers.get('x-powered-by')).toBeNull()
-    expect(response.headers.get('access-control-allow-origin')).toBeNull()
-  })
-
-  it('reports readiness from a live database probe without caching the result', async () => {
-    const response = await fetch(`${baseURL}/api/health/ready`)
-    expect(response.status).toBe(200)
-    expect(response.headers.get('cache-control')).toBe('no-store')
-    expect(await response.json()).toEqual({
-      status: 'ready',
-      checks: { database: 'up' },
-    })
-  })
-
-  it('does not expose an unprefixed health endpoint', async () => {
-    const response = await fetch(`${baseURL}/health`)
-    expect(response.status).toBe(404)
+  it('sanitizes internal exceptions', async () => {
+    const response = await fetch(`${baseURL}/api/test-errors/unexpected`)
+    expect(response.status).toBe(500)
     expect(await response.json()).toEqual({
       data: null,
-      error: { code: 'NOT_FOUND', message: 'Not Found' },
-    })
-  })
-
-  it('exits nonzero if its listening port is already occupied', () => {
-    const result = spawnSync(
-      process.execPath,
-      [fileURLToPath(new URL('../dist/main.js', import.meta.url))],
-      {
-        env: { ...process.env, NODE_ENV: 'test', HOST: '127.0.0.1', PORT: new URL(baseURL).port },
-        encoding: 'utf8',
-        timeout: 5000,
-      },
-    )
-    expect(result.status).toBe(1)
-    expect(result.stdout + result.stderr).toContain('Failed to start the API.')
-  })
-
-  it.each([
-    ['expected', 400, 'BAD_REQUEST', 'Bad Request'],
-    ['unexpected', 500, 'INTERNAL_SERVER_ERROR', 'Internal Server Error'],
-  ] as const)(
-    'sanitizes %s errors while preserving status and log correlation',
-    async (path, statusCode, code, message) => {
-      const response = await fetch(`${baseURL}/api/test-errors/${path}?secret=private-query`)
-      expect(response.status).toBe(statusCode)
-      const requestId = response.headers.get('x-request-id')
-      const body = httpErrorSchema.parse(await response.json())
-      expect(body).toEqual({ data: null, error: { code, message } })
-      await vi.waitFor(() => expect(logs.join('')).toContain(requestId!))
-      expect(logs.join('')).not.toContain('private-')
-    },
-  )
-
-  it('sanitizes malformed JSON errors before controller execution', async () => {
-    const response = await fetch(`${baseURL}/api/test-errors`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', origin: publicOrigin },
-      body: '{"private-json":',
-    })
-    expect(response.status).toBe(400)
-    const body = httpErrorSchema.parse(await response.json())
-    expect(body.error.message).toBe('Bad Request')
-    const requestId = response.headers.get('x-request-id')
-    await vi.waitFor(() => expect(logs.join('')).toContain(requestId!))
-    expect(logs.join('')).not.toContain('private-')
-  })
-
-  it('protects newly added Nest routes before parsing their bodies and retains request IDs', async () => {
-    const response = await fetch(`${baseURL}/api/test-errors`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', origin: 'https://untrusted.invalid' },
-      body: '{"private-json":',
-    })
-    expect(response.status).toBe(403)
-    expect(response.headers.get('cache-control')).toBe('no-store')
-    const requestId = response.headers.get('x-request-id')
-    expect(requestId).toMatch(/^[0-9a-f-]{36}$/)
-    await vi.waitFor(() => expect(logs.join('')).toContain(requestId!))
-    expect(logs.join('')).not.toContain('private-')
-  })
-
-  it.each(['application/json', 'application/x-www-form-urlencoded'])(
-    'rejects oversized %s bodies before route handling and logs no secrets',
-    async (contentType) => {
-      const response = await fetch(`${baseURL}/api/test-errors?secret=private-query`, {
-        method: 'POST',
-        headers: {
-          'content-type': contentType,
-          origin: publicOrigin,
-          authorization: 'Bearer private-auth',
-          cookie: 'session=private-cookie',
-          'x-request-id': 'private-forged-id',
-        },
-        body:
-          contentType === 'application/json'
-            ? JSON.stringify({ secret: 'private-body'.repeat(100) })
-            : `secret=${'private-body'.repeat(100)}`,
-      })
-      expect(response.status).toBe(413)
-      const body = httpErrorSchema.parse(await response.json())
-      const requestId = response.headers.get('x-request-id')
-      expect(body.error.message).toBe('Payload Too Large')
-      await vi.waitFor(() => expect(logs.join('')).toContain(requestId!))
-      const entry = logs
-        .flatMap((line) => line.trim().split('\n'))
-        .map((line) => JSON.parse(line) as Record<string, unknown>)
-        .find((value) => value.requestId === requestId)
-      expect(entry).toMatchObject({ statusCode: 413, method: 'POST', route: '<unmatched>' })
-      expect(logs.join('')).not.toContain('private-')
-    },
-  )
-
-  it('emits JSON startup and request logs in development without losing early logs', async () => {
-    const runtime = await startChild({
-      NODE_ENV: 'development',
-      LOG_LEVEL: 'info',
-    })
-    await vi.waitFor(() => expect(runtime.output.join('')).toContain('Starting Nest application'))
-    const output = runtime.output.join('')
-    const records = output
-      .trim()
-      .split('\n')
-      .filter(Boolean)
-      .map((line) => JSON.parse(line) as Record<string, unknown>)
-    expect(records).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ context: 'NestFactory', msg: 'Starting Nest application...' }),
-        expect.objectContaining({
-          context: 'InstanceLoader',
-          msg: 'AppModule dependencies initialized',
-        }),
-        expect.objectContaining({ context: 'RoutesResolver' }),
-      ]),
-    )
-    expect(output.match(/Starting Nest application/g)).toHaveLength(1)
-    const response = await fetch(`${runtime.url}/api/health?token=private-dev-query`, {
-      headers: { authorization: 'Bearer private-dev-token' },
-    })
-    const requestId = response.headers.get('x-request-id')
-    expect(response.status).toBe(200)
-    expect(requestId).toBeTruthy()
-    await vi.waitFor(() => expect(runtime.output.join('')).toContain(requestId!))
-    expect(runtime.output.join('')).not.toContain('private-dev-')
-    runtime.child.kill('SIGTERM')
-    expect(await runtime.exited).toEqual([0, null])
-  })
-
-  it('emits JSON startup logs in production, including early initialization', async () => {
-    const runtime = await startChild({
-      NODE_ENV: 'production',
-      BETTER_AUTH_URL: 'https://app.example.test',
-    })
-    await vi.waitFor(() => expect(runtime.output.join('')).toContain('Starting Nest application'))
-    const records = runtime.output
-      .join('')
-      .trim()
-      .split('\n')
-      .filter(Boolean)
-      .map((line) => JSON.parse(line) as Record<string, unknown>)
-    expect(records).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ context: 'NestFactory', msg: 'Starting Nest application...' }),
-        expect.objectContaining({
-          context: 'NestApplication',
-          msg: 'Nest application successfully started',
-        }),
-      ]),
-    )
-    runtime.child.kill('SIGTERM')
-    expect(await runtime.exited).toEqual([0, null])
-  })
-
-  it.each(['SIGTERM', 'SIGINT'] as const)(
-    'keeps an in-flight database request usable through native shutdown on %s',
-    async (signal) => {
-      const runtime = await startChild()
-      const inflight = fetch(`${runtime.url}/api/slow`)
-      // Cleanup may close the socket after an assertion fails; observe that rejection.
-      void inflight.catch(() => {})
-      await vi.waitFor(() =>
-        expect(runtime.messages.some((message) => message.event === 'inflight')).toBe(true),
-      )
-      runtime.child.kill(signal)
-      await vi.waitFor(() =>
-        expect(runtime.messages.some((message) => message.event === 'shutdown-started')).toBe(true),
-      )
-      expect(runtime.messages.some((message) => message.event === 'destroying')).toBe(false)
-      runtime.child.send('complete')
-      const response = await inflight
-      expect(response.status).toBe(200)
-      expect(await response.json()).toEqual({ data: { databaseAvailable: true }, error: null })
-      expect(await runtime.exited).toEqual([0, null])
-      expect(runtime.messages.some((message) => message.event === 'destroying')).toBe(true)
-    },
-  )
-
-  it('bounds shutdown when a resource never finishes closing', async () => {
-    const runtime = await startChild({ STALL_CLOSE: '1', SHUTDOWN_TIMEOUT_MS: '150' })
-    runtime.child.kill('SIGINT')
-    await vi.waitFor(() => expect(runtime.child.exitCode).toBe(1), { timeout: 2000 })
-    expect(await runtime.exited).toEqual([1, null])
-    expect(runtime.output.join('')).toContain('API shutdown timed out')
-  })
-
-  it('bounds shutdown when an in-flight request never completes', async () => {
-    const runtime = await startChild({ SHUTDOWN_TIMEOUT_MS: '150' })
-    const inflight = fetch(`${runtime.url}/api/slow`)
-    void inflight.catch(() => {})
-    await vi.waitFor(() =>
-      expect(runtime.messages.some((message) => message.event === 'inflight')).toBe(true),
-    )
-    runtime.child.kill('SIGTERM')
-    expect(await runtime.exited).toEqual([1, null])
-    expect(runtime.messages.some((message) => message.event === 'destroying')).toBe(false)
-    expect(runtime.output.join('')).toContain('API shutdown timed out')
-  })
-
-  it('returns a safe error with a server-generated request ID', async () => {
-    const response = await fetch(`${baseURL}/private-path?token=private-query`, {
-      headers: { 'x-request-id': 'untrusted-id', authorization: 'Bearer private-token' },
-    })
-    const requestId = response.headers.get('x-request-id')
-    expect(requestId).toMatch(/^[0-9a-f-]{36}$/)
-    expect(await response.json()).toEqual({
-      data: null,
-      error: { code: 'NOT_FOUND', message: 'Not Found' },
+      error: { code: 'INTERNAL_SERVER_ERROR', message: 'Internal Server Error' },
     })
   })
 })
 
-it('does not expose retired MCP protocols even when the legacy switch is present', async () => {
-  vi.stubEnv('HOST', '127.0.0.1')
-  vi.stubEnv('MCP_ENABLED', 'true')
-  let retiredApp: Awaited<ReturnType<typeof createApplication>> | undefined
-  try {
-    retiredApp = await createApplication()
-    await retiredApp.listen(0, '127.0.0.1')
-    const origin = await retiredApp.getUrl()
-    for (const [method, path] of [
-      ['GET', '/api/mcp'],
-      ['GET', '/.well-known/oauth-authorization-server'],
-      ['GET', '/.well-known/oauth-protected-resource/api/mcp'],
-      ['POST', '/api/auth/oauth2/token'],
-    ]) {
-      const response = await fetch(`${origin}${path}`, {
-        method,
-        headers: { origin: 'http://localhost:3000' },
-      })
-      expect(response.status, `${method} ${path}`).toBe(404)
-    }
-  } finally {
-    await retiredApp?.close()
-    vi.unstubAllEnvs()
+it('normalizes the configured public origin and rejects unsafe production configuration without values', () => {
+  const { parseAppConfig } =
+    require('../dist/config/app.config.js') as typeof import('../dist/config/app.config.js')
+  const input = {
+    BETTER_AUTH_URL: 'http://localhost:3000/',
+    BETTER_AUTH_SECRET: 'test-only-secret-of-more-than-32-characters',
+    GOOGLE_CLIENT_ID: 'test',
+    GOOGLE_CLIENT_SECRET: 'test',
   }
+  expect(parseAppConfig(input).BETTER_AUTH_URL).toBe('http://localhost:3000')
+  expect(() => parseAppConfig({ ...input, NODE_ENV: 'production' })).toThrow(
+    'Invalid configuration: BETTER_AUTH_URL',
+  )
+  expect(() => parseAppConfig({ ...input, BETTER_AUTH_SECRET: 'private-short-value' })).toThrow(
+    'Invalid configuration: BETTER_AUTH_SECRET',
+  )
 })

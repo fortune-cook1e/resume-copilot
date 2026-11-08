@@ -1,33 +1,12 @@
 {
   "version": "7",
-  "dialect": "postgresql",
+  "dialect": "sqlite",
   "entries": [
     {
       "idx": 0,
-      "version": "7",
-      "when": 1790186864530,
-      "tag": "0000_steep_marauders",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1790234851668,
-      "tag": "0001_concerned_mephisto",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1790277573877,
-      "tag": "0002_mcp_oauth_provider",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1790321501402,
-      "tag": "0003_mcp_connection_lifetime",
+      "version": "6",
+      "when": 1794131184186,
+      "tag": "0000_gorgeous_leopardon",
       "breakpoints": true
     }
   ]

@@ -1,56 +1,29 @@
-import { Injectable, Module, type OnApplicationShutdown, type OnModuleInit } from '@nestjs/common'
-import { ConfigType } from '@nestjs/config'
-import { drizzle } from 'drizzle-orm/postgres-js'
-import postgres from 'postgres'
-import { appConfig } from '../config/app.config'
+import { Inject, Injectable, Module } from '@nestjs/common'
+import type { D1Database } from '@cloudflare/workers-types'
+import { drizzle } from 'drizzle-orm/d1'
+import { D1_BINDING } from '../config/runtime.module'
 import * as schema from './schema'
 
 @Injectable()
-export class DatabaseService implements OnModuleInit, OnApplicationShutdown {
-  private readonly client: postgres.Sql
+export class DatabaseService {
   readonly db: ReturnType<typeof drizzle<typeof schema>>
-
-  constructor(config: ConfigType<typeof appConfig>) {
-    this.client = postgres(config.DATABASE_URL, { max: 10 })
-    this.db = drizzle(this.client, { schema })
+  constructor(@Inject(D1_BINDING) private readonly binding: D1Database) {
+    this.db = drizzle(binding, { schema })
   }
-
-  async onModuleInit() {
-    await this.client`SELECT 1`
-  }
-
   async checkHealth() {
-    const query = this.client`SELECT 1`
-    let deadline: NodeJS.Timeout | undefined
+    let deadline: ReturnType<typeof setTimeout> | undefined
     try {
       await Promise.race([
-        query,
+        this.binding.prepare('SELECT 1').first(),
         new Promise<never>((_resolve, reject) => {
-          deadline = setTimeout(() => {
-            reject(new Error('Database health check timed out'))
-            query.cancel()
-          }, 1000)
+          deadline = setTimeout(() => reject(new Error('Database health check timed out')), 1000)
         }),
       ])
     } finally {
       clearTimeout(deadline)
     }
   }
-
-  // Nest closes HTTP connections before this hook, so in-flight requests retain database access.
-  async onApplicationShutdown() {
-    await this.client.end({ timeout: 5 })
-  }
 }
 
-@Module({
-  providers: [
-    {
-      provide: DatabaseService,
-      useFactory: (config: ConfigType<typeof appConfig>) => new DatabaseService(config),
-      inject: [appConfig.KEY],
-    },
-  ],
-  exports: [DatabaseService],
-})
+@Module({ providers: [DatabaseService], exports: [DatabaseService] })
 export class DatabaseModule {}

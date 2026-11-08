@@ -4,12 +4,10 @@ import { DatabaseModule } from '../database/database.module'
 import { ResumesController } from './resumes.controller'
 import { ResumesRepository } from './resumes.repository'
 import { ResumesService } from './resumes.service'
-import { PdfExportController } from './pdf-export.controller'
-import { PdfRenderer } from './pdf.renderer'
 
 @Module({
   imports: [AuthModule, DatabaseModule],
-  controllers: [ResumesController, PdfExportController],
-  providers: [ResumesService, ResumesRepository, PdfRenderer],
+  controllers: [ResumesController],
+  providers: [ResumesService, ResumesRepository],
 })
 export class ResumesModule {}
