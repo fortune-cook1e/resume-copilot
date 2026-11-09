@@ -21,6 +21,7 @@ function readPdfPages(
   imageCount?: number,
   expectedRows?: { left: string; right: string; rightRange?: [number, number] }[],
   expectedColor?: [number, number, number],
+  expectedLineGaps?: { before: string; after: string; minimum: number }[],
 ): string[] {
   const pages: {
     text: string
@@ -29,7 +30,7 @@ function readPdfPages(
     origins: [number, number][]
     layoutText: string
     links: string[]
-    styles: { text: string; font: string; size: number; x: number }[]
+    styles: { text: string; font: string; size: number; x: number; y: number }[]
     images: number
     colors: number[][]
   }[] = JSON.parse(
@@ -54,7 +55,10 @@ for page in PdfReader(sys.argv[1]).pages:
             origins.append([tm[4]*cm[0]+tm[5]*cm[2]+cm[4], tm[4]*cm[1]+tm[5]*cm[3]+cm[5]])
     def styled_text(text, cm, tm, font, size):
         if text.strip() and font:
-            styles.append(dict(text=text, font=font.get('/BaseFont', ''), size=size, x=tm[4]*cm[0]+tm[5]*cm[2]+cm[4]))
+            y = tm[4]*cm[1]+tm[5]*cm[3]+cm[5]
+            if y == 0 and origins:
+                y = origins[-1][1]
+            styles.append(dict(text=text, font=font.get('/BaseFont', ''), size=size, x=tm[4]*cm[0]+tm[5]*cm[2]+cm[4], y=y))
     text = page.extract_text(visitor_operand_before=visitor, visitor_text=styled_text)
     links = [ref.get_object().get('/A', {}).get('/URI') for ref in page.get('/Annots', [])]
     layout_text = page.extract_text(extraction_mode='layout') if sys.argv[2] == 'true' else ''
@@ -123,6 +127,18 @@ print(json.dumps(pages))
       ),
     ).toBe(true)
   }
+  for (const { before, after, minimum } of expectedLineGaps ?? []) {
+    const page = pages.find((page) =>
+      page.styles.some((style) => style.text.trim().startsWith(before)),
+    )
+    const upper = page?.styles.find((style) => style.text.trim().startsWith(before))
+    const lower = page?.styles.find((style) => style.text.trim().startsWith(after))
+    expect(upper, before).toBeDefined()
+    expect(lower, after).toBeDefined()
+    expect(upper!.y - lower!.y, `Spacing from ${before} to ${after}`).toBeGreaterThanOrEqual(
+      minimum,
+    )
+  }
   return pages.map((page) => page.text)
 }
 
@@ -183,6 +199,60 @@ test('keeps editor mode tabs stationary while the save status changes', async ({
     await expect(status).toHaveText('Saved')
     expect((await tabs.boundingBox())!.x).toBeCloseTo(before!.x, 1)
   }
+})
+
+test('keeps wrapped Balanced project bullets separate in the preview and downloaded PDF', async ({
+  page,
+  context,
+}, testInfo) => {
+  await context.addCookies([
+    { name: 'better-auth.session_token', value: cookie, url: 'http://127.0.0.1:3100' },
+  ])
+  const data = structuredClone(defaultResumeData)
+  data.basics.name = 'Pagination Author'
+  data.modules.projects.items = [
+    {
+      id: 'project',
+      visible: true,
+      name: 'Personal Portfolio Website',
+      description: 'A responsive portfolio website',
+      date: '2023',
+      website: { icon: '', label: '', link: '' },
+      summary: [
+        '- Developed a personal portfolio website using React and Tailwind CSS to showcase projects and experience.',
+        '- Implemented responsive design principles to ensure the website looks great on all devices, resulting in a 20% increase in mobile traffic.',
+        '- Integrated a contact form with email notifications, allowing potential employers and collaborators to easily get in touch.',
+      ].join('\n'),
+    },
+  ]
+  const response = await page.request.post('/api/resumes', {
+    headers: { origin: 'http://127.0.0.1:3100' },
+    data: { title: 'Wrapped project', data },
+  })
+  expect(response.status()).toBe(201)
+  const { data: resume } = await response.json()
+  await page.goto(`/builder/${resume.id}`)
+  await page.getByRole('tab', { name: 'Design' }).click()
+  await page.getByRole('button', { name: /^Balanced/ }).click()
+  const paper = page.getByRole('region', { name: 'Page 1', exact: true })
+  await expect(paper.locator('canvas')).toBeVisible()
+  await expect(paper).toContainText('traffic.')
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download PDF' }).click()
+  const path = testInfo.outputPath('balanced-wrapped-project.pdf')
+  await (await download).saveAs(path)
+  readPdfPages(
+    path,
+    undefined,
+    [{ text: 'Integrated a contact form', font: 'SourceSans3', size: 10 }],
+    undefined,
+    undefined,
+    undefined,
+    [
+      { before: 'Implemented responsive', after: 'traffic.', minimum: 10 },
+      { before: 'traffic.', after: 'Integrated a contact form', minimum: 10 },
+    ],
+  )
 })
 
 test('automatically continues long sections and rich text with matching screen and PDF pages', async ({

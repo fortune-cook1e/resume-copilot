@@ -343,14 +343,25 @@ export function createPdfDocument(source: HTMLElement): PdfDocument {
         if (ordered && item.hasAttribute('value')) number = item.value
         const start = number
         number += step
-        const contents = convert(item, target).filter((block) => block.children.length)
-        if (!contents.length) return []
+        const [content] = convert(item, target)
+        if (!content?.children.length) return []
+        const listStyle = textStyle(css)
+        // Forme 0.28 subtracts the marker gutter when drawing, but its
+        // generic ListItem height measurement only subtracts padding.
+        const markerLength = ordered ? `${start}.`.length : 1
+        const { top = 0, right = 0, bottom = 0 } = content.style.padding ?? {}
+        content.style.padding = {
+          top,
+          right,
+          bottom,
+          left: markerLength * (listStyle.fontSize ?? 10.5) * 0.6 + 6,
+        }
         // Forme can paginate a native list marker separately from its text.
         // Give each item a whole-row boundary, while allowing very tall rows to flow.
         const list = node(
           { type: 'List', ordered, marker_type: ordered ? 'decimal' : 'disc', start },
-          textStyle(css),
-          contents,
+          listStyle,
+          [content],
         )
         return [node({ type: 'View' }, { wrap: false }, [list])]
       })
