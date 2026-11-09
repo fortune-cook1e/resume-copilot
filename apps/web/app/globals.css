@@ -169,14 +169,20 @@
 .resume-pages-builder .resume-page:last-child {
   margin-bottom: 0;
 }
-.resume-preview-block[role='button'] {
+.resume-preview-block {
   cursor: pointer;
-  outline-offset: 4px;
 }
-.resume-preview-block[role='button']:hover,
-.resume-preview-block[role='button']:focus-visible,
+@media (hover: hover) {
+  .resume-preview-block:hover {
+    background-color: rgb(59 130 246 / 10%);
+  }
+}
 .resume-preview-block[aria-pressed='true'] {
+  background-color: rgb(59 130 246 / 18%);
+}
+.resume-preview-block:focus-visible {
   outline: 2px solid #3b82f6;
+  outline-offset: 4px;
 }
 
 /* print styles */

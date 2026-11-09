@@ -66,7 +66,7 @@ function PdfPage({
               key={box.target}
               type="button"
               variant="ghost"
-              className="resume-preview-block absolute rounded-sm p-0 hover:bg-transparent dark:hover:bg-transparent"
+              className="resume-preview-block absolute rounded-sm p-0 focus-visible:ring-0"
               aria-label={`Edit ${label}`}
               aria-pressed={selection?.sectionId === sectionId && selection.itemId === itemId}
               data-preview-section={sectionId}

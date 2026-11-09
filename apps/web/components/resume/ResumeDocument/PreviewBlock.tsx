@@ -34,7 +34,7 @@ export default function PreviewBlock({
       tabIndex={0}
       aria-label={`Edit ${label}`}
       aria-pressed={selected}
-      className={`${className} resume-preview-block relative cursor-pointer rounded-sm outline-offset-4 hover:outline hover:outline-1 hover:outline-blue-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 ${selected ? 'outline outline-2 outline-blue-500' : ''}`}
+      className={`${className} resume-preview-block relative rounded-sm`}
       onClick={(event) => {
         event.preventDefault()
         event.stopPropagation()

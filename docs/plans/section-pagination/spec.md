@@ -19,6 +19,8 @@ Both options default to off and may be enabled together. Section order and conte
 
 The right-hand preview displays separate A4 pages vertically from top to bottom in a fixed, centered document view. Mouse-wheel input scrolls this area without changing zoom, and dragging does not pan the document. The bottom minus/plus buttons adjust zoom, Fit shows the whole page within the current viewport, and the current percentage remains visible. The “A4 · Live preview” caption is not shown. Content automatically continues across pages without clipping or loss, and preview page boundaries match the exported PDF. Basics stays at the beginning of the first page and is not movable. The author does not create empty pages or assign sections to numbered pages.
 
+Editable preview blocks show a pointer and a translucent blue background on hover. A selected block keeps a stronger tint after the pointer moves away. Keyboard focus has a visible outline. Clicking a block still opens its corresponding section or entry for editing, and the highlight appears only in the editor preview.
+
 ## User Stories
 
 1. As a resume author, I want to see each actual page separately in the preview, so that I can judge the document before exporting it.
