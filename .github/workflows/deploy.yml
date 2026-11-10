@@ -81,22 +81,31 @@ jobs:
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          MCP_CLIENT_ID: ${{ secrets.MCP_CLIENT_ID }}
+          MCP_CLIENT_SECRET: ${{ secrets.MCP_CLIENT_SECRET }}
+          MCP_REDIRECT_URI: ${{ secrets.MCP_REDIRECT_URI }}
         run: |
           node --input-type=module <<'JS'
           import { writeFileSync } from 'node:fs'
           const secrets = Object.fromEntries(['BETTER_AUTH_SECRET', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'].map(key => [key, process.env[key]]))
           if (Object.values(secrets).some(value => !value) || secrets.BETTER_AUTH_SECRET.length < 32) throw new Error('API secrets are incomplete')
+          const mcp = Object.fromEntries(['MCP_CLIENT_ID', 'MCP_CLIENT_SECRET', 'MCP_REDIRECT_URI'].map(key => [key, process.env[key]]))
+          if (Object.values(mcp).some(Boolean)) {
+            if (Object.values(mcp).some(value => !value) || mcp.MCP_CLIENT_SECRET.length < 32) throw new Error('MCP secrets are incomplete')
+            const redirect = URL.parse(mcp.MCP_REDIRECT_URI)
+            if (redirect?.protocol !== 'https:' || redirect.username || redirect.password || redirect.hash) throw new Error('MCP_REDIRECT_URI must be a valid HTTPS callback')
+            Object.assign(secrets, mcp)
+          }
           writeFileSync(process.env.RUNNER_TEMP + '/api-secrets.json', JSON.stringify(secrets), { mode: 0o600 })
           JS
       - run: pnpm build:cf
       - run: pnpm --filter @resume-copilot/web exec wrangler deploy --dry-run --outdir .worker-test
       - run: node scripts/check-worker-size.mjs
       - run: pnpm --filter @resume-copilot/api db:migrate:remote
-      - run: pnpm --filter @resume-copilot/api exec wrangler deploy
-      - name: Set API secrets
+      - name: Deploy API with secrets
         run: |
-          pnpm --filter @resume-copilot/api exec wrangler secret bulk "$RUNNER_TEMP/api-secrets.json"
-          rm "$RUNNER_TEMP/api-secrets.json"
+          trap 'rm -f "$RUNNER_TEMP/api-secrets.json"' EXIT
+          pnpm --filter @resume-copilot/api exec wrangler deploy --env '' --secrets-file "$RUNNER_TEMP/api-secrets.json"
       - run: pnpm --filter @resume-copilot/web run deploy
       - name: Check public entry
         run: |
