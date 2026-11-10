@@ -1,10 +1,6 @@
 import { createId } from '@paralleldrive/cuid2'
 import {
-  defaultEducation,
-  defaultExperience,
-  defaultProjects,
-  defaultSkills,
-  defaultCustom,
+  defaultResumeEntries,
   type Modules,
   type ResumeData,
   type ResumeEntry,
@@ -155,36 +151,5 @@ export function entrySubtitle(item: ResumeEntry, type: SectionType | 'custom') {
   )
 }
 export function createEntry(type: SectionType | 'custom'): ResumeEntry {
-  const base = { id: createId(), visible: true }
-  const website = { icon: '', label: '', link: '' }
-  switch (type) {
-    case 'education':
-      return { ...structuredClone(defaultEducation), ...base }
-    case 'experience':
-      return { ...structuredClone(defaultExperience), ...base }
-    case 'projects':
-      return { ...structuredClone(defaultProjects), ...base }
-    case 'skills':
-      return { ...structuredClone(defaultSkills), ...base }
-    case 'profiles':
-      return { ...base, network: '', username: '', website }
-    case 'languages':
-      return { ...base, language: '', fluency: '', rating: 0 }
-    case 'interests':
-      return { ...base, name: '', keywords: [] }
-    case 'awards':
-      return { ...base, title: '', awarder: '', date: '', website, summary: '' }
-    case 'certifications':
-      return { ...base, title: '', issuer: '', date: '', website, summary: '' }
-    case 'publications':
-      return { ...base, title: '', publisher: '', date: '', website, summary: '' }
-    case 'volunteer':
-      return { ...base, organization: '', location: '', date: '', website, summary: '' }
-    case 'references':
-      return { ...base, name: '', position: '', phone: '', website, summary: '' }
-    case 'summary':
-      return { ...base, summary: '' }
-    default:
-      return { ...structuredClone(defaultCustom), ...base }
-  }
+  return { ...structuredClone(defaultResumeEntries[type]), id: createId() }
 }
