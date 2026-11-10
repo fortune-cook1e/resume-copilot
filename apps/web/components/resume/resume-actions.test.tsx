@@ -37,6 +37,8 @@ vi.mock('@/services/resume', () => ({
 vi.mock('@/lib/auth-client', () => ({ useSession: () => ({ data: { user: { id: api.userId } } }) }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 
+const loadedAt = '2026-01-01T00:00:00.000Z'
+
 beforeEach(() => {
   vi.useFakeTimers()
   vi.stubGlobal(
@@ -47,7 +49,7 @@ beforeEach(() => {
       disconnect() {}
     },
   )
-  api.update.mockResolvedValue(undefined)
+  api.update.mockResolvedValue({ updatedAt: '2026-01-01T00:00:00.001Z' })
   api.userId = 'resume-owner'
 })
 
@@ -89,7 +91,12 @@ it.each(['projects', 'languages', 'custom-typed', 'custom-legacy'] as const)(
       visible: true,
       items: [],
     }
-    useResumeStore.getState().initializeResume({ id: 'draft', title: 'Resume', data })
+    useResumeStore.getState().initializeResume({
+      updatedAt: loadedAt,
+      id: 'draft',
+      title: 'Resume',
+      data,
+    })
     render(<ModuleHeader moduleId={id} />)
     fireEvent.keyDown(
       screen.getByRole('button', { name: data.modules[id]!.name + ' section actions' }),
@@ -256,7 +263,9 @@ it('retains a custom section on cancel and removes it only after an accessible c
     visible: true,
     items: [],
   }
-  useResumeStore.getState().initializeResume({ id: 'draft', title: 'Resume', data })
+  useResumeStore
+    .getState()
+    .initializeResume({ updatedAt: loadedAt, id: 'draft', title: 'Resume', data })
   render(<ModuleHeader moduleId="custom-volunteer" />)
   fireEvent.keyDown(screen.getByRole('button', { name: 'Volunteering section actions' }), {
     key: 'Enter',
@@ -511,7 +520,9 @@ it('adds a custom section without overwriting an existing section after a deleti
   const data = structuredClone(defaultResumeData) as ResumeData
   data.modules['custom-1'] = { id: 'custom-1', name: 'Languages', visible: true, items: [] }
   data.modules['custom-3'] = { id: 'custom-3', name: 'Volunteering', visible: true, items: [] }
-  useResumeStore.getState().initializeResume({ id: 'draft', title: 'Resume', data })
+  useResumeStore
+    .getState()
+    .initializeResume({ updatedAt: loadedAt, id: 'draft', title: 'Resume', data })
   render(<EditingWorkspace />)
   addCustom('Profiles')
   expect(useResumeStore.getState().resume?.modules['custom-3'].name).toBe('Volunteering')
@@ -541,6 +552,7 @@ function EditingWorkspace() {
 
 it('adds an immediately editable Basics field and saves plain text in the shared preview draft', async () => {
   useResumeStore.getState().initializeResume({
+    updatedAt: loadedAt,
     id: 'draft',
     title: 'Resume',
     data: structuredClone(defaultResumeData) as ResumeData,
@@ -573,7 +585,9 @@ it('keeps Basics field icons, optional links and text together when moving and d
     { icon: 'LegacyIcon', label: 'Legacy portfolio', link: 'https://legacy.example.com' },
     { icon: 'Mail', label: 'Contact', link: '' },
   ]
-  useResumeStore.getState().initializeResume({ id: 'draft', title: 'Resume', data })
+  useResumeStore
+    .getState()
+    .initializeResume({ updatedAt: loadedAt, id: 'draft', title: 'Resume', data })
   const view = render(<EditingWorkspace />)
   const preview = screen.getByTestId('preview')
   expect(screen.getByRole('button', { name: 'Move field 1 up' }).hasAttribute('disabled')).toBe(
@@ -626,7 +640,12 @@ it('keeps Basics field icons, optional links and text together when moving and d
   const saved = updateResumeSchema.parse(api.update.mock.lastCall![1]).data!
   expect(saved.basics.customFields).toEqual([{ icon: 'Github', label: 'GitHub profile', link: '' }])
   view.unmount()
-  useResumeStore.getState().initializeResume({ id: 'draft', title: 'Resume', data: saved })
+  useResumeStore.getState().initializeResume({
+    updatedAt: loadedAt,
+    id: 'draft',
+    title: 'Resume',
+    data: saved,
+  })
   render(<ResumeDocument />)
   expect(screen.getByText('GitHub profile')).toBeTruthy()
   expect(screen.queryByRole('link', { name: 'GitHub profile' })).toBeNull()
@@ -634,6 +653,7 @@ it('keeps Basics field icons, optional links and text together when moving and d
 
 it('offers the complete section catalog and saves a new language in the same draft used by preview and print', async () => {
   useResumeStore.getState().initializeResume({
+    updatedAt: loadedAt,
     id: 'draft',
     title: 'Resume',
     data: structuredClone(defaultResumeData) as ResumeData,
@@ -674,6 +694,7 @@ it('offers the complete section catalog and saves a new language in the same dra
 
 it('keeps an unnamed entry editable but out of preview and print until content is entered', () => {
   useResumeStore.getState().initializeResume({
+    updatedAt: loadedAt,
     id: 'draft',
     title: 'Resume',
     data: structuredClone(defaultResumeData) as ResumeData,
@@ -698,6 +719,7 @@ it.each([
   'persists %s fields and renders the saved section in the print document',
   async (title, primary, value, secondary, detail, id) => {
     useResumeStore.getState().initializeResume({
+      updatedAt: loadedAt,
       id: 'draft',
       title: 'Resume',
       data: structuredClone(defaultResumeData) as ResumeData,
@@ -716,7 +738,12 @@ it.each([
     const saved = updateResumeSchema.parse(api.update.mock.calls[0][1]).data as ResumeData
     expect(saved.modules[id as keyof ResumeData['modules']]?.items).toHaveLength(1)
     editor.unmount()
-    useResumeStore.getState().initializeResume({ id: 'draft', title: 'Resume', data: saved })
+    useResumeStore.getState().initializeResume({
+      updatedAt: loadedAt,
+      id: 'draft',
+      title: 'Resume',
+      data: saved,
+    })
     const print = render(<ResumeDocument />)
     expect(within(print.container).getByText(value)).toBeTruthy()
     expect(within(print.container).getByText(detail)).toBeTruthy()
@@ -731,7 +758,9 @@ it('edits keyword-based custom content without changing the built-in Skills sect
   data.modules.skills.items = [
     { id: 'skill', visible: true, name: 'Frontend', level: 'Advanced', keywords: ['React'] },
   ]
-  useResumeStore.getState().initializeResume({ id: 'draft', title: 'Resume', data })
+  useResumeStore
+    .getState()
+    .initializeResume({ updatedAt: loadedAt, id: 'draft', title: 'Resume', data })
   const editor = render(<EditingWorkspace />)
   addCustom('Interests')
   fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Photography' } })
@@ -743,7 +772,12 @@ it('edits keyword-based custom content without changing the built-in Skills sect
   })
   const saved = updateResumeSchema.parse(api.update.mock.calls[0][1]).data as ResumeData
   editor.unmount()
-  useResumeStore.getState().initializeResume({ id: 'draft', title: 'Resume', data: saved })
+  useResumeStore.getState().initializeResume({
+    updatedAt: loadedAt,
+    id: 'draft',
+    title: 'Resume',
+    data: saved,
+  })
   const print = render(<ResumeDocument />)
   expect(within(print.container).getByText('Photography')).toBeTruthy()
   expect(within(print.container).getByText('Nature · Travel')).toBeTruthy()
@@ -771,7 +805,9 @@ it('reorders sections and entries by keyboard, then restores their print order f
     date: '',
     summary: '',
   }))
-  useResumeStore.getState().initializeResume({ id: 'draft', title: 'Resume', data })
+  useResumeStore
+    .getState()
+    .initializeResume({ updatedAt: loadedAt, id: 'draft', title: 'Resume', data })
   const editor = render(<EditingWorkspace />)
   fireEvent.keyDown(screen.getByRole('button', { name: 'Experience', expanded: false }), {
     key: 'ArrowUp',
@@ -797,7 +833,12 @@ it('reorders sections and entries by keyboard, then restores their print order f
   })
   const saved = updateResumeSchema.parse(api.update.mock.calls[0][1]).data as ResumeData
   editor.unmount()
-  useResumeStore.getState().initializeResume({ id: 'draft', title: 'Resume', data: saved })
+  useResumeStore.getState().initializeResume({
+    updatedAt: loadedAt,
+    id: 'draft',
+    title: 'Resume',
+    data: saved,
+  })
   const print = render(<ResumeDocument />)
   expect(
     within(print.container)
@@ -826,7 +867,9 @@ it('selects an entry from the preview, edits the authoritative draft inline, and
   data.modules.skills.items = [
     { id: 'skill', visible: true, name: 'Frontend', level: 'Advanced', keywords: ['React'] },
   ]
-  useResumeStore.getState().initializeResume({ id: 'draft', title: 'Resume', data })
+  useResumeStore
+    .getState()
+    .initializeResume({ updatedAt: loadedAt, id: 'draft', title: 'Resume', data })
   render(<EditingWorkspace />)
   expect(screen.queryByLabelText('Company')).toBeNull()
   fireEvent.click(screen.getByRole('button', { name: 'Edit Example Studio' }))
@@ -859,6 +902,7 @@ it('selects an entry from the preview, edits the authoritative draft inline, and
 
 it('adds typed entries directly to each section and keeps their inline values in the shared draft', () => {
   useResumeStore.getState().initializeResume({
+    updatedAt: loadedAt,
     id: 'draft',
     title: 'Resume',
     data: structuredClone(defaultResumeData) as ResumeData,
@@ -901,7 +945,9 @@ it('keeps selection controls out of the print document and hides entries without
       summary: '',
     },
   ]
-  useResumeStore.getState().initializeResume({ id: 'draft', title: 'Resume', data })
+  useResumeStore
+    .getState()
+    .initializeResume({ updatedAt: loadedAt, id: 'draft', title: 'Resume', data })
   const print = render(<ResumeDocument />)
   expect(print.container.querySelector('[role="button"]')).toBeNull()
   expect(print.container.querySelector('.resume-preview-block')).toBeNull()

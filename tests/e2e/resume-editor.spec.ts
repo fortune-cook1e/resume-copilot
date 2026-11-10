@@ -201,6 +201,53 @@ test('keeps editor mode tabs stationary while the save status changes', async ({
   }
 })
 
+test('keeps the local draft when an autosave conflicts with a newer resume', async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await context.addCookies([{ name: 'better-auth.session_token', value: cookie, url: baseURL! }])
+  const headers = { origin: baseURL! }
+  const response = await page.request.post('/api/resumes', {
+    headers,
+    data: { title: 'Conflict check', data: defaultResumeData },
+  })
+  expect(response.status()).toBe(201)
+  const { data: resume } = await response.json()
+  const endpoint = `/api/resumes/${resume.id}`
+  await page.goto(`/builder/${resume.id}`)
+  const status = page.locator('header [role="status"]')
+  await expect(status).toHaveText('Saved')
+
+  const remote = await page.request.patch(endpoint, {
+    headers,
+    data: { title: 'Newer saved title', expectedVersion: Date.parse(resume.updatedAt) },
+  })
+  expect(remote.ok()).toBe(true)
+  await page.getByRole('button', { name: 'Rename resume' }).click()
+  await page.getByRole('textbox', { name: 'Resume name' }).fill('Unsaved local title')
+  const autosave = page.waitForResponse(
+    (res) => res.request().method() === 'PATCH' && new URL(res.url()).pathname === endpoint,
+  )
+  await page.getByRole('button', { name: 'Save name', exact: true }).click()
+  expect((await autosave).status()).toBe(409)
+  await expect(status).toContainText('Save conflict')
+  await expect(page.getByRole('button', { name: 'Download PDF' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Rename resume' })).toContainText(
+    'Unsaved local title',
+  )
+  const latest = page.waitForEvent('popup')
+  await page.getByRole('link', { name: 'Open latest' }).click()
+  const latestEditor = await latest
+  await expect(latestEditor.getByRole('button', { name: 'Rename resume' })).toContainText(
+    'Newer saved title',
+  )
+  await latestEditor.close()
+  await expect(page.getByRole('button', { name: 'Rename resume' })).toContainText(
+    'Unsaved local title',
+  )
+})
+
 test('keeps wrapped Balanced project bullets separate in the preview and downloaded PDF', async ({
   page,
   context,

@@ -1,20 +1,22 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import type { Resume, ResumeData } from '@resume-copilot/contracts'
+import { ApiRequestError } from '@/lib/request'
 import { updateResume as updateResumeAPI } from '@/services/resume'
 
 interface ResumeState {
   resumeId: string | null
   resume: ResumeData | null
   title: string
+  version: number | null
   isReady: boolean
   isSaving: boolean
   isDirty: boolean
-  saveStatus: 'saved' | 'pending' | 'saving' | 'error'
+  saveStatus: 'saved' | 'pending' | 'saving' | 'error' | 'conflict'
 }
 
 interface ResumeActions {
-  initializeResume: (resume: Pick<Resume, 'id' | 'title' | 'data'>) => void
+  initializeResume: (resume: Pick<Resume, 'id' | 'title' | 'data' | 'updatedAt'>) => void
   setResumeId: (id: string | null) => void
   setResume: (resume: ResumeData) => void
   updateResume: (updater: (draft: ResumeData) => void) => void
@@ -29,6 +31,7 @@ const initialState: ResumeState = {
   resumeId: null,
   resume: null,
   title: '',
+  version: null,
   isReady: false,
   isSaving: false,
   isDirty: false,
@@ -47,7 +50,13 @@ export const useResumeStore = create<ResumeStore>()(
 
     initializeResume: (detail) => {
       get().reset()
-      set({ resumeId: detail.id, resume: detail.data, title: detail.title, isReady: true })
+      set({
+        resumeId: detail.id,
+        resume: detail.data,
+        title: detail.title,
+        version: Date.parse(detail.updatedAt),
+        isReady: true,
+      })
     },
 
     setResumeId: (id) => {
@@ -74,12 +83,12 @@ export const useResumeStore = create<ResumeStore>()(
       if (get().resume === previous) return
       set((state) => {
         state.isDirty = true
-        if (!state.isSaving) state.saveStatus = 'pending'
+        if (!state.isSaving && state.saveStatus !== 'conflict') state.saveStatus = 'pending'
       })
 
       // Auto-save after debounce
       if (saveTimer) clearTimeout(saveTimer)
-      if (activeSave) return // The active request drains the newest draft before resolving.
+      if (activeSave || get().saveStatus === 'conflict') return
       saveTimer = setTimeout(() => {
         void get().saveToServer()
       }, SAVE_DEBOUNCE_MS)
@@ -91,10 +100,10 @@ export const useResumeStore = create<ResumeStore>()(
       set((state) => {
         state.title = nextTitle
         state.isDirty = true
-        if (!state.isSaving) state.saveStatus = 'pending'
+        if (!state.isSaving && state.saveStatus !== 'conflict') state.saveStatus = 'pending'
       })
       if (saveTimer) clearTimeout(saveTimer)
-      if (activeSave) return
+      if (activeSave || get().saveStatus === 'conflict') return
       saveTimer = setTimeout(() => {
         void get().saveToServer()
       }, SAVE_DEBOUNCE_MS)
@@ -104,8 +113,9 @@ export const useResumeStore = create<ResumeStore>()(
       if (saveTimer) clearTimeout(saveTimer)
       saveTimer = null
       if (activeSave) return activeSave
-      const { resumeId, resume, title } = get()
-      if (!resumeId || !resume) return Promise.resolve(false)
+      const { resumeId, resume, title, version, saveStatus } = get()
+      if (!resumeId || !resume || version === null || saveStatus === 'conflict')
+        return Promise.resolve(false)
       const epoch = draftEpoch
 
       set((state) => {
@@ -117,12 +127,16 @@ export const useResumeStore = create<ResumeStore>()(
         try {
           let snapshot = resume
           let snapshotTitle = title
+          let expectedVersion = version
           while (epoch === draftEpoch) {
-            await updateResumeAPI(resumeId, {
+            const saved = await updateResumeAPI(resumeId, {
+              expectedVersion,
               data: snapshot,
               ...(snapshotTitle ? { title: snapshotTitle } : {}),
             })
             if (epoch !== draftEpoch) return false
+            expectedVersion = Date.parse(saved.updatedAt)
+            set({ version: expectedVersion })
             const latest = get()
             if (!latest.resume) return false
             if (latest.resume === snapshot && latest.title === snapshotTitle) break
@@ -134,11 +148,12 @@ export const useResumeStore = create<ResumeStore>()(
             state.saveStatus = 'saved'
           })
           return true
-        } catch {
+        } catch (error) {
           if (epoch === draftEpoch)
             set((state) => {
               state.isDirty = true
-              state.saveStatus = 'error'
+              state.saveStatus =
+                error instanceof ApiRequestError && error.status === 409 ? 'conflict' : 'error'
             })
           return false
         } finally {

@@ -7,14 +7,22 @@ import type { ResumeData } from '@resume-copilot/contracts'
 import BuilderToolbar from '@/components/resume/BuilderToolbar'
 import Controls from '@/components/resume/ResumeBuilder/Controls'
 
+const loadedAt = '2026-01-01T00:00:00.000Z'
+const savedAt = '2026-01-01T00:00:00.001Z'
+const saveResponse = { updatedAt: savedAt }
+
 const api = vi.hoisted(() => ({ update: vi.fn(), export: vi.fn(), push: vi.fn() }))
 vi.mock('@/services/resume', () => ({ updateResume: api.update, exportResumePDF: api.export }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: api.push }) }))
 beforeEach(() => {
   vi.useFakeTimers()
   const store = useResumeStore.getState()
-  store.setResumeId('resume-one')
-  store.setResume(structuredClone(defaultResumeData) as ResumeData)
+  store.initializeResume({
+    id: 'resume-one',
+    title: '',
+    data: structuredClone(defaultResumeData) as ResumeData,
+    updatedAt: loadedAt,
+  })
 })
 
 afterEach(() => {
@@ -65,8 +73,8 @@ describe('leaving and exporting the builder draft', () => {
     let finish!: () => void
     api.update.mockImplementationOnce(
       () =>
-        new Promise<void>((resolve) => {
-          finish = resolve
+        new Promise((resolve) => {
+          finish = () => resolve(saveResponse)
         }),
     )
     api.export.mockResolvedValue(new Blob(['test'], { type: 'application/pdf' }))
@@ -121,11 +129,11 @@ describe('saving the editable resume', () => {
     api.update
       .mockImplementationOnce(
         () =>
-          new Promise<void>((resolve) => {
-            finish = resolve
+          new Promise((resolve) => {
+            finish = () => resolve(saveResponse)
           }),
       )
-      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(saveResponse)
     useResumeStore.getState().updateResume((draft) => {
       draft.basics.name = 'First edit'
     })
@@ -138,6 +146,7 @@ describe('saving the editable resume', () => {
     finish()
     await saving
     expect(api.update).toHaveBeenLastCalledWith('resume-one', {
+      expectedVersion: Date.parse(savedAt),
       data: expect.objectContaining({ basics: expect.objectContaining({ name: 'Latest edit' }) }),
     })
     expect(api.update).toHaveBeenCalledTimes(2)
@@ -148,8 +157,8 @@ describe('saving the editable resume', () => {
     let finish!: () => void
     api.update.mockImplementationOnce(
       () =>
-        new Promise<void>((resolve) => {
-          finish = resolve
+        new Promise((resolve) => {
+          finish = () => resolve(saveResponse)
         }),
     )
     useResumeStore.getState().updateResume((draft) => {
@@ -169,7 +178,7 @@ describe('saving the editable resume', () => {
   })
 
   it('keeps a failed draft visibly unsaved and retries it explicitly', async () => {
-    api.update.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(undefined)
+    api.update.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(saveResponse)
     useResumeStore.getState().updateResume((draft) => {
       draft.basics.name = 'Keep this draft'
     })
@@ -190,8 +199,8 @@ describe('saving the editable resume', () => {
     let finish!: () => void
     api.update.mockImplementationOnce(
       () =>
-        new Promise<void>((resolve) => {
-          finish = resolve
+        new Promise((resolve) => {
+          finish = () => resolve(saveResponse)
         }),
     )
     useResumeStore.getState().updateResume((draft) => {
@@ -218,6 +227,7 @@ describe('saving the editable resume', () => {
 
   it('saves the latest document title together with edits made during a request', async () => {
     useResumeStore.getState().initializeResume({
+      updatedAt: loadedAt,
       id: 'resume-one',
       title: 'Original title',
       data: structuredClone(defaultResumeData) as ResumeData,
@@ -226,11 +236,11 @@ describe('saving the editable resume', () => {
     api.update
       .mockImplementationOnce(
         () =>
-          new Promise<void>((resolve) => {
-            finish = resolve
+          new Promise((resolve) => {
+            finish = () => resolve(saveResponse)
           }),
       )
-      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(saveResponse)
     useResumeStore.getState().updateTitle('First title')
     const saving = useResumeStore.getState().saveToServer()
     useResumeStore.getState().updateTitle('Latest title')
@@ -240,6 +250,7 @@ describe('saving the editable resume', () => {
     finish()
     expect(await saving).toBe(true)
     expect(api.update).toHaveBeenLastCalledWith('resume-one', {
+      expectedVersion: Date.parse(savedAt),
       title: 'Latest title',
       data: expect.objectContaining({ basics: expect.objectContaining({ name: 'Latest name' }) }),
     })

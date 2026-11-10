@@ -33,6 +33,7 @@ export default function BuilderToolbar({
   ) => Promise<Blob | null>
 }) {
   const title = useResumeStore((state) => state.title)
+  const resumeId = useResumeStore((state) => state.resumeId)
   const saveStatus = useResumeStore((state) => state.saveStatus)
   const router = useRouter()
   const [busy, setBusy] = useState<Action | null>(null)
@@ -41,6 +42,7 @@ export default function BuilderToolbar({
   const [error, setError] = useState<string | null>(null)
   const [renaming, setRenaming] = useState(false)
   const [draftTitle, setDraftTitle] = useState('')
+  const saveRequiredActionsDisabled = !!busy || saveStatus === 'conflict'
 
   useEffect(() => {
     mounted.current = true
@@ -52,7 +54,7 @@ export default function BuilderToolbar({
   const perform = async (action: Action) => {
     if (busyRef.current) return
     const before = useResumeStore.getState()
-    if (!before.resumeId || !before.resume) return
+    if (!before.resumeId || !before.resume || before.saveStatus === 'conflict') return
     const resumeId = before.resumeId
     // Open in the user gesture; opening only after an async save triggers popup blockers.
     const preview = action === 'preview' ? window.open('about:blank', '_blank') : null
@@ -83,6 +85,7 @@ export default function BuilderToolbar({
       }
       if (!saved) {
         preview?.close()
+        if (useResumeStore.getState().saveStatus === 'conflict') return
         setError(
           useResumeStore.getState().isSaving
             ? 'Saving is taking longer than expected. Your changes are still open.'
@@ -151,7 +154,7 @@ export default function BuilderToolbar({
             variant="ghost"
             size="icon"
             aria-label="Back to resumes"
-            disabled={!!busy}
+            disabled={saveRequiredActionsDisabled}
             onClick={() => void perform('back')}
           >
             <ArrowLeft />
@@ -187,7 +190,9 @@ export default function BuilderToolbar({
                   ? 'Saving…'
                   : saveStatus === 'pending'
                     ? 'Unsaved changes'
-                    : 'Not saved'}
+                    : saveStatus === 'conflict'
+                      ? 'Save conflict'
+                      : 'Not saved'}
               {saveStatus === 'error' ? (
                 <Button
                   variant="link"
@@ -208,7 +213,7 @@ export default function BuilderToolbar({
             variant="ghost"
             size="icon"
             aria-label="Print preview"
-            disabled={!!busy}
+            disabled={saveRequiredActionsDisabled}
             onClick={() => void perform('preview')}
           >
             <Eye />
@@ -216,7 +221,7 @@ export default function BuilderToolbar({
           <Button
             className="bg-blue-600 text-white hover:bg-blue-700"
             aria-label="Download PDF"
-            disabled={!!busy}
+            disabled={saveRequiredActionsDisabled}
             onClick={() => void perform('export')}
           >
             {busy === 'export' ? <LoaderCircle className="animate-spin" /> : <Download />}
@@ -226,7 +231,23 @@ export default function BuilderToolbar({
           </Button>
         </div>
       </header>
-      {error ? (
+      {saveStatus === 'conflict' && resumeId ? (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center gap-x-2 border-b border-destructive/20 bg-destructive/5 px-5 py-2 text-sm text-destructive"
+        >
+          <p>A newer version was saved. Your unsaved changes are still open in this tab.</p>
+          <Button asChild variant="link" className="h-auto p-0 text-inherit underline">
+            <a
+              href={`/builder/${encodeURIComponent(resumeId)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Open latest
+            </a>
+          </Button>
+        </div>
+      ) : error ? (
         <div
           role="alert"
           className="border-b border-destructive/20 bg-destructive/5 px-5 py-3 text-sm text-destructive"
