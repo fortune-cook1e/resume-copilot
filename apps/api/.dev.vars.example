@@ -5,3 +5,8 @@ BETTER_AUTH_URL=http://localhost:3000
 BETTER_AUTH_SECRET=replace-with-a-random-secret-of-at-least-32-bytes
 GOOGLE_CLIENT_ID=replace-with-google-client-id
 GOOGLE_CLIENT_SECRET=replace-with-google-client-secret
+
+# Optional. Set all three to enable the private MCP client.
+# MCP_CLIENT_ID=replace-with-oauth-client-id
+# MCP_CLIENT_SECRET=replace-with-a-random-secret-of-at-least-32-characters
+# MCP_REDIRECT_URI=https://chatgpt.com/replace-with-the-exact-callback

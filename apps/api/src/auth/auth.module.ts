@@ -4,16 +4,21 @@ import { appConfig } from '../config/app.config'
 import { DatabaseModule, DatabaseService } from '../database/database.module'
 import { AuthService } from './auth.service'
 import { MeController } from './me.controller'
+import { McpConnectionsService } from './mcp-connections.service'
 import { SessionGuard } from './session.guard'
 
 @Module({
   imports: [DatabaseModule],
   providers: [
+    McpConnectionsService,
     {
       provide: AuthService,
-      useFactory: (database: DatabaseService, config: ConfigType<typeof appConfig>) =>
-        AuthService.create(database, config),
-      inject: [DatabaseService, appConfig.KEY],
+      useFactory: (
+        database: DatabaseService,
+        config: ConfigType<typeof appConfig>,
+        connections: McpConnectionsService,
+      ) => AuthService.create(database, config, connections),
+      inject: [DatabaseService, appConfig.KEY, McpConnectionsService],
     },
     SessionGuard,
   ],

@@ -8,6 +8,9 @@ export interface WorkerBindings {
   BETTER_AUTH_SECRET: string
   GOOGLE_CLIENT_ID: string
   GOOGLE_CLIENT_SECRET: string
+  MCP_CLIENT_ID?: string
+  MCP_CLIENT_SECRET?: string
+  MCP_REDIRECT_URI?: string
   NODE_ENV?: string
   LOG_LEVEL?: string
   BODY_LIMIT_BYTES?: string

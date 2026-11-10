@@ -13,6 +13,9 @@ import { requestLogging } from './common/logging'
 import { originProtection } from './common/middleware/origin.middleware'
 import { appConfig } from './config/app.config'
 import type { WorkerBindings } from './config/runtime.module'
+import { createMcpHandler } from './mcp/mcp-handler'
+import { AUTH_SERVER_METADATA_PATH, MCP_METADATA_PATH, MCP_PATH } from './mcp/protocol'
+import { ResumesService } from './resumes/resumes.service'
 
 export async function createApplication(bindings: WorkerBindings) {
   let app: NestExpressApplication
@@ -42,8 +45,22 @@ export async function createApplication(bindings: WorkerBindings) {
   app.disable('x-powered-by')
   app.set('trust proxy', false)
 
-  // Apply the same origin policy to native auth and every current or future API route.
-  app.use('/api', originProtection(config.BETTER_AUTH_URL))
+  const auth = app.get(AuthService)
+  if (config.MCP_CLIENT_ID) {
+    const handleMcp = toNodeHandler(
+      createMcpHandler(config.BETTER_AUTH_URL, auth, app.get(ResumesService)),
+    )
+    const parseMcpBody = text({ type: 'application/json', limit: config.BODY_LIMIT_BYTES })
+    app.use((request: Request, response: Response, next: NextFunction) => {
+      if (![MCP_PATH, MCP_METADATA_PATH, AUTH_SERVER_METADATA_PATH].includes(request.path))
+        return next()
+      parseMcpBody(request, response, (error) => {
+        if (error) return next(error)
+        void handleMcp(request, response).catch(next)
+      })
+    })
+  }
+  app.use('/api', originProtection(config.BETTER_AUTH_URL, config.MCP_CLIENT_ID !== undefined))
 
   // Better Auth owns its redirects, Cookies and body parsing; mount it before Nest parsers.
   app.use(
@@ -53,7 +70,7 @@ export async function createApplication(bindings: WorkerBindings) {
       next()
     },
     text({ type: () => true, limit: config.BODY_LIMIT_BYTES }),
-    toNodeHandler(app.get(AuthService).auth),
+    toNodeHandler(auth.auth),
   )
 
   app.useBodyParser('json', { limit: config.BODY_LIMIT_BYTES })

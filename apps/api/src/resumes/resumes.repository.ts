@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common'
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, gt, sql, type SQL } from 'drizzle-orm'
 import type { CreateResume, UpdateResume } from '@resume-copilot/contracts'
 import { DatabaseService } from '../database/database.module'
-import { resume } from '../database/schema/resume.schema'
+import { resume, resumeCreateRequest } from '../database/schema/resume.schema'
 
 @Injectable()
 export class ResumesRepository {
@@ -23,6 +23,15 @@ export class ResumesRepository {
       .orderBy(desc(resume.updatedAt))
   }
 
+  listTitles(userId: string, limit: number, cursor?: string) {
+    return this.database.db
+      .select({ id: resume.id, title: resume.title })
+      .from(resume)
+      .where(and(eq(resume.userId, userId), cursor ? gt(resume.id, cursor) : undefined))
+      .orderBy(resume.id)
+      .limit(limit)
+  }
+
   async find(userId: string, id: string) {
     const [found] = await this.database.db
       .select()
@@ -40,19 +49,91 @@ export class ResumesRepository {
     return created
   }
 
-  async update(userId: string, id: string, input: UpdateResume) {
+  findCreateReceipt(userId: string, requestKey: string) {
+    return this.database.db
+      .select({
+        resumeId: resumeCreateRequest.resumeId,
+        requestHash: resumeCreateRequest.requestHash,
+        version: resumeCreateRequest.version,
+      })
+      .from(resumeCreateRequest)
+      .where(
+        and(eq(resumeCreateRequest.userId, userId), eq(resumeCreateRequest.requestKey, requestKey)),
+      )
+      .get()
+  }
+
+  async createOnce(
+    userId: string,
+    id: string,
+    input: Required<CreateResume>,
+    request: { key: string; hash: string },
+  ) {
+    const db = this.database.db
+    const previous = await this.findCreateReceipt(userId, request.key)
+    if (previous) return previous
+
+    const now = new Date()
+    const receipt = { resumeId: id, requestHash: request.hash, version: now.getTime() }
+    try {
+      await db.batch([
+        db.insert(resume).values({ id, userId, ...input, createdAt: now, updatedAt: now }),
+        db.insert(resumeCreateRequest).values({ userId, requestKey: request.key, ...receipt }),
+      ])
+      return receipt
+    } catch (error) {
+      // A concurrent request may have saved the receipt while this batch rolled back.
+      const completed = await this.findCreateReceipt(userId, request.key)
+      if (completed) return completed
+      throw error
+    }
+  }
+
+  update(userId: string, id: string, { expectedVersion, ...changes }: UpdateResume) {
+    return this.write(userId, id, changes, expectedVersion)
+  }
+
+  patchContent(userId: string, id: string, version: number, path: string, value: string | object) {
+    return this.write(
+      userId,
+      id,
+      {
+        data: sql`json_set(${resume.data}, ${path}, json(${JSON.stringify(value)}))`,
+      },
+      version,
+    )
+  }
+
+  private async write(
+    userId: string,
+    id: string,
+    input: Omit<UpdateResume, 'data' | 'expectedVersion'> & { data?: UpdateResume['data'] | SQL },
+    expectedVersion?: number,
+  ) {
     const [updated] = await this.database.db
       .update(resume)
-      .set({ ...input, updatedAt: new Date() })
-      .where(and(eq(resume.id, id), eq(resume.userId, userId)))
+      .set({ ...input, updatedAt: sql`max(${resume.updatedAt} + 1, ${Date.now()})` })
+      .where(
+        and(
+          eq(resume.id, id),
+          eq(resume.userId, userId),
+          expectedVersion === undefined ? undefined : sql`${resume.updatedAt} = ${expectedVersion}`,
+        ),
+      )
       .returning()
     return updated
   }
 
-  async delete(userId: string, id: string) {
+  async delete(userId: string, id: string, expectedVersion?: number) {
     const [deleted] = await this.database.db
       .delete(resume)
-      .where(and(eq(resume.id, id), eq(resume.userId, userId)))
+      .where(
+        and(
+          eq(resume.id, id),
+          eq(resume.userId, userId),
+          expectedVersion === undefined ? undefined : sql`${resume.updatedAt} = ${expectedVersion}`,
+        ),
+      )
       .returning({ id: resume.id })
     return deleted
   }

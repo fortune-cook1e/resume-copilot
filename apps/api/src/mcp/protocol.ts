@@ -1,0 +1,8 @@
+export const MCP_PATH = '/api/mcp'
+export const MCP_METADATA_PATH = '/.well-known/oauth-protected-resource/api/mcp'
+export const AUTH_SERVER_METADATA_PATH = '/.well-known/oauth-authorization-server/api/auth'
+export const RESUME_READ_SCOPE = 'resumes:read'
+export const RESUME_FULL_READ_SCOPE = 'resumes:read_full'
+export const RESUME_WRITE_SCOPE = 'resumes:write'
+export const RESUME_EDIT_SCOPE = 'resumes:edit'
+export const RESUME_MANAGE_SCOPE = 'resumes:manage'

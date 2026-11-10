@@ -8,6 +8,20 @@
       "when": 1794131184186,
       "tag": "0000_gorgeous_leopardon",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1794215783237,
+      "tag": "0001_mcp_oauth",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1794217913965,
+      "tag": "0002_mcp_create_requests",
+      "breakpoints": true
     }
   ]
 }

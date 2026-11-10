@@ -19,12 +19,28 @@ const envSchema = z
     GOOGLE_CLIENT_ID: z.string().min(1),
     GOOGLE_CLIENT_SECRET: z.string().min(1),
     BETTER_AUTH_SECRET: z.string().min(32),
+    MCP_CLIENT_ID: z.string().min(1).optional(),
+    MCP_CLIENT_SECRET: z.string().min(32).optional(),
+    MCP_REDIRECT_URI: z
+      .url()
+      .refine((value) => {
+        if (!URL.canParse(value)) return false
+        const url = new URL(value)
+        return url.protocol === 'https:' && !url.username && !url.password && !url.hash
+      })
+      .optional(),
     BETTER_AUTH_URL: z
       .url()
       .refine((value) => new URL(value).origin === value.replace(/\/$/, ''))
       .transform((value) => new URL(value).origin),
   })
   .superRefine((env, context) => {
+    if (env.MCP_CLIENT_ID || env.MCP_CLIENT_SECRET || env.MCP_REDIRECT_URI) {
+      for (const key of ['MCP_CLIENT_ID', 'MCP_CLIENT_SECRET', 'MCP_REDIRECT_URI'] as const) {
+        if (!env[key])
+          context.addIssue({ code: 'custom', path: [key], message: 'Required for MCP' })
+      }
+    }
     if (
       env.NODE_ENV === 'production' &&
       (!URL.canParse(env.BETTER_AUTH_URL) || new URL(env.BETTER_AUTH_URL).protocol !== 'https:')

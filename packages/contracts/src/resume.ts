@@ -5,6 +5,7 @@ export * from './resume/modules'
 export * from './resume/common'
 
 export const resumeVisibilitySchema = z.enum(['public', 'private'])
+export const resumeVersionSchema = z.int().nonnegative()
 
 export const resumeFontFamilies = ['EB Garamond', 'Helvetica', 'Times', 'Courier'] as const
 export const resumeTypographyStyleSchema = z
@@ -95,12 +96,13 @@ export const createResumeSchema = z.object({
 
 export const updateResumeSchema = z
   .object({
+    expectedVersion: resumeVersionSchema.optional(),
     title: z.string().trim().min(1).max(20).optional(),
     description: z.string().optional(),
     data: resumeDataSchema.optional(),
     visibility: resumeVisibilitySchema.optional(),
   })
-  .refine((value) => Object.keys(value).length > 0)
+  .refine(({ expectedVersion: _expectedVersion, ...changes }) => Object.keys(changes).length > 0)
 
 export type CreateResume = z.infer<typeof createResumeSchema>
 export type UpdateResume = z.infer<typeof updateResumeSchema>

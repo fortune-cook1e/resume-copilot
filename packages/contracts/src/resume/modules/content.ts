@@ -141,6 +141,13 @@ export const contentModuleSchema = z.discriminatedUnion('id', [
   contentModuleSchemas.volunteer,
   contentModuleSchemas.references,
 ])
+export const defaultSummary: z.infer<typeof contentModuleSchemas.summary> = {
+  id: 'summary',
+  name: 'Summary',
+  visible: true,
+  content: '',
+  items: [],
+}
 export type ContentModule = z.infer<typeof contentModuleSchema>
 export type ContentSectionId = Exclude<
   SectionType,

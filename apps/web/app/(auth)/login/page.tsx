@@ -18,6 +18,8 @@ function GoogleLogin() {
   const searchParams = useSearchParams()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const connectingChatGpt = searchParams.has('sig') && searchParams.has('client_id')
+  const oauthQuery = connectingChatGpt ? searchParams.toString() : ''
 
   const startLogin = async () => {
     if (pending) return
@@ -26,8 +28,9 @@ function GoogleLogin() {
     try {
       const result = await signIn.social({
         provider: 'google',
-        callbackURL: '/dashboard/resumes',
+        callbackURL: oauthQuery ? `/oauth/consent?${oauthQuery}` : '/dashboard/resumes',
         errorCallbackURL: '/login?error=google',
+        ...(oauthQuery ? { fetchOptions: { body: { oauth_query: oauthQuery } } } : {}),
       })
       if (result.error) setError('Could not start Google sign-in. Please try again.')
     } catch {
@@ -42,7 +45,11 @@ function GoogleLogin() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">Sign In</CardTitle>
-          <CardDescription>Continue to Resume Copilot with your Google account</CardDescription>
+          <CardDescription>
+            {connectingChatGpt
+              ? 'Sign in to Resume Copilot to review the ChatGPT connection'
+              : 'Continue to Resume Copilot with your Google account'}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {(error || searchParams.has('error')) && (

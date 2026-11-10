@@ -167,32 +167,33 @@ describe('authenticated page after hydration', () => {
   })
 
   it('ignores a previous user’s late save completion after a new draft starts', async () => {
+    const updatedAt = '2026-01-01T00:00:00.000Z'
     let finishFirst!: () => void
     let finishSecond!: () => void
     state.save
       .mockImplementationOnce(
         () =>
-          new Promise<void>((resolve) => {
-            finishFirst = resolve
+          new Promise((resolve) => {
+            finishFirst = () => resolve({ updatedAt: '2026-01-01T00:00:00.001Z' })
           }),
       )
       .mockImplementationOnce(
         () =>
-          new Promise<void>((resolve) => {
-            finishSecond = resolve
+          new Promise((resolve) => {
+            finishSecond = () => resolve({ updatedAt: '2026-01-01T00:00:00.002Z' })
           }),
       )
     const store = useResumeStore.getState()
-    store.setResumeId('previous-draft')
-    store.setResume({} as Parameters<typeof store.setResume>[0])
+    const data = {} as Parameters<typeof store.setResume>[0]
+    store.initializeResume({ id: 'previous-draft', title: 'Previous draft', data, updatedAt })
     const first = store.saveToServer()
     store.reset()
-    useResumeStore.getState().setResumeId('new-draft')
-    useResumeStore.getState().setResume({} as Parameters<typeof store.setResume>[0])
+    store.initializeResume({ id: 'new-draft', title: 'New draft', data, updatedAt })
     const second = useResumeStore.getState().saveToServer()
     finishFirst()
     await first
     expect(useResumeStore.getState().isSaving).toBe(true)
+    expect(useResumeStore.getState().version).toBe(Date.parse(updatedAt))
     finishSecond()
     await second
     expect(useResumeStore.getState().isSaving).toBe(false)

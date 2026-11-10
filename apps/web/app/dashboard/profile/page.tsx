@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Mail, Calendar, Shield } from 'lucide-react'
+import ChatGptConnection from '@/components/dashboard/ChatGptConnection'
 
 function formatDate(date: string | Date) {
   return new Date(date).toLocaleDateString('en-US', {
@@ -102,6 +103,7 @@ export default function ProfilePage() {
           </div>
         </CardContent>
       </Card>
+      <ChatGptConnection userId={user.id} />
     </div>
   )
 }
