@@ -52,7 +52,7 @@ describe('authenticated resume access', () => {
   it('requires a session for the editor independently of the public print page', async () => {
     vi.stubGlobal('fetch', async () => new Response(null, { status: 401 }))
     const { default: ResumePage } = await import('./app/resume/page')
-    await expect(ResumePage()).rejects.toMatchObject({
+    await expect(ResumePage({})).rejects.toMatchObject({
       digest: expect.stringContaining('NEXT_REDIRECT;replace;/login;'),
     })
     const { default: BuilderPage } = await import('./app/builder/[resumeId]/page')
@@ -70,7 +70,7 @@ describe('authenticated resume access', () => {
     ).rejects.toMatchObject({
       digest: expect.stringContaining('NEXT_REDIRECT;replace;/builder/resume-one;'),
     })
-    await expect(ResumePage()).rejects.toMatchObject({
+    await expect(ResumePage({})).rejects.toMatchObject({
       digest: expect.stringContaining('NEXT_REDIRECT;replace;/dashboard/resumes;'),
     })
   })

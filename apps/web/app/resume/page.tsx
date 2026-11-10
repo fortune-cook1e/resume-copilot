@@ -5,7 +5,7 @@ export default async function ResumePage({
   searchParams,
 }: {
   searchParams?: Promise<{ id?: string | string[] }>
-} = {}) {
+}) {
   const { failure } = await getCurrentUser()
   if (failure?.status === 401) redirect('/login')
   if (failure)
