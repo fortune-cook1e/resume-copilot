@@ -15,6 +15,19 @@
       "service": "resume-copilot-api",
     },
   ],
+  "env": {
+    "test": {
+      "name": "resume-copilot-test",
+      "workers_dev": true,
+      "preview_urls": false,
+      "services": [
+        {
+          "binding": "API",
+          "service": "resume-copilot-api-test",
+        },
+      ],
+    },
+  },
   "observability": {
     "enabled": true,
   },
