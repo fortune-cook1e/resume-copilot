@@ -1,7 +1,7 @@
 'use client'
 
 import { useId, useState } from 'react'
-import { resumeThemeColorSchema } from '@resume-copilot/contracts'
+import { resumeTemplateSchema, resumeThemeColorSchema } from '@resume-copilot/contracts'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Check, RotateCcw } from 'lucide-react'
@@ -10,6 +10,13 @@ import { Field, FieldError, FieldLabel, FieldLegend, FieldSet } from '@/componen
 import { useResumeStore } from '@/stores/resume-store'
 import ResumeTypography from './ResumeTypography'
 import { densityPresets, resolveThemeColor, themeColors } from './ResumeDocument/design'
+
+const templateNames = {
+  onyx: 'Onyx',
+  meowth: 'Meowth',
+  kakuna: 'Kakuna',
+  scizor: 'Scizor',
+} as const
 
 export default function ResumeDesign() {
   const template = useResumeStore((state) => state.resume?.design?.template ?? 'onyx')
@@ -26,11 +33,11 @@ export default function ResumeDesign() {
       <FieldSet className="gap-3">
         <FieldLegend>Template</FieldLegend>
         <div className="grid grid-cols-2 gap-3">
-          {(['onyx', 'meowth'] as const).map((id) => (
+          {resumeTemplateSchema.options.map((id) => (
             <Button
               key={id}
               variant="outline"
-              aria-label={id === 'onyx' ? 'Onyx' : 'Meowth'}
+              aria-label={templateNames[id]}
               aria-pressed={template === id}
               className="h-auto flex-col gap-3 p-3 aria-pressed:border-primary aria-pressed:bg-primary/5"
               onClick={() =>
@@ -44,25 +51,35 @@ export default function ResumeDesign() {
                 aria-hidden="true"
                 className="flex aspect-[210/220] w-full flex-col gap-2 overflow-hidden rounded-sm border bg-white p-3 shadow-sm"
               >
-                <span className="h-1.5 w-2/3 rounded bg-neutral-800" />
-                <span className="h-1 w-1/2 rounded bg-neutral-300" />
+                {id === 'scizor' && <span className="-mx-3 -mt-3 border-t-2 border-sky-600" />}
+                <span
+                  className={`h-1.5 w-2/3 rounded bg-neutral-800 ${id === 'kakuna' ? 'self-center' : ''}`}
+                />
+                {id === 'scizor' && <span className="w-[72%] border-b border-neutral-300" />}
+                <span
+                  className={`h-1 w-1/2 rounded bg-neutral-300 ${id === 'kakuna' ? 'self-center' : ''}`}
+                />
                 {id === 'onyx' && <span className="border-b border-sky-600" />}
                 {[0, 1, 2].map((row) => (
                   <span key={row} className="flex flex-col gap-1.5">
+                    {id === 'scizor' && <span className="border-t border-neutral-300" />}
                     <span
                       className={
                         id === 'meowth'
                           ? 'h-1 w-full border-b border-sky-600'
-                          : 'h-1 w-1/3 bg-neutral-600'
+                          : id === 'kakuna'
+                            ? 'h-1 w-1/3 self-center bg-sky-600'
+                            : 'h-1 w-1/3 bg-neutral-600'
                       }
                     />
+                    {id === 'kakuna' && <span className="border-b border-sky-600" />}
                     <span className="h-1 w-full bg-neutral-200" />
                     <span className="h-1 w-5/6 bg-neutral-200" />
                   </span>
                 ))}
               </span>
               <span className="flex w-full items-center justify-between">
-                {id === 'onyx' ? 'Onyx' : 'Meowth'}
+                {templateNames[id]}
                 {template === id && <Check aria-hidden="true" className="size-4" />}
               </span>
             </Button>

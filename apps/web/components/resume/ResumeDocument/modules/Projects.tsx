@@ -2,7 +2,7 @@
 
 import { useResumeStore } from '@/stores/resume-store'
 import { renderMarkdown } from '@/lib/markdown'
-import Link from './Link'
+import Link, { projectWebsiteHref } from './Link'
 import PreviewBlock from '../PreviewBlock'
 import SectionHeading from '../SectionHeading'
 import EntryHeader from '../EntryHeader'
@@ -25,26 +25,39 @@ const Projects = () => {
       <SectionHeading>{projects.name}</SectionHeading>
 
       <div className="resume-entries">
-        {visibleItems.map((item) => (
-          <PreviewBlock
-            key={item.id}
-            sectionId="projects"
-            itemId={item.id}
-            label={item.name || 'project'}
-            className="space-y-1"
-          >
-            <EntryHeader title={item.name} subtitle={item.description} date={item.date} />
-            {item.summary && (
-              <div
-                className="text-neutral-700 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1"
-                dangerouslySetInnerHTML={{ __html: renderMarkdown(item.summary) }}
+        {visibleItems.map((item) => {
+          const href = projectWebsiteHref(item.website.link)
+          const titleHref = item.website.inlineLink ? href : undefined
+          return (
+            <PreviewBlock
+              key={item.id}
+              sectionId="projects"
+              itemId={item.id}
+              label={item.name || 'project'}
+              className="space-y-1"
+            >
+              <EntryHeader
+                title={item.name}
+                titleHref={titleHref}
+                subtitle={item.description}
+                date={item.date}
               />
-            )}
-            {item.website.link && (
-              <Link url={item.website} label={item.website.label || 'Project'} />
-            )}
-          </PreviewBlock>
-        ))}
+              {item.summary && (
+                <div
+                  className="text-neutral-700 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(item.summary) }}
+                />
+              )}
+              {href && !titleHref && (
+                <Link
+                  url={{ ...item.website, link: href }}
+                  label={item.website.label || 'Project'}
+                  projectLink
+                />
+              )}
+            </PreviewBlock>
+          )
+        })}
       </div>
     </div>
   )

@@ -49,6 +49,8 @@ export const resumeThemeColorSchema = z
   .enum(['blue', 'moss', 'teal', 'plum', 'rust', 'burgundy', 'ochre', 'graphite'])
   .or(z.string().regex(/^#[0-9a-f]{6}$/i))
 
+export const resumeTemplateSchema = z.enum(['onyx', 'meowth', 'kakuna', 'scizor'])
+
 export const resumeDataSchema = z.object({
   basics: basicsSchema,
   modules: modulesSchema,
@@ -57,7 +59,7 @@ export const resumeDataSchema = z.object({
   typography: resumeTypographySchema.optional(),
   design: z
     .object({
-      template: z.enum(['onyx', 'meowth']).optional(),
+      template: resumeTemplateSchema.optional(),
       density: z.enum(['compact', 'normal', 'roomy']).optional(),
       themeColor: resumeThemeColorSchema.optional(),
     })
@@ -69,6 +71,13 @@ export const defaultResumeData = {
   modules: defaultModules,
 } satisfies z.infer<typeof resumeDataSchema>
 
+export const resumeAvatarSize = 256
+export const resumeAvatarMaxBytes = 100 * 1024
+export const uploadResumeAvatarSchema = z.object({
+  jpeg: z.base64().max(Math.ceil(resumeAvatarMaxBytes / 3) * 4),
+})
+export const resumeAvatarSchema = z.string().startsWith('data:image/jpeg;base64,').nullable()
+
 export const resumeSchema = z.object({
   id: z.string(),
   title: z.string().min(1, 'Title is required').max(20, 'Title must be at most 20 characters'),
@@ -77,6 +86,7 @@ export const resumeSchema = z.object({
   visibility: resumeVisibilitySchema,
   createdAt: z.string(),
   updatedAt: z.string(),
+  avatar: resumeAvatarSchema.optional(),
 })
 
 export const resumeItemSchema = resumeSchema.omit({ data: true })

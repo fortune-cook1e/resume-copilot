@@ -81,6 +81,26 @@ function PdfPage({
             />
           )
         })}
+      {pdf.projectLinks?.[number - 1]?.map((box) => {
+        const target = pdf.targets[box.target]
+        if (!target?.link) return null
+        return (
+          <a
+            key={`${box.target}:${box.x}:${box.y}`}
+            href={target.link.href}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="absolute rounded-sm hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={target.link.label}
+            style={{
+              left: box.x * PX_PER_POINT,
+              top: box.y * PX_PER_POINT,
+              width: box.width * PX_PER_POINT,
+              height: box.height * PX_PER_POINT,
+            }}
+          />
+        )
+      })}
     </section>
   )
 }

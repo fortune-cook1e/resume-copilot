@@ -50,7 +50,13 @@ export default function Page({
       childList: true,
       characterData: true,
       attributes: true,
-      attributeFilter: ['data-start-on-new-page', 'data-keep-together', 'data-template', 'style'],
+      attributeFilter: [
+        'data-start-on-new-page',
+        'data-keep-together',
+        'data-template',
+        'style',
+        'src',
+      ],
     })
     document.fonts?.addEventListener('loadingdone', schedule)
     schedule()
@@ -91,6 +97,7 @@ export default function Page({
   }, [selection, onSelect])
 
   const select = (target: EventTarget | null) => {
+    if (target instanceof Element && target.closest('[data-project-link] a')) return false
     const block =
       target instanceof Element ? target.closest<HTMLElement>('[data-preview-section]') : null
     if (!onSelect || !block) return false

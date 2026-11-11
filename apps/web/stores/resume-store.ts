@@ -7,6 +7,7 @@ import { updateResume as updateResumeAPI } from '@/services/resume'
 interface ResumeState {
   resumeId: string | null
   resume: ResumeData | null
+  avatar: string | null
   title: string
   version: number | null
   isReady: boolean
@@ -16,9 +17,10 @@ interface ResumeState {
 }
 
 interface ResumeActions {
-  initializeResume: (resume: Pick<Resume, 'id' | 'title' | 'data' | 'updatedAt'>) => void
+  initializeResume: (resume: Pick<Resume, 'id' | 'title' | 'data' | 'updatedAt' | 'avatar'>) => void
   setResumeId: (id: string | null) => void
   setResume: (resume: ResumeData) => void
+  setAvatar: (resumeId: string, avatar: string | null) => void
   updateResume: (updater: (draft: ResumeData) => void) => void
   updateTitle: (title: string) => void
   saveToServer: () => Promise<boolean>
@@ -30,6 +32,7 @@ type ResumeStore = ResumeState & ResumeActions
 const initialState: ResumeState = {
   resumeId: null,
   resume: null,
+  avatar: null,
   title: '',
   version: null,
   isReady: false,
@@ -53,6 +56,7 @@ export const useResumeStore = create<ResumeStore>()(
       set({
         resumeId: detail.id,
         resume: detail.data,
+        avatar: detail.avatar ?? null,
         title: detail.title,
         version: Date.parse(detail.updatedAt),
         isReady: true,
@@ -73,6 +77,10 @@ export const useResumeStore = create<ResumeStore>()(
         state.isDirty = false
         state.saveStatus = 'saved'
       })
+    },
+
+    setAvatar: (resumeId, avatar) => {
+      if (get().resumeId === resumeId) set({ avatar })
     },
 
     updateResume: (updater) => {

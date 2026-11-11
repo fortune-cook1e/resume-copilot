@@ -4,34 +4,46 @@ import { useResumeStore } from '@/stores/resume-store'
 import { createPdfDocument, embedPdfIcons, type PdfResult, type PreviewTarget } from './document'
 
 export type ResumePdf = PdfResult & { targets: PreviewTarget[] }
-type Job = { revision: ResumeData; result: Promise<ResumePdf>; cancel: () => void }
+type Job = {
+  revision: ResumeData
+  avatar: string | null
+  result: Promise<ResumePdf>
+  cancel: () => void
+}
 const failed = new Error('Could not generate the resume PDF.')
 
 export function useResumePdf(resumeId: string | null, previewVisible: boolean) {
   const resume = useResumeStore((state) => state.resume)
+  const avatar = useResumeStore((state) => state.avatar)
   const sourceRef = useRef<HTMLDivElement>(null)
   const workerRef = useRef<Worker | null>(null)
   const jobRef = useRef<Job | null>(null)
   const nextId = useRef(0)
-  const committed = useRef(resume)
+  const committed = useRef({ resume, avatar })
   const [view, setView] = useState<{ resumeId: string; pdf: ResumePdf | null } | null>(null)
 
   useLayoutEffect(() => {
-    committed.current = resumeId ? resume : null
+    committed.current = { resume: resumeId ? resume : null, avatar }
     return () => {
-      committed.current = null
+      committed.current = { resume: null, avatar: null }
     }
-  }, [resumeId, resume])
+  }, [resumeId, resume, avatar])
 
   const render = useCallback(async (revision: ResumeData): Promise<ResumePdf> => {
-    if (committed.current !== revision)
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
     const id = useResumeStore.getState().resumeId
-    if (!id || committed.current !== revision) throw failed
+    const photo = useResumeStore.getState().avatar
+    const isCurrent = () =>
+      committed.current.resume === revision &&
+      committed.current.avatar === photo &&
+      useResumeStore.getState().avatar === photo
+    if (!isCurrent()) await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    if (!id || !isCurrent()) throw failed
     const active = jobRef.current
-    if (active && active.revision !== revision) await active.result.catch(() => {})
-    if (committed.current !== revision) throw failed
-    if (jobRef.current?.revision === revision) return jobRef.current.result
+    if (active && (active.revision !== revision || active.avatar !== photo))
+      await active.result.catch(() => {})
+    if (!isCurrent()) throw failed
+    if (jobRef.current?.revision === revision && jobRef.current.avatar === photo)
+      return jobRef.current.result
     const source = sourceRef.current?.firstElementChild
     if (!(source instanceof HTMLElement)) throw failed
 
@@ -59,7 +71,13 @@ export function useResumePdf(resumeId: string | null, previewVisible: boolean) {
           if (data.id !== jobId) return
           cleanup()
           if (data.failed) reject(failed)
-          else resolve({ bytes: data.bytes, boxes: data.boxes, targets })
+          else
+            resolve({
+              bytes: data.bytes,
+              boxes: data.boxes,
+              projectLinks: data.projectLinks,
+              targets,
+            })
         }
         const onError = () => {
           cleanup()
@@ -79,14 +97,14 @@ export function useResumePdf(resumeId: string | null, previewVisible: boolean) {
             reject(failed)
           })
       })
-      job = { revision, result, cancel }
+      job = { revision, avatar: photo, result, cancel }
       jobRef.current = job
       const pdf = await result
-      if (committed.current === revision) setView({ resumeId: id, pdf })
+      if (isCurrent()) setView({ resumeId: id, pdf })
       return pdf
     } catch (cause) {
       if (jobRef.current === job) jobRef.current = null
-      if (committed.current === revision) setView({ resumeId: id, pdf: null })
+      if (isCurrent()) setView({ resumeId: id, pdf: null })
       throw cause
     }
   }, [])
@@ -95,7 +113,7 @@ export function useResumePdf(resumeId: string | null, previewVisible: boolean) {
     if (!resumeId || !resume || !previewVisible) return
     const timer = setTimeout(() => void render(resume).catch(() => {}), 180)
     return () => clearTimeout(timer)
-  }, [resumeId, resume, previewVisible, render])
+  }, [resumeId, resume, avatar, previewVisible, render])
 
   useEffect(() => {
     if (!resumeId) return

@@ -21,7 +21,7 @@ function readPdfPages(
   imageCount?: number,
   expectedRows?: { left: string; right: string; rightRange?: [number, number] }[],
   expectedColor?: [number, number, number],
-  expectedLineGaps?: { before: string; after: string; minimum: number }[],
+  expectedLineGaps?: { before: string | RegExp; after: string; minimum: number }[],
 ): string[] {
   const pages: {
     text: string
@@ -128,12 +128,12 @@ print(json.dumps(pages))
     ).toBe(true)
   }
   for (const { before, after, minimum } of expectedLineGaps ?? []) {
-    const page = pages.find((page) =>
-      page.styles.some((style) => style.text.trim().startsWith(before)),
-    )
-    const upper = page?.styles.find((style) => style.text.trim().startsWith(before))
+    const matchesBefore = ({ text }: { text: string }) =>
+      typeof before === 'string' ? text.trim().startsWith(before) : before.test(text.trim())
+    const page = pages.find((page) => page.styles.some(matchesBefore))
+    const upper = page?.styles.find(matchesBefore)
     const lower = page?.styles.find((style) => style.text.trim().startsWith(after))
-    expect(upper, before).toBeDefined()
+    expect(upper, String(before)).toBeDefined()
     expect(lower, after).toBeDefined()
     expect(upper!.y - lower!.y, `Spacing from ${before} to ${after}`).toBeGreaterThanOrEqual(
       minimum,
@@ -607,6 +607,313 @@ test('saves, reopens and exports the same real multi-page resume through the aut
     headers: { origin: 'http://127.0.0.1:3100' },
   })
   expect(cleanup.status()).toBe(200)
+})
+
+test('switches, reopens and exports both imported single-column templates', async ({
+  page,
+  context,
+}, testInfo) => {
+  await context.addCookies([
+    { name: 'better-auth.session_token', value: cookie, url: 'http://127.0.0.1:3100' },
+  ])
+  const data: ResumeData = structuredClone(defaultResumeData)
+  data.basics.name = 'Template Author'
+  data.basics.headline = 'Software Engineer'
+  data.basics.email = 'author@example.test'
+  data.modules.summary = {
+    id: 'summary',
+    name: 'Summary',
+    visible: true,
+    content: 'First page introduction.',
+    items: [],
+  }
+  data.modules.projects.startOnNewPage = true
+  data.modules.projects.items = [
+    {
+      id: 'template-project',
+      name: 'Second Page Project',
+      visible: true,
+      date: '',
+      description: '',
+      website: { icon: '', label: '', link: '' },
+      summary: `- ${'A project description with enough words to wrap on the page. '.repeat(5)} WrapEnd\n- FollowingBullet`,
+    },
+  ]
+  data.sectionOrder = ['summary', 'projects']
+  data.design = { density: 'roomy', themeColor: '#3E6B4F' }
+  data.typography = { preset: 'balanced', textSize: 11 }
+  const response = await page.request.post('/api/resumes', {
+    headers: { origin: 'http://127.0.0.1:3100' },
+    data: { title: 'Template migration', data },
+  })
+  expect(response.status()).toBe(201)
+  const { data: resume } = await response.json()
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto(`/builder/${resume.id}`)
+  const design = page.getByRole('tab', { name: 'Design' })
+  await design.click()
+  const pages = page.getByRole('region', { name: /^Page \d+$/ })
+  const source = page.locator('#resume-pdf-source')
+  for (const [name, heading] of [
+    ['Kakuna', 'Summary'],
+    ['Scizor', 'SUMMARY'],
+  ] as const) {
+    const option = page.getByRole('button', { name, exact: true })
+    await option.click()
+    await expect(option).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible()
+    await page.reload()
+    await design.click()
+    await expect(option).toHaveAttribute('aria-pressed', 'true')
+    await expect(source.locator('[data-resume-heading="name"]')).toHaveCSS(
+      'text-align',
+      name === 'Kakuna' ? 'center' : 'start',
+    )
+    await expect(page.getByRole('button', { name: 'Roomy', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await expect(page.getByRole('slider', { name: 'Text size' })).toHaveAttribute(
+      'aria-valuenow',
+      '11',
+    )
+    await expect(pages).toHaveCount(2)
+    await expect(pages.first()).toContainText(heading)
+    await expect(pages.first()).not.toContainText('Second Page Project')
+    await expect(pages.last()).toContainText('FollowingBullet')
+    if (name === 'Scizor') {
+      for (const paper of await pages.all()) {
+        const canvas = paper.locator('canvas')
+        await canvas.scrollIntoViewIfNeeded()
+        await expect
+          .poll(() =>
+            canvas.evaluate((element: HTMLCanvasElement) =>
+              Array.from(element.getContext('2d')!.getImageData(element.width / 2, 1, 1, 1).data),
+            ),
+          )
+          .toEqual([62, 107, 79, 255])
+      }
+    }
+    const download = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Download PDF' }).click()
+    const path = testInfo.outputPath(`${name.toLowerCase()}.pdf`)
+    await (await download).saveAs(path)
+    const pdfPages = readPdfPages(
+      path,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      [62, 107, 79],
+      [{ before: /\bWrapEnd$/, after: 'FollowingBullet', minimum: 11 }],
+    )
+    expect(pdfPages).toHaveLength(2)
+    expect(pdfPages[0]).toContain(heading)
+    expect(pdfPages[0]).not.toContain('Second Page Project')
+    expect(pdfPages[1]).toContain('Second Page Project')
+    expect(pdfPages[1]).toContain('FollowingBullet')
+  }
+  const cleanup = await page.request.delete(`/api/resumes/${resume.id}`, {
+    headers: { origin: 'http://127.0.0.1:3100' },
+  })
+  expect(cleanup.status()).toBe(200)
+})
+
+test('links only the project title when enabled and keeps the rest editable', async ({
+  page,
+  context,
+}, testInfo) => {
+  await context.addCookies([
+    { name: 'better-auth.session_token', value: cookie, url: 'http://127.0.0.1:3100' },
+  ])
+  const data: ResumeData = structuredClone(defaultResumeData)
+  const href = 'https://example.test/project'
+  data.modules.projects.items = [
+    {
+      id: 'linked-project',
+      name: 'Linked Project',
+      visible: true,
+      date: '',
+      description: 'Editable project description.',
+      summary: '',
+      website: { icon: '', label: 'GitHub', link: href },
+    },
+  ]
+  const response = await page.request.post('/api/resumes', {
+    headers: { origin: 'http://127.0.0.1:3100' },
+    data: { title: 'Project title link', data },
+  })
+  expect(response.status()).toBe(201)
+  const { data: resume } = await response.json()
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto(`/builder/${resume.id}`)
+  const preview = page.getByRole('region', { name: 'Page 1', exact: true })
+  const edit = preview.getByRole('button', { name: 'Edit Linked Project' })
+  const toggle = page.getByRole('checkbox', { name: 'Show link in title' })
+  await expect(preview).toContainText('GitHub')
+  await expect(preview.getByRole('link', { name: 'GitHub' })).toHaveAttribute('href', href)
+  await edit.press('Enter')
+  await toggle.check()
+  await expect(page.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible()
+  await page.reload()
+  const title = preview.getByRole('link', { name: 'Linked Project' })
+  await expect(title).toHaveAttribute('href', href)
+  await expect(preview).not.toContainText('GitHub')
+  await context.route(href, (route) => route.fulfill({ body: 'Project website' }))
+  const popup = page.waitForEvent('popup')
+  await title.click()
+  const projectSite = await popup
+  await expect(projectSite).toHaveURL(href)
+  await projectSite.close()
+  await edit.click({ position: { x: 5, y: 25 } })
+  await expect(toggle).toBeChecked()
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download PDF' }).click()
+  const path = testInfo.outputPath('project-title-link.pdf')
+  await (await download).saveAs(path)
+  expect(readPdfPages(path, [href])[0]).not.toContain('GitHub')
+  await toggle.uncheck()
+  await expect(title).toHaveCount(0)
+  await expect(preview).toContainText('GitHub')
+  await expect(preview.getByRole('link', { name: 'GitHub' })).toHaveAttribute('href', href)
+})
+
+test('crops a resume photo, embeds it in the PDF, and removes it', async ({
+  page,
+  context,
+}, testInfo) => {
+  await context.addCookies([
+    { name: 'better-auth.session_token', value: cookie, url: 'http://127.0.0.1:3100' },
+  ])
+  const data: ResumeData = structuredClone(defaultResumeData)
+  data.basics.name = 'Photo Author Alexandra Catherine Elizabeth Montgomery Sinclair'
+  data.basics.headline = 'Software Engineer'
+  data.basics.email = 'photo-author@example.test'
+  data.basics.phone = '+1 202 555 0117'
+  data.basics.location = 'Stockholm, Sweden'
+  data.basics.website = { icon: '', label: 'Portfolio', link: 'https://example.test/portfolio' }
+  const response = await page.request.post('/api/resumes', {
+    headers: { origin: 'http://127.0.0.1:3100' },
+    data: { title: 'Photo journey', data },
+  })
+  expect(response.status()).toBe(201)
+  const { data: resume } = await response.json()
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto(`/builder/${resume.id}`)
+  const preview = page.getByRole('region', { name: 'Page 1', exact: true })
+  const edit = preview.getByRole('button', { name: 'Edit basics' })
+  await edit.press('Enter')
+  const png = await page.evaluate(() => {
+    const image = document.createElement('canvas')
+    image.width = 512
+    image.height = 256
+    const ctx = image.getContext('2d')!
+    ctx.fillStyle = '#008000'
+    ctx.fillRect(0, 0, 512, 256)
+    ctx.fillStyle = '#000080'
+    ctx.fillRect(256, 0, 256, 256)
+    return image.toDataURL('image/png').split(',')[1]
+  })
+  const file = {
+    name: 'photo.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(png, 'base64'),
+  }
+  const addPhoto = page.getByRole('button', { name: 'Add photo' })
+  await expect(addPhoto).toHaveText('Add photo')
+  const placeholderIcon = addPhoto.locator('[data-slot="avatar-fallback"] svg')
+  await expect(placeholderIcon).toBeVisible()
+  await expect(placeholderIcon).toHaveCSS('width', '24px')
+  const photoButton = (await addPhoto.boundingBox())!
+  const nameField = (await page.getByRole('textbox', { name: 'Full Name' }).boundingBox())!
+  expect(nameField.x).toBeGreaterThan(photoButton.x + photoButton.width)
+  expect(nameField.y).toBeLessThan(photoButton.y + photoButton.height)
+  const fileChooser = page.waitForEvent('filechooser')
+  await addPhoto.getByText('Add photo').click()
+  await (await fileChooser).setFiles(file)
+  const dialog = page.getByRole('dialog', { name: 'Crop photo' })
+  await dialog.getByLabel('Photo crop').press('ArrowLeft')
+  const zoom = dialog.getByRole('slider', { name: 'Zoom' })
+  await zoom.press('ArrowRight')
+  await expect(zoom).toHaveAttribute('aria-valuenow', '1.01')
+  await dialog.getByRole('button', { name: 'Crop and upload' }).click()
+  await expect(page.getByRole('img', { name: 'Current resume photo' })).toBeVisible()
+  const photoPixel = (x = 24, y = 57) =>
+    preview.locator('canvas').evaluate(
+      (canvas: HTMLCanvasElement, position) => {
+        if (!canvas.width) return []
+        const scale = canvas.width / 595.28
+        return Array.from(
+          canvas.getContext('2d')!.getImageData(position.x * scale, position.y * scale, 1, 1).data,
+        )
+      },
+      { x, y },
+    )
+  const hasPhotoPixel = async (x?: number, y?: number) => {
+    const [red, green, blue] = await photoPixel(x, y)
+    return green > 80 && red < 20 && blue < 20
+  }
+  await expect.poll(() => hasPhotoPixel()).toBe(true)
+  await page.reload()
+  await edit.press('Enter')
+  await expect(page.getByRole('img', { name: 'Current resume photo' })).toBeVisible()
+  await page.getByRole('tab', { name: 'Design' }).click()
+  for (const [template, expectedX] of [
+    ['Meowth', 501.28],
+    ['Kakuna', 257.64],
+    ['Scizor', 501.28],
+    ['Onyx', 14],
+  ] as const) {
+    await page.getByRole('button', { name: template, exact: true }).click()
+    const download = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Download PDF' }).click()
+    const path = testInfo.outputPath(`${template.toLowerCase()}-photo.pdf`)
+    await (await download).saveAs(path)
+    const [text] = readPdfPages(path)
+    expect(text.replace(/\s+/g, ' ')).toContain(data.basics.name)
+    expect(text).toContain(data.basics.email)
+    const [x, y, width, height] = JSON.parse(
+      execFileSync(
+        process.env.PDF_TEST_PYTHON ?? 'python3',
+        [
+          '-c',
+          `
+from pypdf import PdfReader
+import json, sys
+page = PdfReader(sys.argv[1]).pages[0]
+photos = []
+def visit(op, args, cm, tm):
+    if op == b'Do':
+        obj = page['/Resources']['/XObject'][args[0]].get_object()
+        if obj.get('/Subtype') == '/Image' and obj.get('/Filter') == '/DCTDecode':
+            photos.append([cm[4], float(page.mediabox.height) - cm[5] - cm[3], cm[0], cm[3]])
+page.extract_text(visitor_operand_before=visit)
+print(json.dumps(photos[0]))
+`,
+          path,
+        ],
+        { encoding: 'utf8' },
+      ),
+    ) as number[]
+    expect(x).toBeCloseTo(expectedX, 0)
+    expect(width).toBeCloseTo(80, 0)
+    expect(height).toBeCloseTo(80, 0)
+    if (template !== 'Onyx') expect(y).toBeCloseTo(18, 0)
+    await expect.poll(() => hasPhotoPixel(x + 10, y + 10)).toBe(true)
+  }
+  await page.getByRole('tab', { name: 'Write' }).click()
+  await edit.press('Enter')
+  const replacement = page.waitForEvent('filechooser')
+  await page.getByRole('button', { name: 'Replace photo' }).press('Enter')
+  await (await replacement).setFiles(file)
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+  await expect(page.getByRole('img', { name: 'Current resume photo' })).toBeVisible()
+  await page.getByRole('button', { name: 'Remove photo' }).click()
+  await expect(page.getByRole('img', { name: 'Current resume photo' })).toHaveCount(0)
+  await expect.poll(() => hasPhotoPixel()).toBe(false)
+  await page.reload()
+  await edit.press('Enter')
+  await expect(page.getByRole('button', { name: 'Add photo' })).toBeVisible()
 })
 
 test('retains ordered-list numbering on continuation pages', async ({ page }) => {

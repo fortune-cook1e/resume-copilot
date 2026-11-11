@@ -1,11 +1,13 @@
 export default function EntryHeader({
   title,
+  titleHref,
   subtitle,
   date,
   location,
   inline = false,
 }: {
   title: string
+  titleHref?: string
   subtitle?: string
   date?: string
   location?: string
@@ -25,7 +27,15 @@ export default function EntryHeader({
   return (
     <div>
       <div className="flex justify-between gap-3">
-        <div className="min-w-0 font-semibold">{title}</div>
+        <div className="min-w-0 font-semibold" data-project-link={titleHref || undefined}>
+          {titleHref ? (
+            <a href={titleHref} target="_blank" rel="noreferrer noopener">
+              {title}
+            </a>
+          ) : (
+            title
+          )}
+        </div>
         {(location || date) && (
           <div className="text-right text-neutral-700">{location || date}</div>
         )}

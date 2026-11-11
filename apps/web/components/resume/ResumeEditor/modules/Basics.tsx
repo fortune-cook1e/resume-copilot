@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import ResumeAvatar from '../components/ResumeAvatar'
 import { useResumeStore } from '@/stores/resume-store'
 import { contactIcons, getContactIcon } from '@/components/resume/contact-icons'
 import { Tag, X, Plus, ArrowUp, Link2, Link2Off } from 'lucide-react'
@@ -62,45 +63,21 @@ export default function Basics() {
 
   return (
     <div className="space-y-3 [&_label]:text-xs [&_input]:h-9 [&_input]:bg-background">
-      {/* Picture */}
-      {/* <div className="space-y-2">
-        <Label htmlFor="picture-url">Picture</Label>
-        <div className="flex items-center gap-4">
-          {basics.picture.url && (
-            <img
-              src={basics.picture.url}
-              alt="Avatar"
-              className="w-16 h-16 rounded-full object-cover"
-            />
-          )}
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3">
+        <ResumeAvatar />
+        <div className="min-w-0 space-y-2">
+          <Label htmlFor="name">Full Name</Label>
           <Input
-            id="picture-url"
-            type="url"
-            value={basics.picture.url}
-            onChange={e =>
-              updateResume(draft => {
-                draft.basics.picture.url = e.target.value;
+            id="name"
+            value={basics.name}
+            onChange={(e) =>
+              updateResume((draft) => {
+                draft.basics.name = e.target.value
               })
             }
-            placeholder="https://example.com/avatar.jpg"
-            className="flex-1"
+            placeholder="John Doe"
           />
         </div>
-      </div> */}
-
-      {/* Full Name */}
-      <div className="space-y-2">
-        <Label htmlFor="name">Full Name</Label>
-        <Input
-          id="name"
-          value={basics.name}
-          onChange={(e) =>
-            updateResume((draft) => {
-              draft.basics.name = e.target.value
-            })
-          }
-          placeholder="John Doe"
-        />
       </div>
       {/* Headline */}
       <div className="space-y-2">

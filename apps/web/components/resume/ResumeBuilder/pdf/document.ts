@@ -8,15 +8,23 @@ import {
 } from '@formepdf/react'
 import type { EditorSelection } from '@/types/resume/editor'
 
-export type PreviewTarget = EditorSelection & { label: string }
+export type PreviewTarget = EditorSelection & {
+  label: string
+  link?: { href: string; label: string }
+}
 export type PdfDocument = {
   document: FormeDocument
   targets: PreviewTarget[]
 }
 export type PreviewBox = { target: number; x: number; y: number; width: number; height: number }
-export type PdfResult = { bytes: Uint8Array<ArrayBuffer>; boxes: PreviewBox[][] }
+export type PdfResult = {
+  bytes: Uint8Array<ArrayBuffer>
+  boxes: PreviewBox[][]
+  projectLinks?: PreviewBox[][]
+}
 
 const POINTS_PER_PIXEL = 0.75
+const a4Width = 595.28
 const margin = { top: 18, right: 14, bottom: 18, left: 14 }
 const a4 = { size: 'A4', margin, wrap: true } as const
 const inlineTags = new Set([
@@ -83,8 +91,15 @@ function image(element: HTMLImageElement, href?: string, file?: string): FormeNo
     !(/^(https?:)$/.test(url.protocol) || /^data:image\/(png|jpe?g);base64,/i.test(source ?? ''))
   )
     throw new Error('The PDF could not embed this image.')
+  const style: FormeStyle = element.hasAttribute('data-resume-avatar')
+    ? {
+        width: { Pt: points(getComputedStyle(element).width) },
+        height: { Pt: points(getComputedStyle(element).height) },
+        flexShrink: 0,
+      }
+    : {}
   return {
-    ...node({ type: 'Image', src: url.href }, {}, [], file),
+    ...node({ type: 'Image', src: url.href }, style, [], file),
     alt: element.alt || undefined,
     href,
   }
@@ -183,7 +198,14 @@ export function createPdfDocument(source: HTMLElement): PdfDocument {
           label: previewLabel ?? previewSection,
         }) - 1
     }
-    const file = target === undefined ? undefined : `target:${target}`
+    const projectHref = element.getAttribute('data-project-link')
+    if (target !== undefined && projectHref)
+      targets[target].link = {
+        href: projectHref,
+        label: element.textContent?.trim() || targets[target].label,
+      }
+    const file =
+      target === undefined ? undefined : `${projectHref ? 'project-link' : 'target'}:${target}`
     const spacing = {
       margin: {
         top: points(css.marginTop),
@@ -278,6 +300,18 @@ export function createPdfDocument(source: HTMLElement): PdfDocument {
       return [...result, ...inlineNodes(inline, textStyle(css))]
     }
     if (element instanceof HTMLImageElement) return [image(element, undefined, file)]
+    if (element.hasAttribute('data-resume-name-rule'))
+      return [
+        node(
+          { type: 'View' },
+          {
+            ...spacing,
+            width: { Pt: points(css.width) },
+            height: { Pt: points(css.height) },
+            backgroundColor: color(css.backgroundColor),
+          },
+        ),
+      ]
     if (tag === 'HR')
       return [
         node(
@@ -407,23 +441,50 @@ export function createPdfDocument(source: HTMLElement): PdfDocument {
           columnGap: points(css.columnGap),
         }),
       )
+      const photo = nested.find((child) => child.kind.type === 'Image')
+      const identity = nested.find((child) => child.kind.type === 'View')
+      if (
+        element.classList.contains('resume-basics-with-photo') &&
+        css.flexDirection === 'row' &&
+        photo?.style.width &&
+        typeof photo.style.width === 'object' &&
+        'Pt' in photo.style.width &&
+        identity
+      ) {
+        // The hidden DOM source is wider than the Forme page's content area.
+        identity.style.width = {
+          Pt: a4Width - margin.left - margin.right - photo.style.width.Pt - points(css.columnGap),
+        }
+        identity.style.flexGrow = 0
+        identity.style.flexShrink = 0
+      }
       // Keep the main field readable when an imported date, location, or link label is long.
       if (
         css.flexDirection === 'row' &&
         css.justifyContent === 'space-between' &&
         nested.length === 2
       ) {
-        const rowWidth = 595.28 - margin.left - margin.right - points(css.columnGap)
+        const rowWidth = a4Width - margin.left - margin.right - points(css.columnGap)
         const secondaryWidth = Math.floor(rowWidth * 0.4)
         nested[0].style.width = { Pt: rowWidth - secondaryWidth }
         nested[1].style.width = { Pt: secondaryWidth }
       }
     }
     if (css.flexShrink === '0') style.flexShrink = 0
-    if (css.borderBottomStyle !== 'none' && points(css.borderBottomWidth)) {
-      style.borderWidth = { top: 0, right: 0, bottom: points(css.borderBottomWidth), left: 0 }
-      const stroke = color(css.borderBottomColor)
-      if (stroke) style.borderColor = { top: stroke, right: stroke, bottom: stroke, left: stroke }
+    const top = css.borderTopStyle === 'none' ? 0 : points(css.borderTopWidth)
+    const bottom = css.borderBottomStyle === 'none' ? 0 : points(css.borderBottomWidth)
+    if (top || bottom) {
+      style.borderWidth = { top, right: 0, bottom, left: 0 }
+      const topColor = top ? color(css.borderTopColor) : undefined
+      const bottomColor = bottom ? color(css.borderBottomColor) : undefined
+      const stroke = topColor ?? bottomColor
+      if (stroke)
+        style.borderColor = {
+          top: topColor ?? stroke,
+          right: stroke,
+          bottom: bottomColor ?? stroke,
+          left: stroke,
+        }
     }
     return [node({ type: 'View' }, style, nested)]
   }
@@ -449,6 +510,28 @@ export function createPdfDocument(source: HTMLElement): PdfDocument {
 
   // Forme discards a completely empty page. Give a blank resume one paint-free box.
   if (!children.length) children.push(node({ type: 'View' }, { height: { Pt: 1 } }))
+
+  const sourceStyle = getComputedStyle(source)
+  const pageRuleHeight = points(sourceStyle.getPropertyValue('--resume-page-rule-height'))
+  if (pageRuleHeight) {
+    // Forme starts repeating a fixed header from its position in the document.
+    // Paint the rule in the top margin without consuming any content space.
+    children.unshift(
+      node({ type: 'Fixed', position: 'Header' }, {}, [
+        node(
+          { type: 'View' },
+          {
+            position: 'Absolute',
+            top: -margin.top,
+            left: -margin.left,
+            width: { Pt: a4Width },
+            height: { Pt: pageRuleHeight },
+            backgroundColor: color(sourceStyle.getPropertyValue('--resume-theme').trim()),
+          },
+        ),
+      ]),
+    )
+  }
 
   return {
     document: {

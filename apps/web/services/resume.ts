@@ -1,6 +1,7 @@
 import request from '@/lib/request'
 import {
   deletedResumeSchema,
+  resumeAvatarSchema,
   resumeItemSchema,
   resumeSchema,
   type CreateResume,
@@ -8,6 +9,14 @@ import {
   type Resume,
   type ResumeItem,
 } from '@resume-copilot/contracts'
+
+export async function uploadResumeAvatar(id: string, jpeg: string) {
+  return resumeAvatarSchema.parse(await request.put(`/resumes/${id}/avatar`, { jpeg }))
+}
+
+export async function removeResumeAvatar(id: string) {
+  return resumeAvatarSchema.parse(await request.delete(`/resumes/${id}/avatar`))
+}
 
 /** Get all resumes for the current user */
 export async function getResumes(signal?: AbortSignal): Promise<ResumeItem[]> {

@@ -36,6 +36,7 @@ export default function PreviewBlock({
       aria-pressed={selected}
       className={`${className} resume-preview-block relative rounded-sm`}
       onClick={(event) => {
+        if (event.target instanceof Element && event.target.closest('[data-project-link] a')) return
         event.preventDefault()
         event.stopPropagation()
         context.onSelect?.({ sectionId, itemId })

@@ -5,7 +5,7 @@ export const projectsSchema = itemSchema.extend({
   name: z.string(),
   description: z.string(),
   date: z.string(),
-  website: urlSchema,
+  website: urlSchema.extend({ inlineLink: z.boolean().optional() }),
   summary: z.string(),
 })
 

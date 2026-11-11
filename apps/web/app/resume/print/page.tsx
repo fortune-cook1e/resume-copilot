@@ -17,7 +17,7 @@ declare global {
 function ResumePrintContent() {
   const searchParams = useSearchParams()
   const resumeId = searchParams.get('id')
-  const { resume, setResume, setResumeId } = useResumeStore()
+  const { resume, setResume, setResumeId, setAvatar } = useResumeStore()
 
   useEffect(() => {
     const injected = window.__RESUME_DATA__
@@ -35,11 +35,12 @@ function ResumePrintContent() {
       .then((res) => {
         setResumeId(res.id)
         setResume(res.data)
+        setAvatar(res.id, res.avatar ?? null)
       })
       .catch((err) => {
         console.error('Failed to load resume for print:', err)
       })
-  }, [resumeId, setResume, setResumeId])
+  }, [resumeId, setResume, setResumeId, setAvatar])
 
   if (!resume) return null
 

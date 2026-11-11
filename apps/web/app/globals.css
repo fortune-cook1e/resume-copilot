@@ -255,10 +255,88 @@
   margin-block-end: var(--resume-list-gap, 4pt);
 }
 
-.resume-typography[data-template='meowth'] .resume-section-heading {
+.resume-typography[data-template='onyx'] .resume-basics {
+  border-bottom: 1px solid var(--resume-theme);
+  padding-bottom: 0.75rem;
+}
+
+.resume-typography[data-template='meowth'] .resume-basics {
+  padding-bottom: 0.25rem;
+}
+
+.resume-typography:is([data-template='meowth'], [data-template='kakuna']) .resume-section-heading {
   color: var(--resume-theme);
   border-bottom: 1pt solid var(--resume-theme);
   padding-bottom: 1pt;
+}
+
+.resume-typography[data-template='kakuna'] :is(.resume-basics, .resume-section-heading) {
+  text-align: center;
+}
+
+.resume-typography[data-template='kakuna'] .resume-contacts {
+  justify-content: center;
+}
+
+.resume-basics-with-photo .resume-identity {
+  flex: 1 1 0%;
+}
+
+.resume-typography[data-template='onyx'] .resume-basics-with-photo {
+  align-items: center;
+}
+
+.resume-typography[data-template='kakuna'] .resume-basics-with-photo {
+  flex-direction: column;
+  align-items: center;
+}
+
+.resume-typography[data-template='kakuna'] .resume-basics-with-photo .resume-identity {
+  width: 100%;
+  flex: none;
+}
+
+.resume-typography:is([data-template='meowth'], [data-template='scizor'])
+  .resume-basics-with-photo {
+  align-items: flex-start;
+}
+
+.resume-typography[data-template='scizor'] {
+  --resume-page-rule-height: 4px;
+  --resume-divider: #d8dce2;
+}
+
+.resume-page:has(.resume-typography[data-template='scizor']) {
+  position: relative;
+}
+
+.resume-typography[data-template='scizor']::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--resume-page-rule-height);
+  background: var(--resume-theme);
+  content: '';
+}
+
+.resume-typography[data-template='scizor'] [data-resume-heading='name'] {
+  font-size: calc(var(--resume-heading-size) * 1.85);
+}
+
+.resume-typography[data-template='scizor'] .resume-name-rule {
+  width: 72%;
+  height: 2pt;
+  margin-block: 3pt;
+  border: 0;
+  background: var(--resume-divider);
+}
+
+.resume-typography[data-template='scizor'] .resume-section-heading {
+  border-top: 1pt solid var(--resume-divider);
+  padding-top: 5pt;
+}
+
+.resume-typography[data-template='scizor'] .resume-section-heading h2 {
+  font-size: calc(var(--resume-heading-size) * 0.9);
 }
 
 .resume-typography > :not(:last-child) {

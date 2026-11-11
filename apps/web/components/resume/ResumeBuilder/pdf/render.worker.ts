@@ -33,7 +33,7 @@ self.onmessage = async ({ data }: MessageEvent<{ id: number; document: FormeDocu
           oversized.add(Number(name.slice('section:'.length)))
       })
     }
-    const sections = document.children[0].children
+    const sections = document.children[0].children.filter((child) => child.kind.type !== 'Fixed')
     const restoredFlow = sections.filter(
       (section, index) => oversized.has(index) && section.style.wrap === false,
     )
@@ -48,7 +48,10 @@ self.onmessage = async ({ data }: MessageEvent<{ id: number; document: FormeDocu
     )
       throw new Error('The PDF font could not render some of the text.')
 
+    const projectLinks: PreviewBox[][] = []
     const boxes = result.layout.pages.map((page) => {
+      const links: PreviewBox[] = []
+      projectLinks.push(links)
       const targets = new Map<number, PreviewBox>()
       visit(page.elements, (element) => {
         const { x, y, width, height } = element
@@ -63,10 +66,17 @@ self.onmessage = async ({ data }: MessageEvent<{ id: number; document: FormeDocu
         )
           throw new Error('PDF text falls outside the page.')
         const name = element.sourceLocation?.file
-        if (!name?.startsWith('target:')) return
+        const projectLink = name?.startsWith('project-link:')
+        if (!name || (!projectLink && !name.startsWith('target:'))) return
         if (x < 0 || y < 0 || x >= page.width || y >= page.height || width <= 0 || height <= 0)
           return
-        const target = Number(name.slice('target:'.length))
+        const target = Number(name.slice(name.indexOf(':') + 1))
+        if (projectLink && element.nodeType === 'Text') {
+          for (const line of element.children) {
+            if (line.nodeType === 'TextLine' && line.width > 0 && line.height > 0)
+              links.push({ target, x: line.x, y: line.y, width: line.width, height: line.height })
+          }
+        }
         const box = targets.get(target)
         const left = Math.min(x, box?.x ?? x)
         const top = Math.min(y, box?.y ?? y)
@@ -81,7 +91,7 @@ self.onmessage = async ({ data }: MessageEvent<{ id: number; document: FormeDocu
       return Array.from(targets.values())
     })
     const bytes = Uint8Array.from(result.pdf)
-    const response: PdfResult & { id: number } = { id: data.id, bytes, boxes }
+    const response: PdfResult & { id: number } = { id: data.id, bytes, boxes, projectLinks }
     self.postMessage(response, { transfer: [bytes.buffer] })
   } catch {
     self.postMessage({ id: data.id, failed: true })

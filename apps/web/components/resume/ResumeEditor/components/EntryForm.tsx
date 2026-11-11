@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -104,6 +105,26 @@ export default function EntryForm({ sectionId, itemId }: { sectionId: SectionId;
               />
             </div>
           ))}
+          {type === 'projects' && (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id={itemId + '-website-inline'}
+                checked={'inlineLink' in item.website && item.website.inlineLink === true}
+                onCheckedChange={(checked) =>
+                  update((draft) => {
+                    const target = draft.modules[sectionId]?.items.find(
+                      (item) => item.id === itemId,
+                    )
+                    if (target && 'website' in target)
+                      Object.assign(target.website, { inlineLink: checked === true })
+                  })
+                }
+              />
+              <Label htmlFor={itemId + '-website-inline'} className="text-xs">
+                Show link in title
+              </Label>
+            </div>
+          )}
         </div>
       )}
       {'level' in item && typeof item.level === 'string' && (
