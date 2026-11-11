@@ -12,6 +12,9 @@ import { afterAll, beforeAll, expect, test } from 'vitest'
 let runtime: Miniflare
 let fixture: Awaited<ReturnType<typeof createTestRuntime>>
 const origin = 'https://resume.example.test'
+const sampleJpeg = Buffer.from([
+  255, 216, 255, 192, 0, 11, 8, 1, 0, 1, 0, 1, 1, 17, 0, 255, 217,
+]).toString('base64')
 const cookieHeader = (response: { headers: Headers }) =>
   response.headers
     .getSetCookie()
@@ -40,6 +43,7 @@ async function login(worker = runtime, oauthQuery?: string) {
   )
   return { callback, cookie: cookieHeader(callback) }
 }
+
 beforeAll(async () => {
   fixture = await createTestRuntime({ origin })
   runtime = fixture.runtime
@@ -1195,6 +1199,16 @@ test('MCP manages resume metadata and can copy and delete only authorized revisi
     })
     const renamed = await read(original.id)
     expect(renamed).toMatchObject({ ...changes, data: original.data })
+    const photo = `data:image/jpeg;base64,${sampleJpeg}`
+    const photoPath = origin + '/api/resumes/' + original.id + '/avatar'
+    const photoHeaders = { origin, cookie, 'content-type': 'application/json' }
+    const upload = await worker.dispatchFetch(photoPath, {
+      method: 'PUT',
+      headers: photoHeaders,
+      body: JSON.stringify({ jpeg: sampleJpeg }),
+    })
+    expect(upload.status).toBe(200)
+    expect(await read(original.id)).not.toHaveProperty('avatar')
     expect(renamed.version).toBeGreaterThan(original.version)
     expect(await manage('delete_resume', target)).toMatchObject({
       isError: true,
@@ -1231,6 +1245,17 @@ test('MCP manages resume metadata and can copy and delete only authorized revisi
       description: 'Updated roles',
       data: original.data,
     })
+    const readCopyPhoto = async () => {
+      const result = await worker.dispatchFetch(origin + '/api/resumes/' + copy.id, {
+        headers: { cookie },
+      })
+      return result.json()
+    }
+    expect(await readCopyPhoto()).toMatchObject({ data: { avatar: photo } })
+    expect(
+      (await worker.dispatchFetch(photoPath, { method: 'DELETE', headers: photoHeaders })).status,
+    ).toBe(200)
+    expect(await readCopyPhoto()).toMatchObject({ data: { avatar: photo } })
     expect(
       await manage('duplicate_resume', { ...duplicate, title: 'Different copy' }),
     ).toMatchObject({ isError: true })
@@ -1791,4 +1816,67 @@ test('MCP and browser edits share an owner-scoped version and reject competing s
   } finally {
     await worker.dispose()
   }
+})
+
+test('only a resume owner can replace or remove a bounded avatar', async () => {
+  fixture.setGoogleProfile({
+    sub: 'avatar-owner',
+    name: 'Avatar Owner',
+    email: 'avatar-owner@example.test',
+    email_verified: true,
+  })
+  const owner = await login()
+  const headers = { origin, cookie: owner.cookie, 'content-type': 'application/json' }
+  const created = await runtime.dispatchFetch(origin + '/api/resumes', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ title: 'Avatar resume' }),
+  })
+  expect(created.status).toBe(201)
+  const { data } = (await created.json()) as { data: { id: string } }
+  const path = origin + '/api/resumes/' + data.id
+  const put = (jpeg: string, cookie = owner.cookie) =>
+    runtime.dispatchFetch(path + '/avatar', {
+      method: 'PUT',
+      headers: { ...headers, cookie },
+      body: JSON.stringify({ jpeg }),
+    })
+  expect((await put('bm90IGEganBlZw==')).status).toBe(400)
+  expect((await put(sampleJpeg)).status).toBe(200)
+  expect(await (await runtime.dispatchFetch(path, { headers })).json()).toMatchObject({
+    data: { avatar: `data:image/jpeg;base64,${sampleJpeg}` },
+  })
+  fixture.setGoogleProfile({
+    sub: 'avatar-other',
+    name: 'Other',
+    email: 'avatar-other@example.test',
+    email_verified: true,
+  })
+  const other = await login()
+  expect((await runtime.dispatchFetch(path, { headers: { cookie: other.cookie } })).status).toBe(
+    404,
+  )
+  expect((await put(sampleJpeg, other.cookie)).status).toBe(404)
+  expect(
+    (
+      await runtime.dispatchFetch(path + '/avatar', {
+        method: 'DELETE',
+        headers: { ...headers, cookie: other.cookie },
+      })
+    ).status,
+  ).toBe(404)
+  const replacement = Buffer.concat([
+    Buffer.from([255, 216, 255, 254, 0, 3, 65]),
+    Buffer.from(sampleJpeg, 'base64').subarray(2),
+  ]).toString('base64')
+  expect((await put(replacement)).status).toBe(200)
+  expect(await (await runtime.dispatchFetch(path, { headers })).json()).toMatchObject({
+    data: { avatar: `data:image/jpeg;base64,${replacement}` },
+  })
+  expect(
+    (await runtime.dispatchFetch(path + '/avatar', { method: 'DELETE', headers })).status,
+  ).toBe(200)
+  expect(await (await runtime.dispatchFetch(path, { headers })).json()).toMatchObject({
+    data: { avatar: null },
+  })
 })

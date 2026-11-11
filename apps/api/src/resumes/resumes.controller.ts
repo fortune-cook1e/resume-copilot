@@ -8,10 +8,15 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Req,
   UseGuards,
 } from '@nestjs/common'
-import { createResumeSchema, updateResumeSchema } from '@resume-copilot/contracts'
+import {
+  createResumeSchema,
+  updateResumeSchema,
+  uploadResumeAvatarSchema,
+} from '@resume-copilot/contracts'
 import { SessionGuard, type AuthenticatedRequest } from '../auth/session.guard'
 import { ResumesService } from './resumes.service'
 
@@ -29,7 +34,25 @@ export class ResumesController {
   @Get(':id')
   @Header('Cache-Control', 'no-store')
   find(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
-    return this.resumes.find(request.trustedUser!.id, id)
+    return this.resumes.findForEditor(request.trustedUser!.id, id)
+  }
+
+  @Put(':id/avatar')
+  @Header('Cache-Control', 'no-store')
+  uploadAvatar(
+    @Req() request: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ) {
+    const parsed = uploadResumeAvatarSchema.safeParse(body)
+    if (!parsed.success) throw new BadRequestException()
+    return this.resumes.uploadAvatar(request.trustedUser!.id, id, parsed.data.jpeg)
+  }
+
+  @Delete(':id/avatar')
+  @Header('Cache-Control', 'no-store')
+  removeAvatar(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    return this.resumes.removeAvatar(request.trustedUser!.id, id)
   }
 
   @Post()

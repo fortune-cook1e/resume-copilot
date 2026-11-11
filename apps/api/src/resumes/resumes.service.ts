@@ -8,6 +8,8 @@ import { createHash, randomUUID } from 'node:crypto'
 import {
   defaultResumeData,
   defaultSummary,
+  resumeAvatarMaxBytes,
+  resumeAvatarSize,
   resumeDataSchema,
   type CreateResume,
   type McpResumeUpdate,
@@ -25,6 +27,34 @@ function creationFields(input: CreateResume): Required<CreateResume> {
     data: input.data ?? structuredClone(defaultResumeData),
     visibility: input.visibility ?? 'private',
   }
+}
+
+function isAvatarJpeg(jpeg: Buffer) {
+  if (jpeg.length < 12 || jpeg.length > resumeAvatarMaxBytes) return false
+  if (jpeg.readUInt16BE() !== 0xffd8 || jpeg.readUInt16BE(jpeg.length - 2) !== 0xffd9) return false
+  for (let offset = 2; offset + 4 <= jpeg.length;) {
+    if (jpeg[offset] !== 0xff) return false
+    const marker = jpeg[offset + 1]
+    if (marker === 0xff) {
+      offset++
+      continue
+    }
+    const length = jpeg.readUInt16BE(offset + 2)
+    if (length < 2 || offset + 2 + length > jpeg.length) return false
+    if (marker === 0xc0 || marker === 0xc2)
+      return (
+        length >= 8 &&
+        jpeg.readUInt16BE(offset + 5) === resumeAvatarSize &&
+        jpeg.readUInt16BE(offset + 7) === resumeAvatarSize
+      )
+    if (marker === 0xda || marker === 0xd9) return false
+    offset += 2 + length
+  }
+  return false
+}
+
+function avatarData(jpeg: Buffer | null) {
+  return jpeg ? `data:image/jpeg;base64,${jpeg.toString('base64')}` : null
 }
 
 @Injectable()
@@ -48,6 +78,27 @@ export class ResumesService {
     return found
   }
 
+  async findForEditor(userId: string, id: string) {
+    const [found, picture] = await Promise.all([
+      this.find(userId, id),
+      this.repository.findAvatar(userId, id),
+    ])
+    return { ...found, avatar: avatarData(picture?.jpeg ?? null) }
+  }
+
+  async uploadAvatar(userId: string, id: string, data: string) {
+    const jpeg = Buffer.from(data, 'base64')
+    if (!isAvatarJpeg(jpeg)) throw new BadRequestException('Invalid avatar.')
+    if (!(await this.repository.writeAvatar(userId, id, jpeg))) throw new NotFoundException()
+    return avatarData(jpeg)
+  }
+
+  async removeAvatar(userId: string, id: string) {
+    if (!(await this.repository.findAvatar(userId, id))) throw new NotFoundException()
+    await this.repository.deleteAvatar(userId, id)
+    return null
+  }
+
   create(userId: string, input: CreateResume) {
     return this.repository.create(userId, randomUUID(), creationFields(input))
   }
@@ -56,9 +107,16 @@ export class ResumesService {
     userId: string,
     input: Pick<CreateResume, 'title' | 'data' | 'description'>,
     request: { key: string; hash: string },
+    copyAvatarFrom?: string,
   ) {
     const fields = creationFields({ ...input, visibility: 'private' })
-    const receipt = await this.repository.createOnce(userId, randomUUID(), fields, request)
+    const receipt = await this.repository.createOnce(
+      userId,
+      randomUUID(),
+      fields,
+      request,
+      copyAvatarFrom,
+    )
     if (receipt.requestHash !== request.hash)
       throw new ConflictException('This request key was already used for different resume content.')
     return { id: receipt.resumeId, title: fields.title, version: receipt.version }
@@ -91,6 +149,7 @@ export class ResumesService {
       userId,
       { title, description: source.description, data: data.data },
       { key: requestKey, hash },
+      resumeId,
     )
   }
 

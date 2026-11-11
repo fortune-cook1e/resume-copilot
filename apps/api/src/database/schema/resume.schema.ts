@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { integer, sqliteTable, text, index, primaryKey } from 'drizzle-orm/sqlite-core'
+import { blob, integer, sqliteTable, text, index, primaryKey } from 'drizzle-orm/sqlite-core'
 import { user } from './auth.schema'
 const timestamp = (name: string) => integer(name, { mode: 'timestamp_ms' })
 const now = sql`(unixepoch('subsec') * 1000)`
@@ -40,3 +40,10 @@ export const resumeCreateRequest = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.userId, table.requestKey] })],
 )
+
+export const resumeAvatar = sqliteTable('resume_avatar', {
+  resumeId: text('resume_id')
+    .primaryKey()
+    .references(() => resume.id, { onDelete: 'cascade' }),
+  jpeg: blob('jpeg', { mode: 'buffer' }).notNull(),
+})
