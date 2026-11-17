@@ -1,64 +1,63 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight, ArrowUpRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { WorkspaceBrand } from '@/components/WorkspaceBrand'
+import { getCurrentUser } from '@/lib/current-user'
+import { ResumeMcpDemo } from '@/components/ResumeMcpDemo'
 import styles from './home.module.css'
 
 const repository = 'https://github.com/fortune-cook1e/resume-copilot'
 
-export default function Home() {
+export default async function Home() {
+  const { user } = await getCurrentUser()
+  const destination = user ? '/dashboard/resumes' : '/login'
+
   return (
     <div className={styles.page}>
-      <a className={styles.skipLink} href="#main">
+      <a className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3" href="#main">
         Skip to content
       </a>
-      <div className={styles.container}>
-        <header className={styles.header}>
-          <Link href="/" className={styles.brand} aria-label="Resume Copilot home">
-            <Image
-              src="/dog.png"
-              alt=""
-              width={36}
-              height={36}
-              className={styles.logo}
-              unoptimized
-            />
-            Resume Copilot
-          </Link>
-          <nav aria-label="Main navigation">
-            <a href={repository} className={styles.sourceLink}>
-              GitHub <ArrowUpRight size={14} aria-hidden="true" />
-            </a>
-          </nav>
-        </header>
-
-        <main id="main" className={styles.main}>
-          <section className={styles.hero} aria-labelledby="hero-title">
-            <p className={styles.eyebrow}>Your next chapter starts here</p>
-            <h1 id="hero-title">
-              Your story.
-              <br />A clearer <em>resume.</em>
-            </h1>
-            <p className={styles.intro}>
-              A little help turning your experience into a resume that feels like you.
-            </p>
-            <Link href="/dashboard/resumes" className={styles.primaryAction}>
-              Open workspace <ArrowRight size={17} aria-hidden="true" />
+      <header className={styles.header}>
+        <WorkspaceBrand />
+        <nav aria-label="Main navigation" className="flex items-center gap-3 sm:gap-6">
+          <a href={repository} className="inline-flex items-center gap-1 text-sm hover:underline">
+            GitHub <ArrowUpRight className="size-3.5" aria-hidden="true" />
+          </a>
+          <Button asChild variant="outline" className="rounded-full bg-transparent">
+            <Link href={destination}>{user ? 'My resumes' : 'Sign in'}</Link>
+          </Button>
+        </nav>
+      </header>
+      <main id="main" className={styles.hero}>
+        <div className={styles.content}>
+          <h1 className={styles.title}>Edit your resume in ChatGPT.</h1>
+          <p className={styles.intro}>
+            Connect Resume Copilot via MCP to create and edit resumes from your ChatGPT
+            conversations.
+          </p>
+          <Button asChild size="lg" className={styles.action}>
+            <Link href={destination}>
+              Build a resume <ArrowRight aria-hidden="true" />
             </Link>
-            <p className={styles.finePrint}>Sign in to save your work.</p>
-            <p className={styles.developmentNote}>
-              <span className={styles.statusDot} aria-hidden="true" />A conversational resume
-              experience is in development.
-            </p>
-          </section>
-        </main>
-
-        <footer className={styles.footer}>
-          <span>Open source. Your words, your final say.</span>
-          <span>
-            Made by <a href="https://github.com/fortune-cook1e">fortune-cook1e</a>
-          </span>
-        </footer>
-      </div>
+          </Button>
+          <div className={styles.demo}>
+            <ResumeMcpDemo />
+          </div>
+        </div>
+        <div className={styles.previewPanel}>
+          <Image
+            className={styles.paper}
+            src="/resume-templates/onyx.webp"
+            alt="Example resume in the Onyx template"
+            width={794}
+            height={1123}
+            sizes="(max-width: 720px) 80vw, 420px"
+            preload
+            unoptimized
+          />
+        </div>
+      </main>
     </div>
   )
 }
