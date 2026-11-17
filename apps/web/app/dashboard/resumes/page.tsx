@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ResumeDialog } from '@/components/dashboard/ResumeDialog'
 import { ResumeCard } from '@/components/dashboard/ResumeCard'
 import { Skeleton } from '@/components/ui/skeleton'
-import { FileText } from 'lucide-react'
+import { FileText, Plus } from 'lucide-react'
 import { getResumes } from '@/services/resume'
 import { Button } from '@/components/ui/button'
 import { useSession } from '@/lib/auth-client'
@@ -37,7 +37,7 @@ export default function ResumesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-7xl space-y-8">
       <ResumeDialog
         mode="create"
         open={open}
@@ -45,37 +45,27 @@ export default function ResumesPage() {
         onSuccess={invalidateResumes}
       />
 
-      {/* Page header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Resumes</h1>
-          <p className="text-muted-foreground">Create and manage your resumes</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" disabled={!userId || isFetching} onClick={refreshResumes}>
-            {isFetching && !isPending ? 'Refreshing…' : 'Refresh'}
-          </Button>
-          <Button onClick={() => setOpen(true)}>
-            <FileText className="h-4 w-4" />
-            New Resume
-          </Button>
-        </div>
-      </div>
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-serif text-5xl tracking-tight">Resumes</h1>
+        <Button
+          className="rounded-full bg-[#314b3b] text-white hover:bg-[#25392d]"
+          onClick={() => setOpen(true)}
+        >
+          <Plus aria-hidden="true" />
+          New resume
+        </Button>
+      </header>
 
-      {/* Loading state */}
       {isPending && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="rounded-xl border p-6 space-y-3">
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-10 w-10 rounded-lg" />
-                <div className="space-y-1.5">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-3 w-16" />
-                </div>
-              </div>
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-3 w-24" />
+        <div
+          aria-busy="true"
+          className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,10rem),1fr))] gap-4"
+        >
+          {Array.from({ length: 3 }, (_, index) => (
+            <div key={index} className="space-y-3">
+              <Skeleton className="aspect-[210/297] rounded-md" />
+              <Skeleton className="h-5 w-1/2" />
+              <Skeleton className="h-4 w-1/3" />
             </div>
           ))}
         </div>
@@ -93,26 +83,17 @@ export default function ResumesPage() {
         </div>
       ) : null}
 
-      {/* Empty state only after a successful response. */}
       {!isPending && !isError && resumes.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-16 px-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-            <FileText className="h-7 w-7 text-muted-foreground" />
-          </div>
-          <h3 className="mt-4 text-lg font-semibold">No resumes yet</h3>
-          <p className="mt-1 text-sm text-muted-foreground text-center max-w-sm">
-            Create your first resume to get started. You can customize it with your experience,
-            education, and skills.
-          </p>
-          <div className="mt-6">
-            <Button onClick={() => setOpen(true)}>Create Resume</Button>
-          </div>
+        <div className="grid justify-items-center gap-4 rounded-3xl border border-dashed border-[#d7d9cf] py-20">
+          <span className="grid size-14 place-items-center rounded-full bg-[#e8eae0] text-[#314b3b]">
+            <FileText aria-hidden="true" className="size-6" />
+          </span>
+          <h2 className="text-lg font-medium">No resumes yet</h2>
         </div>
       )}
 
-      {/* Resume grid */}
       {!isPending && resumes.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,10rem),1fr))] gap-x-4 gap-y-6">
           {resumes.map((resume) => (
             <ResumeCard
               key={resume.id}

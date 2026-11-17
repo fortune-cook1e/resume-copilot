@@ -79,15 +79,52 @@ test('Google login creates a D1 session and persists owner-scoped resume edits',
     data: { id: string; data: unknown; createdAt: string }
   }
   expect(Number.isNaN(Date.parse(resume.createdAt))).toBe(false)
+  const getOwnedResumes = async () => {
+    const response = await runtime.dispatchFetch(origin + '/api/resumes', { headers })
+    expect(response.status).toBe(200)
+    return (await response.json()) as { data: Record<string, unknown>[] }
+  }
+  expect((await getOwnedResumes()).data).toMatchObject([{ id: resume.id, template: 'onyx' }])
+  const design = { template: 'scizor' }
+  const original = resume.data as typeof defaultResumeData
+  const editedData = {
+    ...original,
+    design,
+    basics: { ...original.basics, name: 'Actual Candidate', headline: 'Product Designer' },
+    modules: {
+      ...original.modules,
+      projects: {
+        ...original.modules.projects,
+        items: [
+          { ...defaultProjects, id: 'hidden', name: 'Hidden Project', visible: false },
+          { ...defaultProjects, id: 'shown', name: 'Visible Project' },
+        ],
+      },
+      experience: {
+        ...original.modules.experience,
+        startOnNewPage: true,
+        items: [{ ...defaultExperience, id: 'later', company: 'Second Page Company' }],
+      },
+    },
+    sectionOrder: ['projects', 'experience'],
+  }
   const edited = await runtime.dispatchFetch(origin + '/api/resumes/' + resume.id, {
     method: 'PATCH',
     headers,
-    body: JSON.stringify({ title: 'Edited', data: resume.data }),
+    body: JSON.stringify({ title: 'Edited', data: editedData }),
   })
   expect(edited.status).toBe(200)
   const reopened = await runtime.dispatchFetch(origin + '/api/resumes/' + resume.id, { headers })
   expect(await reopened.json()).toMatchObject({
-    data: { id: resume.id, title: 'Edited', data: resume.data },
+    data: { id: resume.id, title: 'Edited', data: editedData },
+  })
+  const [listed] = (await getOwnedResumes()).data
+  expect(listed).toMatchObject({ id: resume.id, template: 'scizor' })
+  expect(listed).not.toHaveProperty('data')
+  expect(listed.preview).toMatchObject({
+    name: 'Actual Candidate',
+    headline: 'Product Designer',
+    sections: [{ name: 'Projects', entries: [{ title: 'Visible Project' }] }],
   })
   fixture.setGoogleProfile({
     sub: 'google-test-2',

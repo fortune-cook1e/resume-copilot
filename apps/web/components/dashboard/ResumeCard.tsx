@@ -1,8 +1,8 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
+import Link from 'next/link'
+import { Card } from '@/components/ui/card'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
   AlertDialog,
@@ -14,7 +14,6 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog'
-import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,8 +21,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { FileText, MoreVertical, Pencil, Trash2, Eye, Clock } from 'lucide-react'
+import { Ellipsis, Pencil, Trash2 } from 'lucide-react'
 import { deleteResume } from '@/services/resume'
+import { ResumeCover } from './ResumeCover'
 import { ResumeDialog } from './ResumeDialog'
 import type { ResumeItem } from '@resume-copilot/contracts'
 import { useToggle } from '@/hooks'
@@ -43,7 +43,6 @@ function formatDate(dateStr: string | Date) {
 }
 
 export function ResumeCard({ resume, onDeleted, onEdit }: ResumeCardProps) {
-  const router = useRouter()
   const { value: open, toggle: toggleDialog } = useToggle()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -63,10 +62,6 @@ export function ResumeCard({ resume, onDeleted, onEdit }: ResumeCardProps) {
     } finally {
       setDeleting(false)
     }
-  }
-
-  const handlePreview = () => {
-    router.push(`/builder/${encodeURIComponent(resume.id)}`)
   }
 
   return (
@@ -116,87 +111,52 @@ export function ResumeCard({ resume, onDeleted, onEdit }: ResumeCardProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <Card className="group relative overflow-hidden transition-all hover:shadow-md hover:border-primary/20">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <FileText className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-semibold truncate">{resume.title}</h3>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <Badge
-                    variant={resume.visibility === 'public' ? 'default' : 'secondary'}
-                    className="text-[10px] px-1.5 py-0"
-                  >
-                    {resume.visibility}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 opacity-100"
-                  ref={actionsButton}
-                  aria-label="Resume actions"
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={toggleDialog}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-                {/* <DropdownMenuItem onClick={handlePreview}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  Preview
-                </DropdownMenuItem> */}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  onSelect={() => {
-                    setDeleteError(false)
-                    setDeleteOpen(true)
-                  }}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+      <Card className="relative block gap-0 rounded-2xl border-0 bg-transparent py-0 shadow-none ring-0">
+        <Link
+          href={`/builder/${encodeURIComponent(resume.id)}`}
+          prefetch={false}
+          className="block rounded-md focus-visible:outline-2 focus-visible:outline-offset-4"
+        >
+          <ResumeCover resume={resume} />
+          <div className="mt-2 min-w-0 pr-9">
+            <h2 className="line-clamp-2 text-sm leading-snug font-semibold wrap-anywhere">
+              {resume.title}
+            </h2>
+            <time dateTime={resume.updatedAt} className="text-xs text-[#535b51]">
+              {formatDate(resume.updatedAt)}
+            </time>
           </div>
-        </CardHeader>
-
-        <CardContent className="pb-3">
-          <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">
-            {resume.description || 'No description'}
-          </p>
-        </CardContent>
-
-        <CardFooter className="pt-0 flex items-center justify-between">
-          {/* 左侧：更新时间 */}
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            <span>Updated {formatDate(resume.updatedAt)}</span>
-          </div>
-
-          {/* 右下角：新增的预览按钮 */}
-          <Button
-            variant="outline"
-            size="default"
-            className="h-8 gap-1.5 text-sm font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
-            onClick={handlePreview}
-          >
-            <Eye className="h-3.5 w-3.5" />
-            Open editor
-          </Button>
-        </CardFooter>
+        </Link>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="absolute right-0 bottom-0.5 rounded-md"
+              ref={actionsButton}
+              aria-label="Resume actions"
+            >
+              <Ellipsis />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={toggleDialog}>
+              <Pencil />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onSelect={() => {
+                setDeleteError(false)
+                setDeleteOpen(true)
+              }}
+            >
+              <Trash2 />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </Card>
     </>
   )

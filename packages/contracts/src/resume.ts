@@ -89,7 +89,29 @@ export const resumeSchema = z.object({
   avatar: resumeAvatarSchema.optional(),
 })
 
-export const resumeItemSchema = resumeSchema.omit({ data: true })
+const resumeListPreviewSchema = z.object({
+  name: z.string().max(96),
+  headline: z.string().max(96),
+  location: z.string().max(96),
+  themeColor: resumeThemeColorSchema.optional(),
+  sections: z
+    .array(
+      z.object({
+        name: z.string().max(64),
+        entries: z
+          .array(z.object({ title: z.string().max(96), detail: z.string().max(160) }))
+          .max(2),
+      }),
+    )
+    .max(3),
+})
+
+export type ResumeListPreview = z.infer<typeof resumeListPreviewSchema>
+
+export const resumeItemSchema = resumeSchema.omit({ data: true }).extend({
+  template: resumeTemplateSchema.optional(),
+  preview: resumeListPreviewSchema.optional(),
+})
 export const deletedResumeSchema = z.object({ id: z.string() })
 
 export type ResumeVisibility = z.infer<typeof resumeVisibilitySchema>

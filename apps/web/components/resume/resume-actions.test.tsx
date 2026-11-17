@@ -433,7 +433,7 @@ it('refreshes the dashboard after creating, renaming and deleting a resume witho
     </QueryClientProvider>,
   )
   await waitFor(() => expect(screen.getByText('Existing resume')).toBeTruthy())
-  fireEvent.click(screen.getByRole('button', { name: 'New Resume' }))
+  fireEvent.click(screen.getByRole('button', { name: 'New resume' }))
   fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'New resume' } })
   await act(async () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create' }))

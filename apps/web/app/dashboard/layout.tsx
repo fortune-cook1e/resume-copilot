@@ -4,7 +4,6 @@ import { Authentication } from '@/components/authentication'
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
-import { Separator } from '@/components/ui/separator'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, failure } = await getCurrentUser()
@@ -17,15 +16,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <Authentication key={user.id} expectedUserId={user.id}>
       <TooltipProvider>
-        <SidebarProvider>
+        <SidebarProvider className="bg-[#faf8f3] [--sidebar:#f4f1e9] [--sidebar-accent:#e5e9de] [--sidebar-accent-foreground:#263c2f] [--sidebar-border:#e6e1d6] [--sidebar-foreground:#242822]">
           <DashboardSidebar />
-          <SidebarInset>
-            <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
-              <SidebarTrigger className="-ml-1" />
-              <Separator orientation="vertical" className="mr-2 !h-4" />
-              <span className="text-sm font-medium text-muted-foreground">Dashboard</span>
+          <SidebarInset className="min-w-0 bg-[#faf8f3] text-[#242822]">
+            <header className="flex h-14 shrink-0 items-center px-4">
+              <SidebarTrigger />
             </header>
-            <main className="flex-1 overflow-auto p-6">{children}</main>
+            <div className="flex-1 px-4 pt-2 pb-10 sm:px-8 lg:px-12">{children}</div>
           </SidebarInset>
         </SidebarProvider>
       </TooltipProvider>

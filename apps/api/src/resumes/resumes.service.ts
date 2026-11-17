@@ -19,6 +19,7 @@ import {
 } from '@resume-copilot/contracts'
 import { ResumesRepository } from './resumes.repository'
 import { applyResumeOperations } from './resume-patch'
+import { resumeListPreview } from './resume-list-preview'
 
 function creationFields(input: CreateResume): Required<CreateResume> {
   return {
@@ -61,8 +62,17 @@ function avatarData(jpeg: Buffer | null) {
 export class ResumesService {
   constructor(private readonly repository: ResumesRepository) {}
 
-  list(userId: string) {
-    return this.repository.list(userId)
+  async list(userId: string) {
+    const rows = await this.repository.list(userId)
+    return rows.map(({ data, ...resume }) => {
+      const parsed = resumeDataSchema.safeParse(data)
+      if (!parsed.success) return { ...resume, template: 'onyx' as const }
+      return {
+        ...resume,
+        template: parsed.data.design?.template ?? 'onyx',
+        preview: resumeListPreview(parsed.data),
+      }
+    })
   }
 
   async listForMcp(userId: string, cursor?: string) {

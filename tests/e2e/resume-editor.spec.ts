@@ -188,7 +188,7 @@ test('keeps editor mode tabs stationary while the save status changes', async ({
     await page.getByRole('button', { name: 'Rename resume' }).click()
     await page.getByRole('textbox', { name: 'Resume name' }).fill(width === 1440 ? 'A' : 'CV')
     // Keep the edit pending long enough to measure its layout before autosave.
-    await page.clock.pauseAt(await page.evaluate(() => Date.now()))
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1_000))
     await page.getByRole('button', { name: 'Save name', exact: true }).click()
     await expect(status).toHaveText('Unsaved changes')
     const pending = await tabs.boundingBox()
@@ -433,17 +433,106 @@ test('signs in, creates a resume and displays every page after editing and reope
 
     await page.goto('/dashboard/resumes')
     await expect(page).toHaveURL(/\/login(?:\?|$)/)
+    await page.setViewportSize({ width: 1280, height: 720 })
+    await page.goto('/')
+    const heroPreview = page.getByRole('img', { name: 'Example resume in the Onyx template' })
+    const heroTitle = page.getByRole('heading', { level: 1 })
+    await expect(heroPreview).toBeVisible()
+    expect((await heroPreview.boundingBox())!.x).toBeLessThan((await heroTitle.boundingBox())!.x)
+    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(720)
+    const homeAction = page.getByRole('link', { name: 'Build a resume' })
+    await expect(homeAction).toHaveAttribute('href', '/login')
+    const viewOriginal = page.getByRole('button', { name: 'View original' })
+    await viewOriginal.hover()
+    const demoResult = page.locator('figure [aria-live]')
+    const toggleBounds = (await viewOriginal.boundingBox())!
+    expect((await demoResult.boundingBox())!.y).toBeGreaterThan(
+      toggleBounds.y + toggleBounds.height,
+    )
+    await viewOriginal.click()
+    await expect(page.getByText(/Worked on Field Notes/)).toBeVisible()
+    await page.getByRole('button', { name: 'Show edit' }).click()
+    await expect(
+      page.getByText('Built a searchable library for 80+ research interviews.'),
+    ).toBeVisible()
+    await homeAction.click()
+    await expect(page).toHaveURL(/\/login$/)
+    const loginArtwork = page.locator('main img')
+    await expect(loginArtwork).toBeVisible()
+    expect((await loginArtwork.boundingBox())!.x).toBeLessThan(
+      (await page.getByRole('heading', { level: 1 }).boundingBox())!.x,
+    )
     await page.getByRole('button', { name: 'Continue with Google' }).click()
     await expect(page).toHaveURL(/\/dashboard\/resumes$/)
 
     await expect(page.getByRole('heading', { name: 'No resumes yet' })).toBeVisible()
+    await page.goto('/')
+    await expect(homeAction).toHaveAttribute('href', '/dashboard/resumes')
+    await homeAction.click()
+    await expect(page).toHaveURL(/\/dashboard\/resumes$/)
     const title = 'Core flow resume'
-    await page.getByRole('button', { name: 'New Resume', exact: true }).click()
+    await page.getByRole('button', { name: 'New resume', exact: true }).click()
     const dialog = page.getByRole('dialog', { name: 'Create new resume' })
     await dialog.getByRole('textbox', { name: 'Title', exact: true }).fill(title)
     await dialog.getByRole('button', { name: 'Create', exact: true }).click()
-    await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible()
-    await page.getByRole('button', { name: 'Open editor', exact: true }).click()
+    const openResume = page.getByRole('link', { name: new RegExp(title) })
+    await expect(openResume).toBeVisible()
+    const other = await page.request.post('/api/resumes', {
+      headers: { origin: baseURL! },
+      data: {
+        title: 'Design example',
+        data: {
+          ...defaultResumeData,
+          basics: {
+            ...defaultResumeData.basics,
+            name: 'Jamie Chen',
+            headline: 'Product Designer',
+          },
+          modules: {
+            ...defaultResumeData.modules,
+            experience: {
+              ...defaultResumeData.modules.experience,
+              items: [
+                {
+                  id: 'cover-work',
+                  visible: true,
+                  company: 'Fieldwork Studio',
+                  position: 'Product Designer',
+                  location: 'Stockholm',
+                  date: '2024 — Present',
+                  summary: 'Made project planning easier for small teams.',
+                },
+              ],
+            },
+          },
+          design: { template: 'kakuna' },
+        },
+      },
+    })
+    expect(other.status()).toBe(201)
+    await page.reload()
+    const actualCover = page
+      .getByRole('link', { name: /Design example/ })
+      .locator('[data-template]')
+    await expect(actualCover).toHaveAttribute('data-template', 'kakuna')
+    await expect(actualCover.getByText('Jamie Chen')).toBeVisible()
+    await expect(actualCover.getByText('Fieldwork Studio')).toBeVisible()
+    const coverBounds = (await actualCover.boundingBox())!
+    expect(coverBounds.height).toBeGreaterThan(coverBounds.width)
+    await expect(page.locator('canvas')).toHaveCount(0)
+    const desktopViewport = page.viewportSize()!
+    await page.setViewportSize({ width: 390, height: 844 })
+    await expect(openResume).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390)
+    await page.setViewportSize(desktopViewport)
+    const actions = openResume.locator('..').getByRole('button', { name: 'Resume actions' })
+    await actions.focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(actions).toBeFocused()
+    await openResume.focus()
+    await page.keyboard.press('Enter')
     await expect(page).toHaveURL(/\/builder\/[^/?]+$/)
 
     const preview = page.getByRole('region', { name: 'Resume preview', exact: true })

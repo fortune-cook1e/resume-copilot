@@ -17,6 +17,7 @@ export class ResumesRepository {
         visibility: resume.visibility,
         createdAt: resume.createdAt,
         updatedAt: resume.updatedAt,
+        data: resume.data,
       })
       .from(resume)
       .where(eq(resume.userId, userId))

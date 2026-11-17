@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -8,7 +7,6 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -19,6 +17,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { FileText, User } from 'lucide-react'
 import { useSession } from '@/lib/auth-client'
+import { WorkspaceBrand } from '@/components/WorkspaceBrand'
 import { SignOutButton } from '@/components/dashboard/SignOutButton'
 
 const navItems = [
@@ -48,29 +47,26 @@ export function DashboardSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="border-b border-sidebar-border">
-        <Link href="/dashboard" className="flex items-center gap-3 px-2 py-3">
-          <Image
-            src="/dog.png"
-            alt=""
-            width={32}
-            height={32}
-            className="size-8 shrink-0 rounded-lg"
-            unoptimized
-          />
-          <span className="text-base font-semibold">Resume Copilot</span>
-        </Link>
+      <SidebarHeader className="px-4 py-6">
+        <WorkspaceBrand href="/dashboard" />
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Menu</SidebarGroupLabel>
+        <SidebarGroup className="px-3">
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
-                    <Link href={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    size="lg"
+                    className="rounded-xl px-3"
+                    isActive={pathname.startsWith(item.href)}
+                  >
+                    <Link
+                      href={item.href}
+                      aria-current={pathname.startsWith(item.href) ? 'page' : undefined}
+                    >
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                     </Link>
