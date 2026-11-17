@@ -2,6 +2,8 @@
 
 ## Current work
 
+- **Home, sign-in, and Dashboard refresh is implemented locally.** The [visual refresh spec](plans/workspace-visual-refresh/spec.md) covers the expanded Onyx sample, interactive ChatGPT MCP demo, sign-in collage, and compact covers based on each resume’s own visible content. No database migration is required. The refresh is pending visual review and deployment.
+
 - **Resume photos and project links are implemented locally.** Basics crops photos to bounded JPEGs stored in D1, with ownership checks and independent copies. Each project can place its clickable website link on its title or below its content. Both features passed focused browser acceptance and the 15-test editor regression suite. The D1 migration has been verified in isolation and is pending deployment. See the [feature spec](plans/resume-photo-and-project-links/spec.md).
 - **Kakuna and Scizor are available in Design.** The two single-column templates use static thumbnails and the existing autosave and PDF paths. The focused two-page browser test passed for both templates, including reload, a manual page break, wrapped list text, and the repeated Scizor accent rule. See the [template spec](plans/single-column-templates/spec.md).
 - **Production Custom MCP is ready for deployment.** The Cloudflare workflow validates the optional OAuth settings as a group and deploys them with the API Worker. The three production GitHub Actions secrets are configured. After deployment, retry OAuth discovery in the private ChatGPT connection, verify the callback matches the registered one, and authorize and test the connection. Public directory submission is deferred.
