@@ -2,6 +2,8 @@
 
 ## Current work
 
+- **ORYZO homepage adoption is ready locally.** The [design system](../apps/web/DESIGN.md) supplies shared tokens, Inter, and scoped shadcn colors. The homepage uses the dark palette, uppercase headings, dashed dividers, and a flat interactive MCP demonstration. Chromium verified five viewport sizes, desktop height fit, demo switching, and both session-state entry paths. The core login/create/edit journey, 69 Web tests, and Cloudflare build passed. Lint retains three existing Web warnings. Next step is homepage visual review, then sign-in adoption. The Base UI migration was discarded by the user.
+
 - **Home, sign-in, and Dashboard refresh is implemented locally.** The [visual refresh spec](plans/workspace-visual-refresh/spec.md) covers the expanded Onyx sample, interactive ChatGPT MCP demo, sign-in collage, and compact covers based on each resume’s own visible content. No database migration is required. The refresh is pending visual review and deployment.
 
 - **Resume photos and project links are implemented locally.** Basics crops photos to bounded JPEGs stored in D1, with ownership checks and independent copies. Each project can place its clickable website link on its title or below its content. Both features passed focused browser acceptance and the 15-test editor regression suite. The D1 migration has been verified in isolation and is pending deployment. See the [feature spec](plans/resume-photo-and-project-links/spec.md).
