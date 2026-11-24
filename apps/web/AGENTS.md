@@ -30,6 +30,7 @@
 
 ## UI and verification
 
+- Read [the frontend design system](DESIGN.md) before changing application UI styling or interaction; follow its theme tokens and page-by-page adoption scope.
 - Avoid unnecessary secondary labels and descriptions. Let the layout do the explaining
 - Reuse existing UI components and styling conventions before introducing alternatives.
 - Use the shared shadcn/ui components in `components/ui` for interactive controls.

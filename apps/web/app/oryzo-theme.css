@@ -1,0 +1,103 @@
+/* Resume Copilot's ORYZO palette and application tokens. See apps/web/DESIGN.md. */
+:root {
+  --oryzo-canvas: #100904;
+  --oryzo-surface: #382416;
+  --oryzo-border: #40372e;
+  --oryzo-structure: #6c5f51;
+  --oryzo-text: #ffedd7;
+  --oryzo-ember: #dc5000;
+  --oryzo-text-muted: color-mix(in srgb, var(--oryzo-text) 72%, var(--oryzo-canvas));
+  --oryzo-danger: #f4a6a6;
+
+  --oryzo-weight-body: 400;
+  --oryzo-weight-label: 500;
+  --oryzo-text-display: clamp(2.5rem, 5vw, 3.1875rem);
+  --oryzo-text-heading: clamp(2rem, 4vw, 2.5625rem);
+  --oryzo-text-subheading: 1.5rem;
+  --oryzo-text-lead: clamp(1.125rem, 2.5vw, 1.8125rem);
+  --oryzo-text-body: 1rem;
+  --oryzo-text-label: 0.875rem;
+  --oryzo-leading-display: 0.95;
+  --oryzo-leading-body: 1.5;
+
+  --oryzo-space-inline: 0.5rem;
+  --oryzo-space-control: 0.75rem;
+  --oryzo-space-gap: 1.125rem;
+  --oryzo-space-panel: 1.5rem;
+  --oryzo-radius-card: 0.75rem;
+  --oryzo-radius-outline: 1.40625rem;
+  --oryzo-radius-action: 2.25rem;
+  --oryzo-radius-input: 0;
+  --oryzo-shadow: none;
+  --oryzo-motion-duration: 180ms;
+  --oryzo-motion-ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Next.js attaches the loaded font variables to body. Resolve them there. */
+body {
+  --oryzo-font-sans: var(--font-oryzo-sans), var(--font-geist-sans), Arial, sans-serif;
+}
+
+@theme inline {
+  --color-oryzo-canvas: var(--oryzo-canvas);
+  --color-oryzo-surface: var(--oryzo-surface);
+  --color-oryzo-border: var(--oryzo-border);
+  --color-oryzo-text: var(--oryzo-text);
+  --color-oryzo-text-muted: var(--oryzo-text-muted);
+  --color-oryzo-ember: var(--oryzo-ember);
+  --font-oryzo: var(--oryzo-font-sans);
+  --text-oryzo-display: var(--oryzo-text-display);
+  --text-oryzo-heading: var(--oryzo-text-heading);
+  --text-oryzo-subheading: var(--oryzo-text-subheading);
+  --text-oryzo-lead: var(--oryzo-text-lead);
+  --text-oryzo-body: var(--oryzo-text-body);
+  --text-oryzo-label: var(--oryzo-text-label);
+  --radius-oryzo-card: var(--oryzo-radius-card);
+  --radius-oryzo-outline: var(--oryzo-radius-outline);
+  --radius-oryzo-action: var(--oryzo-radius-action);
+  --radius-oryzo-input: var(--oryzo-radius-input);
+  --spacing-oryzo-gap: var(--oryzo-space-gap);
+  --spacing-oryzo-panel: var(--oryzo-space-panel);
+}
+
+/* Enable on a route shell and its portal containers during that page's adoption. */
+[data-theme='oryzo'] {
+  color-scheme: dark;
+  font-family: var(--oryzo-font-sans);
+  color: var(--oryzo-text);
+  background-color: var(--oryzo-canvas);
+
+  --radius: var(--oryzo-radius-card);
+  --background: var(--oryzo-canvas);
+  --foreground: var(--oryzo-text);
+  --card: var(--oryzo-canvas);
+  --card-foreground: var(--oryzo-text);
+  --popover: var(--oryzo-surface);
+  --popover-foreground: var(--oryzo-text);
+  --primary: var(--oryzo-surface);
+  --primary-foreground: var(--oryzo-text);
+  --secondary: var(--oryzo-canvas);
+  --secondary-foreground: var(--oryzo-text);
+  --muted: var(--oryzo-surface);
+  --muted-foreground: var(--oryzo-text-muted);
+  --accent: var(--oryzo-surface);
+  --accent-foreground: var(--oryzo-text);
+  --destructive: var(--oryzo-danger);
+  --border: var(--oryzo-border);
+  --input: var(--oryzo-text-muted);
+  --ring: var(--oryzo-text);
+  --sidebar: var(--oryzo-canvas);
+  --sidebar-foreground: var(--oryzo-text);
+  --sidebar-primary: var(--oryzo-surface);
+  --sidebar-primary-foreground: var(--oryzo-text);
+  --sidebar-accent: var(--oryzo-surface);
+  --sidebar-accent-foreground: var(--oryzo-text);
+  --sidebar-border: var(--oryzo-border);
+  --sidebar-ring: var(--oryzo-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme='oryzo'] {
+    --oryzo-motion-duration: 0ms;
+  }
+}
