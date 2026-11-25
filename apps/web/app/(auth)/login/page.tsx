@@ -36,25 +36,28 @@ function GoogleLogin() {
   }
 
   return (
-    <div className={styles.page}>
+    <div data-theme="oryzo" className={styles.page}>
+      <a className={styles.skipLink} href="#main">
+        Skip to sign in
+      </a>
       <header className={styles.header}>
         <WorkspaceBrand />
       </header>
-      <main className={styles.grid}>
+      <main id="main" className={styles.grid}>
         <div className={styles.form}>
           <h1>Sign in</h1>
           {connectingChatGpt && <p>Sign in to review your ChatGPT connection.</p>}
           {(error || searchParams.has('error')) && (
-            <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+            <p role="alert" className={styles.error}>
               {error ?? 'Google sign-in was not completed. Please try again.'}
             </p>
           )}
           <Button
             type="button"
-            variant="outline"
-            className="w-full rounded-full bg-white"
+            className={styles.googleButton}
             size="lg"
             disabled={pending}
+            aria-busy={pending}
             onClick={startLogin}
           >
             {pending ? (

@@ -8,7 +8,7 @@ The homepage gives visitors several lines of explanation before they see the pro
 
 Use a shared warm-white palette, dark text, a single accent color, and the existing dog logo. Give each screen one prominent action and use resume previews to show what the product makes.
 
-The subsequent ORYZO rollout follows [the application design system](../../../apps/web/DESIGN.md). The homepage now uses its scoped dark palette, Inter typography, dashed separators, and a flat MCP demonstration. Sign-in and Dashboard adoption follow as separate steps.
+The subsequent ORYZO rollout follows [the application design system](../../../apps/web/DESIGN.md). The homepage now uses its scoped dark palette, Inter typography, dashed separators, and a flat MCP demonstration. Sign-in now uses the same theme with a restrained resume collage, a focused Google action and preserved pending/error/ChatGPT continuation states. Dashboard adoption follows separately.
 
 ## User stories
 
