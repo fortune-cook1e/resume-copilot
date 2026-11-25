@@ -435,26 +435,64 @@ test('signs in, creates a resume and displays every page after editing and reope
     await expect(page).toHaveURL(/\/login(?:\?|$)/)
     await page.setViewportSize({ width: 1280, height: 720 })
     await page.goto('/')
-    const heroPreview = page.getByRole('img', { name: 'Example resume in the Onyx template' })
+    const story = page.locator('section[data-animated]')
     const heroTitle = page.getByRole('heading', { level: 1 })
-    await expect(heroPreview).toBeVisible()
-    expect((await heroPreview.boundingBox())!.x).toBeLessThan((await heroTitle.boundingBox())!.x)
-    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(720)
-    const homeAction = page.getByRole('link', { name: 'Build a resume' })
+    await expect(heroTitle).toHaveText('Create your resume with AI tools.')
+    await expect(story).toHaveAttribute('data-scene', 'start')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(1280)
+    const homeAction = page.getByRole('link', { name: 'Create your resume', exact: true })
+    await expect(homeAction).toHaveCount(0)
+    const mcpWrites: string[] = []
+    const recordMcpWrite = (
+      request: import('../../apps/web/node_modules/@playwright/test').Request,
+    ) => {
+      if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/mcp')
+        mcpWrites.push(request.url())
+    }
+    page.on('request', recordMcpWrite)
+    for (const [scene, heading] of [
+      ['discover', 'Meet Resume Copilot.'],
+      ['connect', 'Connect your AI tool through MCP.'],
+      ['prompt', 'Tell it what you need.'],
+      ['create', 'Your experience becomes a resume.'],
+      ['export', 'Choose a template. Export PDF.'],
+    ]) {
+      await page.mouse.move(640, 350)
+      await page.mouse.wheel(0, 720)
+      await expect(story).toHaveAttribute('data-scene', scene)
+      const artwork = page.getByRole('region', { name: heading, exact: true }).getByRole('img')
+      await expect(artwork).toHaveCount(1)
+      await expect(artwork).toBeVisible()
+      await artwork.evaluate((image: HTMLImageElement) => image.decode())
+      expect(await artwork.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBe(1536)
+      const artworkBounds = (await artwork.boundingBox())!
+      expect(artworkBounds.y + artworkBounds.height).toBeLessThanOrEqual(720)
+      if (scene !== 'export') await expect(homeAction).toHaveCount(0)
+    }
+    await expect(homeAction).toBeInViewport()
     await expect(homeAction).toHaveAttribute('href', '/login')
-    const viewOriginal = page.getByRole('button', { name: 'View original' })
-    await viewOriginal.hover()
-    const demoResult = page.locator('figure [aria-live]')
-    const toggleBounds = (await viewOriginal.boundingBox())!
-    expect((await demoResult.boundingBox())!.y).toBeGreaterThan(
-      toggleBounds.y + toggleBounds.height,
-    )
-    await viewOriginal.click()
-    await expect(page.getByText(/Worked on Field Notes/)).toBeVisible()
-    await page.getByRole('button', { name: 'Show edit' }).click()
-    await expect(
-      page.getByText('Built a searchable library for 80+ research interviews.'),
-    ).toBeVisible()
+    await page.mouse.move(640, 350)
+    await page.mouse.wheel(0, -720)
+    await expect(story).toHaveAttribute('data-scene', 'create')
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await expect(story).toHaveAttribute('data-scene', 'start')
+    await expect(heroTitle).toBeVisible()
+    expect(mcpWrites).toEqual([])
+    page.off('request', recordMcpWrite)
+
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await expect(story).toHaveCount(0)
+    await expect(page.getByRole('main').getByRole('img')).toHaveCount(6)
+    await expect(page.getByRole('region', { name: 'Choose a template. Export PDF.' })).toBeVisible()
+    await page.setViewportSize({ width: 390, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390)
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await expect(story).toHaveCount(0)
+    await page.setViewportSize({ width: 1280, height: 720 })
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await expect(story).toHaveAttribute('data-scene', 'start')
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+    await expect(story).toHaveAttribute('data-scene', 'export')
     await homeAction.click()
     await expect(page).toHaveURL(/\/login$/)
     const loginArtwork = page.locator('main img')
@@ -467,6 +505,13 @@ test('signs in, creates a resume and displays every page after editing and reope
 
     await expect(page.getByRole('heading', { name: 'No resumes yet' })).toBeVisible()
     await page.goto('/')
+    await expect(page.getByRole('link', { name: 'My resumes', exact: true })).toHaveAttribute(
+      'href',
+      '/dashboard/resumes',
+    )
+    await expect(story).toHaveAttribute('data-animated', 'true')
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+    await expect(story).toHaveAttribute('data-scene', 'export')
     await expect(homeAction).toHaveAttribute('href', '/dashboard/resumes')
     await homeAction.click()
     await expect(page).toHaveURL(/\/dashboard\/resumes$/)
