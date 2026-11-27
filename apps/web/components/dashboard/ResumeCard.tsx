@@ -35,7 +35,15 @@ interface ResumeCardProps {
 }
 
 function formatDate(dateStr: string | Date) {
-  return new Date(dateStr).toLocaleDateString('en-US', {
+  const date = new Date(dateStr)
+  const today = new Date()
+  const day = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+  const currentDay = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+  const days = Math.round((day - currentDay) / 86400000)
+  if (days <= 0 && days > -7) {
+    return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(days, 'day')
+  }
+  return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -118,12 +126,14 @@ export function ResumeCard({ resume, onDeleted, onEdit }: ResumeCardProps) {
           className="block rounded-md focus-visible:outline-2 focus-visible:outline-offset-4"
         >
           <ResumeCover resume={resume} />
-          <div className="mt-2 min-w-0 pr-9">
-            <h2 className="line-clamp-2 text-sm leading-snug font-semibold wrap-anywhere">
-              {resume.title}
-            </h2>
-            <time dateTime={resume.updatedAt} className="text-xs text-[#535b51]">
-              {formatDate(resume.updatedAt)}
+          <div className="mt-2.5 min-w-0 pr-9">
+            <h2 className="truncate text-sm leading-snug font-medium">{resume.title}</h2>
+            <time
+              title={new Date(resume.updatedAt).toLocaleString()}
+              dateTime={resume.updatedAt}
+              className="mt-1 block text-xs text-[#6e716a]"
+            >
+              Resume · edited {formatDate(resume.updatedAt)}
             </time>
           </div>
         </Link>

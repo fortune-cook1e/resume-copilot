@@ -59,7 +59,7 @@ export default function ResumesPage() {
       {isPending && (
         <div
           aria-busy="true"
-          className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,10rem),1fr))] gap-4"
+          className="grid grid-cols-[repeat(auto-fill,min(100%,18.75rem))] gap-x-5 gap-y-6"
         >
           {Array.from({ length: 3 }, (_, index) => (
             <div key={index} className="space-y-3">
@@ -93,7 +93,7 @@ export default function ResumesPage() {
       )}
 
       {!isPending && resumes.length > 0 && (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,10rem),1fr))] gap-x-4 gap-y-6">
+        <div className="grid grid-cols-[repeat(auto-fill,min(100%,18.75rem))] gap-x-5 gap-y-6">
           {resumes.map((resume) => (
             <ResumeCard
               key={resume.id}

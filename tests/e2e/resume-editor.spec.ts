@@ -563,6 +563,8 @@ test('signs in, creates a resume and displays every page after editing and reope
       .toBe(840)
     const coverBounds = (await actualCover.boundingBox())!
     expect(coverBounds.height / coverBounds.width).toBeCloseTo(297 / 210, 1)
+    expect(coverBounds.width).toBeGreaterThanOrEqual(290)
+    expect(coverBounds.width).toBeLessThanOrEqual(300)
     // The card is a real rendered page, not an invented HTML summary or a blank image.
     const inkPixels = await actualCover.evaluate((image: HTMLImageElement) => {
       const canvas = document.createElement('canvas')
@@ -2042,6 +2044,10 @@ test('shows real first-page covers across templates and refreshes a saved revisi
       images.map((image) => (image as HTMLImageElement).src),
     )
     expect(new Set(sources).size).toBe(3)
+    const bounds = (await covers.first().boundingBox())!
+    expect(bounds.width).toBeGreaterThanOrEqual(290)
+    expect(bounds.width).toBeLessThanOrEqual(300)
+    expect(bounds.height).toBeLessThan(430)
     await page.screenshot({
       path: testInfo.outputPath('dashboard-covers-desktop.png'),
       fullPage: true,
