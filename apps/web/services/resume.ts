@@ -24,8 +24,8 @@ export async function getResumes(signal?: AbortSignal): Promise<ResumeItem[]> {
 }
 
 /** Get a single resume by ID */
-export async function getResume(id: string): Promise<Resume> {
-  return resumeSchema.parse(await request.get(`/resumes/${id}`))
+export async function getResume(id: string, signal?: AbortSignal): Promise<Resume> {
+  return resumeSchema.parse(await request.get(`/resumes/${id}`, { signal }))
 }
 
 /** Create a new resume */

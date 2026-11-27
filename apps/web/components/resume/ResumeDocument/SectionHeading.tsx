@@ -1,7 +1,7 @@
-import { useResumeStore } from '@/stores/resume-store'
+import { useDocumentData } from './data'
 
 export default function SectionHeading({ children }: { children: string }) {
-  const template = useResumeStore((state) => state.resume?.design?.template)
+  const template = useDocumentData().resume?.design?.template
   return (
     <div className="resume-section-heading">
       <h2 data-resume-heading className="font-semibold">

@@ -556,15 +556,30 @@ test('signs in, creates a resume and displays every page after editing and reope
     })
     expect(other.status()).toBe(201)
     await page.reload()
-    const actualCover = page
-      .getByRole('link', { name: /Design example/ })
-      .locator('[data-template]')
-    await expect(actualCover).toHaveAttribute('data-template', 'kakuna')
-    await expect(actualCover.getByText('Jamie Chen')).toBeVisible()
-    await expect(actualCover.getByText('Fieldwork Studio')).toBeVisible()
+    const actualCover = page.getByRole('link', { name: /Design example/ }).locator('img')
+    await expect(actualCover).toBeVisible({ timeout: 45000 })
+    await expect
+      .poll(() => actualCover.evaluate((image: HTMLImageElement) => image.naturalWidth))
+      .toBe(840)
     const coverBounds = (await actualCover.boundingBox())!
-    expect(coverBounds.height).toBeGreaterThan(coverBounds.width)
+    expect(coverBounds.height / coverBounds.width).toBeCloseTo(297 / 210, 1)
+    // The card is a real rendered page, not an invented HTML summary or a blank image.
+    const inkPixels = await actualCover.evaluate((image: HTMLImageElement) => {
+      const canvas = document.createElement('canvas')
+      canvas.width = image.naturalWidth
+      canvas.height = image.naturalHeight
+      const context = canvas.getContext('2d')!
+      context.drawImage(image, 0, 0)
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data
+      let ink = 0
+      for (let index = 0; index < pixels.length; index += 4) {
+        if (pixels[index] < 150 && pixels[index + 1] < 150 && pixels[index + 2] < 150) ink++
+      }
+      return ink
+    })
+    expect(inkPixels).toBeGreaterThan(1000)
     await expect(page.locator('canvas')).toHaveCount(0)
+    await expect(openResume.locator('img')).toBeVisible({ timeout: 45000 })
     const desktopViewport = page.viewportSize()!
     await page.setViewportSize({ width: 390, height: 844 })
     await expect(openResume).toBeVisible()
@@ -578,7 +593,7 @@ test('signs in, creates a resume and displays every page after editing and reope
     await expect(actions).toBeFocused()
     await openResume.focus()
     await page.keyboard.press('Enter')
-    await expect(page).toHaveURL(/\/builder\/[^/?]+$/)
+    await expect(page).toHaveURL(/\/builder\/[^/?]+$/, { timeout: 30000 })
 
     const preview = page.getByRole('region', { name: 'Resume preview', exact: true })
     const sheets = preview.getByRole('region', { name: /^Page \d+$/ })
@@ -1946,5 +1961,117 @@ test('scrolls the preview with the wheel and changes zoom only through its contr
       })
       expect(cleanup.status()).toBe(200)
     }
+  }
+})
+
+test('shows real first-page covers across templates and refreshes a saved revision', async ({
+  page,
+  context,
+}, testInfo) => {
+  test.setTimeout(90000)
+  await context.addCookies([
+    { name: 'better-auth.session_token', value: cookie, url: 'http://127.0.0.1:3100' },
+  ])
+  await page.setViewportSize({ width: 1536, height: 1000 })
+  const ids: string[] = []
+  const data = structuredClone(defaultResumeData)
+  data.basics = {
+    ...data.basics,
+    name: 'Jamie Chen',
+    headline: 'Software Engineer',
+    email: 'jamie@example.com',
+    location: 'Stockholm, Sweden',
+  }
+  data.modules.education.items = [
+    {
+      id: 'education',
+      visible: true,
+      university: 'Stockholm University',
+      major: 'MSc Computer and Systems Sciences',
+      location: 'Sweden',
+      date: '2024 — 2026',
+      summary: 'Software engineering, distributed systems and applied machine learning.',
+    },
+  ]
+  data.modules.experience.items = ['Fieldwork Studio', 'Open Source Collective'].map(
+    (company, index) => ({
+      id: `work-${index}`,
+      visible: true,
+      company,
+      position: 'Software Engineer',
+      location: 'Stockholm',
+      date: '2023 — Present',
+      summary:
+        '- Built accessible React interfaces and reliable API integrations for a collaborative workspace.\n- Improved release confidence through integration tests and automated delivery.\n- Collaborated with designers to turn customer feedback into simple, useful product features.',
+    }),
+  )
+  data.modules.projects.items = [
+    {
+      id: 'project',
+      visible: true,
+      name: 'Resume Workspace',
+      description: 'An independent workspace for tailored resumes',
+      date: '2026',
+      website: { icon: '', label: 'GitHub', link: 'https://github.com/example/resume' },
+      summary:
+        '- Created a structured editor with live previews and multiple document templates.\n- Connected external agents through MCP to create and edit resumes.\n- Deployed the application to Cloudflare Workers with D1 storage.',
+    },
+  ]
+  data.modules.skills.items = [
+    {
+      id: 'skills',
+      visible: true,
+      name: 'Engineering',
+      level: 'Advanced',
+      keywords: ['TypeScript', 'React', 'Node.js', 'Testing', 'Cloudflare'],
+    },
+  ]
+  try {
+    for (const template of ['onyx', 'meowth', 'kakuna'] as const) {
+      const response = await page.request.post('/api/resumes', {
+        headers: { origin: 'http://127.0.0.1:3100' },
+        data: { title: `Cover ${template}`, data: { ...data, design: { template } } },
+      })
+      expect(response.status()).toBe(201)
+      ids.push((await response.json()).data.id)
+    }
+    await page.goto('/dashboard/resumes')
+    const covers = page.getByRole('link', { name: /^Cover / }).locator('img')
+    await expect(covers).toHaveCount(3, { timeout: 45000 })
+    const sources = await covers.evaluateAll((images) =>
+      images.map((image) => (image as HTMLImageElement).src),
+    )
+    expect(new Set(sources).size).toBe(3)
+    await page.screenshot({
+      path: testInfo.outputPath('dashboard-covers-desktop.png'),
+      fullPage: true,
+    })
+    const target = page.getByRole('link', { name: /^Cover onyx/ })
+    const originalImage = await target.locator('img').getAttribute('src')
+    const result = await page.request.patch(`/api/resumes/${ids[0]}`, {
+      headers: { origin: 'http://127.0.0.1:3100' },
+      data: { data: { ...data, basics: { ...data.basics, name: 'Updated candidate' } } },
+    })
+    expect(result.status()).toBe(200)
+    await page.reload()
+    await expect(target.locator('img')).toBeVisible({ timeout: 45000 })
+    expect(await target.locator('img').getAttribute('src')).not.toBe(originalImage)
+    await page.setViewportSize({ width: 390, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390)
+    for (const template of ['onyx', 'meowth', 'kakuna']) {
+      const card = page.getByRole('link', { name: new RegExp(`^Cover ${template}`) })
+      await card.scrollIntoViewIfNeeded()
+      await expect(card.locator('img')).toBeVisible({ timeout: 45000 })
+    }
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await page.screenshot({
+      path: testInfo.outputPath('dashboard-covers-mobile.png'),
+      fullPage: true,
+    })
+  } finally {
+    for (const id of ids)
+      await page.request.delete(`/api/resumes/${id}`, {
+        headers: { origin: 'http://127.0.0.1:3100' },
+      })
   }
 })

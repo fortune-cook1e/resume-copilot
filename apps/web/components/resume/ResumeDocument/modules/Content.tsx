@@ -1,6 +1,6 @@
 'use client'
 
-import { useResumeStore } from '@/stores/resume-store'
+import { useDocumentData } from '../data'
 import { renderMarkdown } from '@/lib/markdown'
 import {
   entryText,
@@ -15,7 +15,7 @@ import EntryHeader from '../EntryHeader'
 import Link, { projectWebsiteHref } from './Link'
 
 export default function Content({ sectionId }: { sectionId: SectionId }) {
-  const section = useResumeStore((state) => state.resume?.modules[sectionId])
+  const section = useDocumentData().resume?.modules[sectionId]
   if (!section?.visible) return null
   const type = getSectionType(sectionId, section)
   const text = 'content' in section ? section.content : undefined

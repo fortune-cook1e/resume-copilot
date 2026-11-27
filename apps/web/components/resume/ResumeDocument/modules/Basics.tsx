@@ -1,11 +1,11 @@
-import { useResumeStore } from '@/stores/resume-store'
+import { useDocumentData } from '../data'
 import Image from 'next/image'
 import PreviewBlock from '../PreviewBlock'
 import { Mail, Phone as PhoneIcon, MapPin, Link as LinkIcon } from 'lucide-react'
 import { getContactIcon } from '@/components/resume/contact-icons'
 
 const Basics = () => {
-  const { resume, avatar } = useResumeStore()
+  const { resume, avatar } = useDocumentData()
 
   if (!resume) return null
 

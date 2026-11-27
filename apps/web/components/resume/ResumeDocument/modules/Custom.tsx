@@ -1,6 +1,6 @@
 'use client'
 
-import { useResumeStore } from '@/stores/resume-store'
+import { useDocumentData } from '../data'
 import type { Custom, CustomModuleId } from '@resume-copilot/contracts'
 import { renderMarkdown } from '@/lib/markdown'
 import Link from './Link'
@@ -13,7 +13,7 @@ interface CustomProps {
 }
 
 const Custom = ({ moduleId }: CustomProps) => {
-  const { resume } = useResumeStore()
+  const { resume } = useDocumentData()
 
   if (!resume) return null
 

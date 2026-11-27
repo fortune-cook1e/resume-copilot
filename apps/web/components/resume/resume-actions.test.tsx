@@ -42,6 +42,13 @@ const loadedAt = '2026-01-01T00:00:00.000Z'
 beforeEach(() => {
   vi.useFakeTimers()
   vi.stubGlobal(
+    'IntersectionObserver',
+    class {
+      observe() {}
+      disconnect() {}
+    },
+  )
+  vi.stubGlobal(
     'ResizeObserver',
     class {
       observe() {}
@@ -290,17 +297,19 @@ it('cancels resume deletion without a request and retains the confirmation after
   const onDeleted = vi.fn()
   api.remove.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(undefined)
   render(
-    <ResumeCard
-      resume={{
-        id: 'resume-one',
-        title: 'Frontend resume',
-        description: '',
-        visibility: 'private',
-        createdAt: '2026-10-08',
-        updatedAt: '2026-10-08',
-      }}
-      onDeleted={onDeleted}
-    />,
+    <QueryClientProvider client={new QueryClient()}>
+      <ResumeCard
+        resume={{
+          id: 'resume-one',
+          title: 'Frontend resume',
+          description: '',
+          visibility: 'private',
+          createdAt: '2026-10-08',
+          updatedAt: '2026-10-08',
+        }}
+        onDeleted={onDeleted}
+      />
+    </QueryClientProvider>,
   )
   const openDelete = () => {
     const trigger = screen.getByRole('button', { name: 'Resume actions' })

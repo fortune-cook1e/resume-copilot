@@ -1,41 +1,60 @@
-import type { CSSProperties } from 'react'
+'use client'
+
+import { useEffect, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import type { ResumeItem } from '@resume-copilot/contracts'
 import { FileText } from 'lucide-react'
-import { resolveThemeColor } from '@/components/resume/ResumeDocument/design'
+import { useSession } from '@/lib/auth-client'
+import { getResume } from '@/services/resume'
+import { Skeleton } from '@/components/ui/skeleton'
 import styles from './resume-cover.module.css'
 
 export function ResumeCover({ resume }: { resume: ResumeItem }) {
-  const { preview, template = 'onyx' } = resume
-  const hasContent =
-    preview && (preview.name || preview.headline || preview.location || preview.sections.length)
+  const ref = useRef<HTMLDivElement>(null)
+  const [nearby, setNearby] = useState(false)
+  const { data: session } = useSession()
+  const userId = session?.user.id
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setNearby(true)
+          observer.disconnect()
+        }
+      },
+      { rootMargin: '240px' },
+    )
+    if (ref.current) observer.observe(ref.current)
+    return () => observer.disconnect()
+  }, [])
+
+  // Account identity and saved revision own the cached image. Sign-out clears the cache.
+  const { data: image, isError } = useQuery({
+    queryKey: ['resume-thumbnail', userId, resume.id, resume.updatedAt],
+    enabled: nearby && !!userId,
+    staleTime: Infinity,
+    gcTime: 5 * 60 * 1000,
+    retry: false,
+    queryFn: async ({ signal }) => {
+      const { enqueueThumbnail, renderThumbnail } = await import('./resume-thumbnail')
+      return enqueueThumbnail(async () => {
+        const detail = await getResume(resume.id, signal)
+        return renderThumbnail(detail, signal)
+      }, signal)
+    },
+  })
 
   return (
-    <div className={styles.cover} aria-hidden="true">
-      {hasContent ? (
-        <div
-          data-template={template}
-          className={styles.paper}
-          style={{ '--cover-accent': resolveThemeColor(preview.themeColor) } as CSSProperties}
-        >
-          <div className={styles.identity}>
-            {preview.name && <p className={styles.name}>{preview.name}</p>}
-            {preview.headline && <p>{preview.headline}</p>}
-            {preview.location && <p>{preview.location}</p>}
-          </div>
-          {preview.sections.map((section, index) => (
-            <div className={styles.section} key={index}>
-              <p className={styles.sectionTitle}>{section.name}</p>
-              {section.entries.map(({ title, detail }, entryIndex) => (
-                <div key={entryIndex}>
-                  {title && <p className={styles.entryTitle}>{title}</p>}
-                  {detail && <p>{detail}</p>}
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      ) : (
+    <div ref={ref} className={styles.cover} aria-hidden="true">
+      {image ? (
+        // Generated locally from the same PDF as the editor and export.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={image} alt="" className={styles.image} />
+      ) : isError ? (
         <FileText className="size-7 text-neutral-400" />
+      ) : (
+        <Skeleton className="absolute inset-0 rounded-none" />
       )}
     </div>
   )

@@ -1,7 +1,7 @@
 'use client'
 
 import type { CSSProperties } from 'react'
-import { useResumeStore } from '@/stores/resume-store'
+import { DocumentDataProvider, useDocumentData, type DocumentData } from './data'
 import Basics from './modules/Basics'
 import Education from './modules/Education'
 import Experience from './modules/Experience'
@@ -30,11 +30,25 @@ const fontStacks = {
 }
 
 export default function ResumeDocument({
+  data,
+  ...props
+}: EditorSelectionProps & {
+  sourceId?: string
+  data?: DocumentData
+} = {}) {
+  return (
+    <DocumentDataProvider value={data}>
+      <DocumentContent {...props} />
+    </DocumentDataProvider>
+  )
+}
+
+function DocumentContent({
   selection,
   onSelect,
   sourceId = 'resume-document',
 }: EditorSelectionProps & { sourceId?: string } = {}) {
-  const { resume } = useResumeStore()
+  const { resume } = useDocumentData()
   if (!resume) {
     return <div id={sourceId} data-ready="false" className="p-custom" />
   }

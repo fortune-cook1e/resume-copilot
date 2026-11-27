@@ -1,13 +1,13 @@
 'use client'
 
-import { useResumeStore } from '@/stores/resume-store'
+import { useDocumentData } from '../data'
 import { renderMarkdown } from '@/lib/markdown'
 import PreviewBlock from '../PreviewBlock'
 import SectionHeading from '../SectionHeading'
 import EntryHeader from '../EntryHeader'
 
 const Experience = () => {
-  const { resume } = useResumeStore()
+  const { resume } = useDocumentData()
 
   if (!resume) return null
 
